@@ -3,6 +3,7 @@ package io.eleven19.krueger
 import zio.test.*
 
 object SpanSpec extends ZIOSpecDefault:
+
     def spec = suite("Span")(
         test("zero is (0, 0)") {
             assertTrue(Span.zero == Span(0, 0))

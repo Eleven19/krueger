@@ -9,9 +9,9 @@ import io.eleven19.krueger.parser.CstLowering
 
 object AstVisitorSpec extends ZIOSpecDefault:
 
-    private val sp                   = Span.zero
-    private def cn(name: String)     = CstName(name)(sp)
-    private def cqn(parts: String*)  = CstQualifiedName(parts.map(cn).toList)(sp)
+    private val sp                  = Span.zero
+    private def cn(name: String)    = CstName(name)(sp)
+    private def cqn(parts: String*) = CstQualifiedName(parts.map(cn).toList)(sp)
 
     private val sampleCst: CstModule =
         CstModule(
@@ -23,22 +23,22 @@ object AstVisitorSpec extends ZIOSpecDefault:
     private val sampleAst: Module = CstLowering.lowerModule(sampleCst)
 
     private class TagVisitor extends AstVisitor[String]:
-        def visitNode(node: AstNode): String                             = "Node"
-        override def visitQualifiedName(node: QualifiedName): String     = s"QN(${node.fullName})"
-        override def visitIntLiteral(node: IntLiteral): String           = s"Int(${node.value})"
-        override def visitImport(node: Import): String                   = s"Imp(${node.moduleName.fullName})"
-        override def visitModule(node: Module): String                   = s"Mod(${node.name.fullName})"
+        def visitNode(node: AstNode): String                         = "Node"
+        override def visitQualifiedName(node: QualifiedName): String = s"QN(${node.fullName})"
+        override def visitIntLiteral(node: IntLiteral): String       = s"Int(${node.value})"
+        override def visitImport(node: Import): String               = s"Imp(${node.moduleName.fullName})"
+        override def visitModule(node: Module): String               = s"Mod(${node.name.fullName})"
 
     def spec = suite("AstVisitor")(
         suite("dispatch")(
             test("visit routes to the specific visitor method") {
-                val v              = new TagVisitor
-                val lit: AstNode   = IntLiteral(5L)(sp)
+                val v            = new TagVisitor
+                val lit: AstNode = IntLiteral(5L)(sp)
                 assertTrue(AstVisitor.visit(lit, v) == "Int(5)")
             },
             test("visit falls back to visitNode when no override is provided") {
-                val v            = new TagVisitor
-                val s: AstNode   = StringLiteral("hi")(sp)
+                val v          = new TagVisitor
+                val s: AstNode = StringLiteral("hi")(sp)
                 assertTrue(AstVisitor.visit(s, v) == "Node")
             }
         ),
@@ -71,8 +71,8 @@ object AstVisitorSpec extends ZIOSpecDefault:
         ),
         suite("extension methods")(
             test("node.visit delegates to AstVisitor.visit") {
-                val v              = new TagVisitor
-                val node: AstNode  = IntLiteral(9L)(sp)
+                val v             = new TagVisitor
+                val node: AstNode = IntLiteral(9L)(sp)
                 assertTrue(node.visit(v) == "Int(9)")
             },
             test("node.children delegates to AstVisitor.children") {

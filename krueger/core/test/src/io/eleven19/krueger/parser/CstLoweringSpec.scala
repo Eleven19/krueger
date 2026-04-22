@@ -8,9 +8,9 @@ import io.eleven19.krueger.ast
 
 object CstLoweringSpec extends ZIOSpecDefault:
 
-    private val sp                  = Span.zero
-    private def n(name: String)     = CstName(name)(sp)
-    private def qn(parts: String*)  = CstQualifiedName(parts.map(n).toList)(sp)
+    private val sp                 = Span.zero
+    private def n(name: String)    = CstName(name)(sp)
+    private def qn(parts: String*) = CstQualifiedName(parts.map(n).toList)(sp)
 
     private def moduleWithDecl(decl: CstDeclaration): CstModule =
         CstModule(
@@ -48,8 +48,8 @@ object CstLoweringSpec extends ZIOSpecDefault:
             val m = CstLowering.lowerModule(cst)
             val exp = m.exposing match
                 case e: ast.ExposingExplicit => e.items
-                case _                        => Nil
-            val types = exp.collect { case t: ast.ExposedType => (t.name, t.exposeConstructors) }
+                case _                       => Nil
+            val types  = exp.collect { case t: ast.ExposedType => (t.name, t.exposeConstructors) }
             val values = exp.collect { case v: ast.ExposedValue => v.name }
             val ops    = exp.collect { case o: ast.ExposedOperator => o.name }
             assertTrue(
@@ -143,9 +143,9 @@ object CstLoweringSpec extends ZIOSpecDefault:
             )
         },
         test("lowerTypeExpression lowers function types") {
-            val a = CstTypeVariable(n("a"))(sp)
-            val b = CstTypeVariable(n("b"))(sp)
-            val t = CstFunctionType(a, b)(sp)
+            val a       = CstTypeVariable(n("a"))(sp)
+            val b       = CstTypeVariable(n("b"))(sp)
+            val t       = CstFunctionType(a, b)(sp)
             val lowered = CstLowering.lowerTypeExpression(t)
             assertTrue(lowered.isInstanceOf[ast.FunctionType])
         }
