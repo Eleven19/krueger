@@ -1,0 +1,4 @@
+extends: [_root_.build.CommonScalaModule, _root_.build.PublishSupport]
+artifactName: krueger
+moduleDeps:
+  - build.krueger.core.jvm
