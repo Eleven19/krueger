@@ -15,7 +15,8 @@ object CstNode:
 case class CstModule(
     moduleDecl: CstModuleDeclaration,
     imports: List[CstImport],
-    declarations: List[CstDeclaration]
+    declarations: List[CstDeclaration],
+    comments: List[CstComment] = Nil
 )(val span: Span)
     extends CstNode derives CanEqual
 
@@ -36,6 +37,17 @@ case class CstQualifiedName(
 
 case class CstName(
     value: String
+)(val span: Span)
+    extends CstNode derives CanEqual
+
+// ── Comments ─────────────────────────────────────────────────────────────────
+
+enum CommentKind derives CanEqual:
+    case Line, Block, Doc
+
+case class CstComment(
+    kind: CommentKind,
+    text: String
 )(val span: Span)
     extends CstNode derives CanEqual
 

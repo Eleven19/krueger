@@ -3,6 +3,8 @@ package io.eleven19.krueger
 import parsley.{Failure, Success}
 import zio.test.*
 
+import io.eleven19.krueger.cst.CommentKind
+
 object KruegerSpec extends ZIOSpecDefault:
 
     private val minimal = "module Main exposing (..)\n"
@@ -40,6 +42,21 @@ object KruegerSpec extends ZIOSpecDefault:
                 m.moduleDecl.name.parts.map(_.value) == List("App"),
                 m.imports.size == 1,
                 m.declarations.size == 1
+            )
+        },
+        test("parseCst differentiates line, block, and doc comments") {
+            val m = parseCstOrFail(
+                """module App exposing (..)
+                  |
+                  |-- regular line
+                  |{- regular block -}
+                  |{-| module docs -}
+                  |main = "-- not a comment"
+                  |""".stripMargin
+            )
+            assertTrue(
+                m.comments.map(_.kind) == List(CommentKind.Line, CommentKind.Block, CommentKind.Doc),
+                m.comments.map(_.text.trim) == List("regular line", "regular block", "module docs")
             )
         },
         test("parseAst lowers imports and declarations") {

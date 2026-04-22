@@ -20,6 +20,7 @@ trait CstVisitor[A]:
     def visitModuleDeclaration(node: CstModuleDeclaration): A = visitNode(node)
     def visitQualifiedName(node: CstQualifiedName): A         = visitNode(node)
     def visitName(node: CstName): A                           = visitNode(node)
+    def visitComment(node: CstComment): A                     = visitNode(node)
     def visitImport(node: CstImport): A                       = visitNode(node)
 
     // --- Exposing ---
@@ -114,6 +115,7 @@ object CstVisitor:
         case n: CstModuleDeclaration       => visitor.visitModuleDeclaration(n)
         case n: CstQualifiedName           => visitor.visitQualifiedName(n)
         case n: CstName                    => visitor.visitName(n)
+        case n: CstComment                 => visitor.visitComment(n)
         case n: CstImport                  => visitor.visitImport(n)
         case n: CstExposingAll             => visitor.visitExposingAll(n)
         case n: CstExposingExplicit        => visitor.visitExposingExplicit(n)
@@ -180,10 +182,11 @@ object CstVisitor:
 
     /** Return the direct children of a node. */
     def children(node: CstNode): List[CstNode] = node match
-        case n: CstModule                  => n.moduleDecl :: n.imports ::: n.declarations
+        case n: CstModule                  => n.moduleDecl :: n.imports ::: n.declarations ::: n.comments
         case n: CstModuleDeclaration       => List(n.name, n.exposing)
         case n: CstQualifiedName           => n.parts
         case n: CstName                    => Nil
+        case n: CstComment                 => Nil
         case n: CstImport                  => n.moduleName :: n.alias.toList ::: n.exposing.toList
         case n: CstExposingAll             => Nil
         case n: CstExposingExplicit        => n.items
