@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "musing_chaum_7e7242",
+  "project_id": "b7a23587-1ee1-4901-bf93-c0618aa54809"
+}

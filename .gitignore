@@ -9,8 +9,9 @@ out/
 .vscode/
 .cursor/
 
-# Claude Code — local overrides (user-specific)
+# Claude Code — local overrides (user-specific) and agent worktrees
 .claude/settings.local.json
+.claude/worktrees/
 
 # Oh My Claude Code
 .omc/
