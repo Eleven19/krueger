@@ -25,8 +25,8 @@ object TriviaAssociator:
         // Determine the boundary after which declarations begin.
         // Doc comments before the first import or declaration (but after the module decl) are module doc comments.
         val firstContentOffset: Int =
-            val importStart  = module.imports.headOption.map(_.span.offset)
-            val declStart    = module.declarations.headOption.map(_.span.offset)
+            val importStart = module.imports.headOption.map(_.span.offset)
+            val declStart   = module.declarations.headOption.map(_.span.offset)
             (importStart ++ declStart).minOption.getOrElse(Int.MaxValue)
 
         // Associate doc comments with declarations.
@@ -81,8 +81,10 @@ object TriviaAssociator:
 
     /** Attach trivia to a declaration, preserving the span from the second parameter list. */
     private def withTrivia(decl: CstDeclaration, trivia: CstTrivia): CstDeclaration = decl match
-        case d: CstValueDeclaration      => CstValueDeclaration(d.annotation, d.name, d.patterns, d.body, trivia)(d.span)
-        case d: CstTypeAliasDeclaration  => CstTypeAliasDeclaration(d.name, d.typeVariables, d.body, trivia)(d.span)
-        case d: CstCustomTypeDeclaration => CstCustomTypeDeclaration(d.name, d.typeVariables, d.constructors, trivia)(d.span)
-        case d: CstPortDeclaration       => CstPortDeclaration(d.name, d.typeExpr, trivia)(d.span)
-        case d: CstInfixDeclaration      => CstInfixDeclaration(d.associativity, d.precedence, d.operator, d.function, trivia)(d.span)
+        case d: CstValueDeclaration     => CstValueDeclaration(d.annotation, d.name, d.patterns, d.body, trivia)(d.span)
+        case d: CstTypeAliasDeclaration => CstTypeAliasDeclaration(d.name, d.typeVariables, d.body, trivia)(d.span)
+        case d: CstCustomTypeDeclaration =>
+            CstCustomTypeDeclaration(d.name, d.typeVariables, d.constructors, trivia)(d.span)
+        case d: CstPortDeclaration => CstPortDeclaration(d.name, d.typeExpr, trivia)(d.span)
+        case d: CstInfixDeclaration =>
+            CstInfixDeclaration(d.associativity, d.precedence, d.operator, d.function, trivia)(d.span)

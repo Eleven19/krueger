@@ -44,8 +44,9 @@ object ModuleParser:
         }
 
     val qualifiedName: Parsley[CstQualifiedName] =
-        (offset <~> upperName <~> many(atomic(symbol(".") *> upperName)) <~> offset).map { case (((s, first), rest), e) =>
-            CstQualifiedName(first :: rest)(mkSpan(s, e))
+        (offset <~> upperName <~> many(atomic(symbol(".") *> upperName)) <~> offset).map {
+            case (((s, first), rest), e) =>
+                CstQualifiedName(first :: rest)(mkSpan(s, e))
         }
 
     val qualifiedValueName: Parsley[CstQualifiedName] =

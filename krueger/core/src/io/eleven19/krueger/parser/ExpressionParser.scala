@@ -64,8 +64,9 @@ object ExpressionParser:
         }
 
     private val tupleLit: Parsley[CstExpression] =
-        (offset <~> parens(expression <~> some(symbol(",") *> expression)) <~> offset).map { case ((s, (first, rest)), e) =>
-            CstTupleLiteral(first :: rest)(mkSpan(s, e))
+        (offset <~> parens(expression <~> some(symbol(",") *> expression)) <~> offset).map {
+            case ((s, (first, rest)), e) =>
+                CstTupleLiteral(first :: rest)(mkSpan(s, e))
         }
 
     private val listLit: Parsley[CstExpression] =
@@ -137,8 +138,9 @@ object ExpressionParser:
         }
 
     private val caseBranch: Parsley[CstCaseBranch] =
-        (offset <~> PatternParser.pattern <~> (symbol("->") *> expression) <~> offset).map { case (((s, pat), body), e) =>
-            CstCaseBranch(pat, body)(mkSpan(s, e))
+        (offset <~> PatternParser.pattern <~> (symbol("->") *> expression) <~> offset).map {
+            case (((s, pat), body), e) =>
+                CstCaseBranch(pat, body)(mkSpan(s, e))
         }
 
     private val caseOf: Parsley[CstExpression] =

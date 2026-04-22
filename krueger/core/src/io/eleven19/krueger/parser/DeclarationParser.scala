@@ -45,8 +45,9 @@ object DeclarationParser:
         }
 
     private val recordFieldType: Parsley[CstRecordFieldType] =
-        (offset <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> offset).map { case (((s, n), t), e) =>
-            CstRecordFieldType(n, t)(mkSpan(s, e))
+        (offset <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> offset).map {
+            case (((s, n), t), e) =>
+                CstRecordFieldType(n, t)(mkSpan(s, e))
         }
 
     private val recordType: Parsley[CstTypeExpression] =
@@ -92,8 +93,9 @@ object DeclarationParser:
     // -----------------------------------------------------------------------
 
     val typeAnnotation: Parsley[CstTypeAnnotation] =
-        (offset <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> offset).map { case (((s, n), t), e) =>
-            CstTypeAnnotation(n, t)(mkSpan(s, e))
+        (offset <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> offset).map {
+            case (((s, n), t), e) =>
+                CstTypeAnnotation(n, t)(mkSpan(s, e))
         }
 
     // -----------------------------------------------------------------------
@@ -104,8 +106,9 @@ object DeclarationParser:
         (offset <~> option(atomic(typeAnnotation)) <~>
             ModuleParser.lowerName <~>
             many(PatternParser.atomPattern) <~>
-            (symbol("=") *> ExpressionParser.expression) <~> offset).map { case (((((s, ann), name), params), body), e) =>
-            CstValueDeclaration(ann, name, params.toIndexedSeq, body)(mkSpan(s, e))
+            (symbol("=") *> ExpressionParser.expression) <~> offset).map {
+            case (((((s, ann), name), params), body), e) =>
+                CstValueDeclaration(ann, name, params.toIndexedSeq, body)(mkSpan(s, e))
         }
 
     private val typeAliasDeclaration: Parsley[CstDeclaration] =

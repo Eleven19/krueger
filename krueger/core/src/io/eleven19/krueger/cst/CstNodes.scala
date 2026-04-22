@@ -15,8 +15,10 @@ object CstNode:
 sealed trait CstTriviaItem extends CstNode
 
 case class CstTrivia(items: IndexedSeq[CstTriviaItem] = IndexedSeq.empty) derives CanEqual:
+
     def docComment: Option[CstComment] =
         items.collectFirst { case c: CstComment if c.kind == CommentKind.Doc => c }
+
     def comments: IndexedSeq[CstComment] =
         items.collect { case c: CstComment => c }
     def isEmpty: Boolean  = items.isEmpty
