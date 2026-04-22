@@ -74,6 +74,9 @@ object ElmLexer:
         "<<"
     )
 
+    private lazy val hardOperator: Parsley[String] =
+        elmOperators.toList.sortBy(op => -op.length).map(op => symbol(op).as(op)).reduce(_ | _)
+
     private val desc: LexicalDesc = LexicalDesc.plain.copy(
         nameDesc = NameDesc.plain.copy(
             identifierStart = predicate.Basic(c => c.isLetter || c == '_'),
@@ -111,7 +114,7 @@ object ElmLexer:
     val identifier: Parsley[String] = lexer.lexeme.names.identifier
 
     /** A user-defined operator. */
-    val operator: Parsley[String] = lexer.lexeme.names.userDefinedOperator
+    val operator: Parsley[String] = hardOperator | lexer.lexeme.names.userDefinedOperator
 
     // -----------------------------------------------------------------------
     // Keywords and symbols
@@ -132,6 +135,12 @@ object ElmLexer:
 
     /** A floating-point literal. */
     val floatLiteral: Parsley[Double] = lexer.lexeme.floating.decimalDouble
+
+    /** A string literal. */
+    val stringLiteral: Parsley[String] = lexer.lexeme.string.ascii
+
+    /** A character literal. */
+    val charLiteral: Parsley[Char] = lexer.lexeme.character.ascii
 
     // -----------------------------------------------------------------------
     // Whitespace and structure

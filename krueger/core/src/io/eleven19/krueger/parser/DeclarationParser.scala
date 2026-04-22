@@ -61,8 +61,8 @@ object DeclarationParser:
 
     /** An atomic type (not a function type or application). */
     val atomType: Parsley[CstTypeExpression] =
-        unitType
-            | atomic(tupleType)
+        atomic(tupleType)
+            | unitType
             | recordType
             | typeReference
             | typeVariable

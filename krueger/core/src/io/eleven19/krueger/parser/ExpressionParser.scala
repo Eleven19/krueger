@@ -33,8 +33,18 @@ object ExpressionParser:
             CstFloatLiteral(v)(mkSpan(s, e))
         }
 
+    private val stringLit: Parsley[CstExpression] =
+        (pos <~> stringLiteral <~> pos).map { case ((s, v), e) =>
+            CstStringLiteral(v)(mkSpan(s, e))
+        }
+
+    private val charLit: Parsley[CstExpression] =
+        (pos <~> charLiteral <~> pos).map { case ((s, v), e) =>
+            CstCharLiteral(v)(mkSpan(s, e))
+        }
+
     private val variableRef: Parsley[CstExpression] =
-        (pos <~> ModuleParser.qualifiedName <~> pos).map { case ((s, qn), e) =>
+        (pos <~> ModuleParser.qualifiedValueName <~> pos).map { case ((s, qn), e) =>
             CstVariableRef(qn)(mkSpan(s, e))
         }
 
@@ -88,6 +98,8 @@ object ExpressionParser:
     val atom: Parsley[CstExpression] =
         atomic(floatLit)
             | intLit
+            | stringLit
+            | charLit
             | unitLit
             | atomic(tupleLit)
             | parenthesized
@@ -95,8 +107,8 @@ object ExpressionParser:
             | atomic(recordUpdate)
             | recordLit
             | fieldAccessFn
-            | constructorRef
             | variableRef
+            | constructorRef
 
     // -----------------------------------------------------------------------
     // Compound expressions
@@ -146,10 +158,20 @@ object ExpressionParser:
             CstNegate(expr)(mkSpan(s, e))
         }
 
+    private val fieldSuffix: Parsley[CstName] =
+        symbol(".") *> ModuleParser.lowerName
+
+    private val postfixAtom: Parsley[CstExpression] =
+        (pos <~> atom <~> many(fieldSuffix) <~> pos).map { case (((s, base), fields), e) =>
+            fields.foldLeft(base) { (record, field) =>
+                CstFieldAccess(record, field)(Span.between(record.span, field.span))
+            }
+        }
+
     /** A non-operator expression: atom with optional function application and field access. */
     private val appExpr: Parsley[CstExpression] =
-        val base = ifThenElse | letIn | caseOf | lambda | negate | atom
-        (pos <~> base <~> many(atom) <~> pos).map { case (((s, fn), args), e) =>
+        val base = ifThenElse | letIn | caseOf | lambda | negate | postfixAtom
+        (pos <~> base <~> many(postfixAtom) <~> pos).map { case (((s, fn), args), e) =>
             if args.isEmpty then fn
             else CstFunctionApplication(fn, args)(mkSpan(s, e))
         }

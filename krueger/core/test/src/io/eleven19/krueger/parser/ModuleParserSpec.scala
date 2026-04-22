@@ -63,6 +63,19 @@ object ModuleParserSpec extends ZIOSpecDefault:
                 decl.body == CstIntLiteral(42L)(decl.body.span)
             )
         },
+        test("parses lower-case value references and record field access") {
+            val m = parseOrFail("module M exposing (..)\nfoo : { bar : Int } -> Int\nfoo record = record.bar\n")
+            val decl = m.declarations.head match
+                case v: CstValueDeclaration => v
+                case other                  => throw new AssertionError(s"expected value declaration, got $other")
+            val access = decl.body match
+                case a: CstFieldAccess => a
+                case other             => throw new AssertionError(s"expected field access, got $other")
+            assertTrue(
+                access.field.value == "bar",
+                access.record.asInstanceOf[CstVariableRef].name.parts.map(_.value) == List("record")
+            )
+        },
         test("fails on malformed module header") {
             ModuleParser.module.parse("module !!!") match
                 case Failure(_) => assertCompletes

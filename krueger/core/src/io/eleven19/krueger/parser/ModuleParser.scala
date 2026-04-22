@@ -48,6 +48,12 @@ object ModuleParser:
             CstQualifiedName(first :: rest)(mkSpan(s, e))
         }
 
+    val qualifiedValueName: Parsley[CstQualifiedName] =
+        atomic((pos <~> many(atomic(upperName <* symbol("."))) <~> lowerName <~> pos).map {
+            case (((s, prefix), last), e) =>
+                CstQualifiedName(prefix :+ last)(mkSpan(s, e))
+        })
+
     // -----------------------------------------------------------------------
     // Exposing lists
     // -----------------------------------------------------------------------
