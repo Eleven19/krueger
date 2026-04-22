@@ -5,7 +5,7 @@
 [![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/io.eleven19.krueger/krueger-core_3?server=https%3A%2F%2Fs01.oss.sonatype.org)](https://s01.oss.sonatype.org/content/repositories/snapshots/io/eleven19/krueger/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm source code into both a Concrete Syntax Tree (CST) and Abstract Syntax Tree (AST), with support for JVM and Scala.js targets.
+An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm source code into both a Concrete Syntax Tree (CST) and Abstract Syntax Tree (AST), with support for JVM, Scala.js, and Scala Native targets.
 
 ## Features
 
@@ -13,14 +13,15 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 - Concrete Syntax Tree (CST) with cursor-based traversal and visitor pattern
 - Abstract Syntax Tree (AST) with cursor-based traversal and visitor pattern
 - CST-to-AST lowering
-- Cross-platform support (JVM and Scala.js)
+- Cross-platform support (JVM, Scala.js, and Scala Native)
 
 ## Getting Started
 
 ### Requirements
 
-- JDK 21+ (Temurin recommended)
+- JDK 25+ (Temurin recommended)
 - [Mill](https://mill-build.org/) 1.1.5+
+- For Scala Native: `clang`, `libunwind`, and a boehm-gc library (`libgc` on Linux)
 
 ### Installation
 
@@ -70,21 +71,51 @@ val ast = Krueger.parseModuleToAst(source)
 ## Building from Source
 
 ```sh
-# Compile
+# Compile (JVM)
 mill krueger.core.jvm.compile
 
-# Run tests
+# Run tests (JVM)
 mill krueger.core.jvm.test
 
 # Compile for Scala.js
 mill krueger.core.js.compile
+
+# Compile for Scala Native
+mill krueger.core.native.compile
 ```
+
+## Testing
+
+Krueger has two complementary test layers.
+
+### Unit tests (ZIO Test, cross-platform)
+
+Sources under `krueger/core/test/src/` are shared by all three platforms:
+
+```sh
+mill krueger.core.jvm.test
+mill krueger.core.js.test
+mill krueger.core.native.test
+```
+
+### BDD integration tests (cucumber-scala on JUnit 5, JVM)
+
+Gherkin feature files under `krueger/itest/resources/features/` exercise the
+parser end-to-end through a `TestDriver`. Step definitions live in
+`krueger/itest/src/io/eleven19/krueger/itest/steps/`.
+
+```sh
+mill krueger.itest
+```
+
+To add new scenarios, drop a `.feature` file into `resources/features/` and
+add or extend a step-definition class in `steps/`.
 
 ## Project Structure
 
 ```
 krueger/
-  core/              # Core module (JVM + JS)
+  core/              # Core module (JVM + JS + Native)
     src/             # Source code
       ast/           # AST nodes, cursor, and visitor
       cst/           # CST nodes, cursor, and visitor

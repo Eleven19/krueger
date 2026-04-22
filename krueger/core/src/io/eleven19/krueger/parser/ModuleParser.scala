@@ -44,9 +44,8 @@ object ModuleParser:
         }
 
     val qualifiedName: Parsley[CstQualifiedName] =
-        (pos <~> some(upperIdentifier) <~> pos).map { case ((s, parts), e) =>
-            val sp = mkSpan(s, e)
-            CstQualifiedName(parts.map(p => CstName(p)(sp)))(sp)
+        (pos <~> upperName <~> many(atomic(symbol(".") *> upperName)) <~> pos).map { case (((s, first), rest), e) =>
+            CstQualifiedName(first :: rest)(mkSpan(s, e))
         }
 
     // -----------------------------------------------------------------------
@@ -82,12 +81,12 @@ object ModuleParser:
 
     val exposingList: Parsley[CstExposingList] =
         keyword("exposing") *> (
-            (pos <~> parens(symbol("..")) <~> pos).map { case ((s, _), e) =>
+            atomic((pos <~> parens(symbol("..")) <~> pos).map { case ((s, _), e) =>
                 CstExposingAll()(mkSpan(s, e))
-            }
-            | (pos <~> parens(commaSep1(exposedItem)) <~> pos).map { case ((s, items), e) =>
-                CstExposingExplicit(items)(mkSpan(s, e))
-            }
+            })
+                | (pos <~> parens(commaSep1(exposedItem)) <~> pos).map { case ((s, items), e) =>
+                    CstExposingExplicit(items)(mkSpan(s, e))
+                }
         )
 
     // -----------------------------------------------------------------------

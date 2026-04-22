@@ -23,6 +23,9 @@ jobs:
       - name: Check formatting
         run: ./mill krueger.core.jvm.checkFormat
 
+      - name: Check itest formatting
+        run: ./mill krueger.itest.checkFormat
+
   build:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -32,13 +35,16 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
-      - name: Compile all modules
-        run: ./mill __.compile
+      - name: Compile JVM modules
+        run: ./mill krueger.core.jvm.compile
 
-      - name: Run all tests
-        run: ./mill __.test
+      - name: Run JVM tests
+        run: ./mill krueger.core.jvm.test
+
+      - name: Run BDD integration tests
+        run: ./mill krueger.itest
 
   build-js:
     name: Build & Test (Scala.js)
@@ -50,7 +56,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - uses: actions/setup-node@v4
         with:
@@ -61,3 +67,26 @@ jobs:
 
       - name: Run JS tests
         run: ./mill krueger.core.js.test
+
+  build-native:
+    name: Build & Test (Scala Native)
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Install Scala Native toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libunwind-dev libgc-dev
+
+      - name: Compile Native modules
+        run: ./mill krueger.core.native.compile
+
+      - name: Run Native tests
+        run: ./mill krueger.core.native.test

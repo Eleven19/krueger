@@ -1,0 +1,19 @@
+package build.krueger.itest
+
+import mill.*, scalalib.*
+
+object `package` extends _root_.build.CommonScalaModule
+    with TestModule.Junit5 {
+
+    def moduleDeps = Seq(build.krueger.core.jvm)
+
+    def mvnDeps = Seq(
+        mvn"org.scalameta::munit::1.0.4",
+        mvn"io.cucumber::cucumber-scala::8.39.1",
+        mvn"io.cucumber:cucumber-picocontainer:7.20.1",
+        mvn"io.cucumber:cucumber-junit-platform-engine:7.20.1",
+        mvn"org.junit.platform:junit-platform-suite:1.11.4",
+        mvn"org.junit.platform:junit-platform-suite-engine:1.11.4",
+        mvn"org.junit.jupiter:junit-jupiter-engine:5.11.4"
+    )
+}

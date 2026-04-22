@@ -80,13 +80,13 @@ object CstLowering:
         case Associativity.Non   => ast.Associativity.Non
 
     def lowerTypeExpression(cst: CstTypeExpression): ast.TypeExpression = cst match
-        case n: CstTypeReference   => ast.TypeReference(lowerQualifiedName(n.name))(n.span)
-        case n: CstTypeVariable    => ast.TypeVariable(n.name.value)(n.span)
+        case n: CstTypeReference => ast.TypeReference(lowerQualifiedName(n.name))(n.span)
+        case n: CstTypeVariable  => ast.TypeVariable(n.name.value)(n.span)
         case n: CstTypeApplication =>
             ast.TypeApplication(lowerTypeExpression(n.constructor), n.arguments.map(lowerTypeExpression))(n.span)
-        case n: CstFunctionType    => ast.FunctionType(lowerTypeExpression(n.from), lowerTypeExpression(n.to))(n.span)
-        case n: CstTupleType       => ast.TupleType(n.elements.map(lowerTypeExpression))(n.span)
-        case n: CstUnitType        => ast.UnitType()(n.span)
+        case n: CstFunctionType => ast.FunctionType(lowerTypeExpression(n.from), lowerTypeExpression(n.to))(n.span)
+        case n: CstTupleType    => ast.TupleType(n.elements.map(lowerTypeExpression))(n.span)
+        case n: CstUnitType     => ast.UnitType()(n.span)
         case n: CstRecordType =>
             ast.RecordType(
                 fields = n.fields.map(f => ast.RecordFieldType(f.name.value, lowerTypeExpression(f.typeExpr))(f.span)),
@@ -94,18 +94,18 @@ object CstLowering:
             )(n.span)
 
     def lowerExpression(cst: CstExpression): ast.Expression = cst match
-        case n: CstIntLiteral          => ast.IntLiteral(n.value)(n.span)
-        case n: CstFloatLiteral        => ast.FloatLiteral(n.value)(n.span)
-        case n: CstStringLiteral       => ast.StringLiteral(n.value)(n.span)
-        case n: CstCharLiteral         => ast.CharLiteral(n.value)(n.span)
-        case n: CstVariableRef         => ast.VariableRef(lowerQualifiedName(n.name))(n.span)
-        case n: CstConstructorRef      => ast.ConstructorRef(lowerQualifiedName(n.name))(n.span)
-        case n: CstOperatorRef         => ast.OperatorRef(n.name.value)(n.span)
+        case n: CstIntLiteral     => ast.IntLiteral(n.value)(n.span)
+        case n: CstFloatLiteral   => ast.FloatLiteral(n.value)(n.span)
+        case n: CstStringLiteral  => ast.StringLiteral(n.value)(n.span)
+        case n: CstCharLiteral    => ast.CharLiteral(n.value)(n.span)
+        case n: CstVariableRef    => ast.VariableRef(lowerQualifiedName(n.name))(n.span)
+        case n: CstConstructorRef => ast.ConstructorRef(lowerQualifiedName(n.name))(n.span)
+        case n: CstOperatorRef    => ast.OperatorRef(n.name.value)(n.span)
         case n: CstFunctionApplication =>
             ast.FunctionApplication(lowerExpression(n.function), n.arguments.map(lowerExpression))(n.span)
         case n: CstBinaryOp =>
             ast.BinaryOp(lowerExpression(n.left), n.operator.value, lowerExpression(n.right))(n.span)
-        case n: CstNegate     => ast.Negate(lowerExpression(n.expr))(n.span)
+        case n: CstNegate => ast.Negate(lowerExpression(n.expr))(n.span)
         case n: CstIfThenElse =>
             ast.IfThenElse(
                 lowerExpression(n.condition),
@@ -118,10 +118,10 @@ object CstLowering:
             ast.CaseOf(lowerExpression(n.expr), n.branches.map(lowerCaseBranch))(n.span)
         case n: CstLambda =>
             ast.Lambda(n.parameters.map(lowerPattern), lowerExpression(n.body))(n.span)
-        case n: CstTupleLiteral   => ast.TupleLiteral(n.elements.map(lowerExpression))(n.span)
-        case n: CstUnitLiteral    => ast.UnitLiteral()(n.span)
-        case n: CstListLiteral    => ast.ListLiteral(n.elements.map(lowerExpression))(n.span)
-        case n: CstRecordLiteral  =>
+        case n: CstTupleLiteral => ast.TupleLiteral(n.elements.map(lowerExpression))(n.span)
+        case n: CstUnitLiteral  => ast.UnitLiteral()(n.span)
+        case n: CstListLiteral  => ast.ListLiteral(n.elements.map(lowerExpression))(n.span)
+        case n: CstRecordLiteral =>
             ast.RecordLiteral(n.fields.map(f => ast.RecordField(f.name.value, lowerExpression(f.value))(f.span)))(
                 n.span
             )
@@ -150,18 +150,18 @@ object CstLowering:
         ast.CaseBranch(lowerPattern(cst.pattern), lowerExpression(cst.body))(cst.span)
 
     def lowerPattern(cst: CstPattern): ast.Pattern = cst match
-        case n: CstAnythingPattern    => ast.AnythingPattern()(n.span)
-        case n: CstIntPattern         => ast.IntPattern(n.value)(n.span)
-        case n: CstFloatPattern       => ast.FloatPattern(n.value)(n.span)
-        case n: CstStringPattern      => ast.StringPattern(n.value)(n.span)
-        case n: CstCharPattern        => ast.CharPattern(n.value)(n.span)
-        case n: CstVariablePattern    => ast.VariablePattern(n.name.value)(n.span)
-        case n: CstUnitPattern        => ast.UnitPattern()(n.span)
+        case n: CstAnythingPattern => ast.AnythingPattern()(n.span)
+        case n: CstIntPattern      => ast.IntPattern(n.value)(n.span)
+        case n: CstFloatPattern    => ast.FloatPattern(n.value)(n.span)
+        case n: CstStringPattern   => ast.StringPattern(n.value)(n.span)
+        case n: CstCharPattern     => ast.CharPattern(n.value)(n.span)
+        case n: CstVariablePattern => ast.VariablePattern(n.name.value)(n.span)
+        case n: CstUnitPattern     => ast.UnitPattern()(n.span)
         case n: CstConstructorPattern =>
             ast.ConstructorPattern(lowerQualifiedName(n.name), n.arguments.map(lowerPattern))(n.span)
-        case n: CstTuplePattern           => ast.TuplePattern(n.elements.map(lowerPattern))(n.span)
-        case n: CstListPattern            => ast.ListPattern(n.elements.map(lowerPattern))(n.span)
-        case n: CstConsPattern            => ast.ConsPattern(lowerPattern(n.head), lowerPattern(n.tail))(n.span)
-        case n: CstRecordPattern          => ast.RecordPattern(n.fields.map(_.value))(n.span)
-        case n: CstAsPattern              => ast.AsPattern(lowerPattern(n.pattern), n.alias.value)(n.span)
-        case n: CstParenthesizedPattern   => lowerPattern(n.pattern)
+        case n: CstTuplePattern         => ast.TuplePattern(n.elements.map(lowerPattern))(n.span)
+        case n: CstListPattern          => ast.ListPattern(n.elements.map(lowerPattern))(n.span)
+        case n: CstConsPattern          => ast.ConsPattern(lowerPattern(n.head), lowerPattern(n.tail))(n.span)
+        case n: CstRecordPattern        => ast.RecordPattern(n.fields.map(_.value))(n.span)
+        case n: CstAsPattern            => ast.AsPattern(lowerPattern(n.pattern), n.alias.value)(n.span)
+        case n: CstParenthesizedPattern => lowerPattern(n.pattern)

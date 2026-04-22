@@ -22,21 +22,56 @@ object ElmLexer:
     // -----------------------------------------------------------------------
 
     private val elmKeywords: Set[String] = Set(
-        "module", "exposing", "import", "as", "port", "effect",
-        "type", "alias",
-        "let", "in",
-        "if", "then", "else",
-        "case", "of",
-        "infix", "left", "right", "non",
+        "module",
+        "exposing",
+        "import",
+        "as",
+        "port",
+        "effect",
+        "type",
+        "alias",
+        "let",
+        "in",
+        "if",
+        "then",
+        "else",
+        "case",
+        "of",
+        "infix",
+        "left",
+        "right",
+        "non",
         "where"
     )
 
     private val elmOperators: Set[String] = Set(
-        "->", "<-", "::", "=", "|", "\\", ".", "..",
-        "+", "-", "*", "/", "//", "^",
-        "==", "/=", "<", ">", "<=", ">=",
-        "&&", "||",
-        "++", "<|", "|>", ">>", "<<"
+        "->",
+        "<-",
+        "::",
+        "=",
+        "|",
+        "\\",
+        ".",
+        "..",
+        "+",
+        "-",
+        "*",
+        "/",
+        "//",
+        "^",
+        "==",
+        "/=",
+        "<",
+        ">",
+        "<=",
+        ">=",
+        "&&",
+        "||",
+        "++",
+        "<|",
+        "|>",
+        ">>",
+        "<<"
     )
 
     private val desc: LexicalDesc = LexicalDesc.plain.copy(
@@ -51,10 +86,10 @@ object ElmLexer:
             hardOperators = elmOperators
         ),
         spaceDesc = SpaceDesc.plain.copy(
-            lineCommentStart = "--",
-            multiLineCommentStart = "{-",
-            multiLineCommentEnd = "-}",
-            multiLineNestedComments = true
+            commentLine = "--",
+            commentStart = "{-",
+            commentEnd = "-}",
+            nestedComments = true
         )
     )
 
@@ -66,11 +101,11 @@ object ElmLexer:
 
     /** A lower-case identifier: starts with a lowercase letter or underscore. */
     val lowerIdentifier: Parsley[String] =
-        lexer.lexeme.names.identifier.filter(s => s.head.isLower || s.head == '_')
+        atomic(lexer.lexeme.names.identifier.filter(s => s.head.isLower || s.head == '_'))
 
     /** An upper-case identifier: starts with an uppercase letter. */
     val upperIdentifier: Parsley[String] =
-        lexer.lexeme.names.identifier.filter(_.head.isUpper)
+        atomic(lexer.lexeme.names.identifier.filter(_.head.isUpper))
 
     /** Any identifier (lower or upper). */
     val identifier: Parsley[String] = lexer.lexeme.names.identifier
@@ -93,10 +128,10 @@ object ElmLexer:
     // -----------------------------------------------------------------------
 
     /** An integer literal. */
-    val intLiteral: Parsley[Long] = lexer.lexeme.numeric.integer.decimal64
+    val intLiteral: Parsley[Long] = lexer.lexeme.integer.decimal64
 
     /** A floating-point literal. */
-    val floatLiteral: Parsley[Double] = lexer.lexeme.numeric.floating.doubleDecimal
+    val floatLiteral: Parsley[Double] = lexer.lexeme.floating.decimalDouble
 
     // -----------------------------------------------------------------------
     // Whitespace and structure
@@ -118,18 +153,18 @@ object ElmLexer:
     val newline: Parsley[Char] = char('\n')
 
     /** Parse content wrapped in parentheses. */
-    def parens[A](p: Parsley[A]): Parsley[A] = lexer.lexeme.enclosing.parens(p)
+    def parens[A](p: Parsley[A]): Parsley[A] = lexer.lexeme.parens(p)
 
     /** Parse content wrapped in square brackets. */
-    def brackets[A](p: Parsley[A]): Parsley[A] = lexer.lexeme.enclosing.brackets(p)
+    def brackets[A](p: Parsley[A]): Parsley[A] = lexer.lexeme.brackets(p)
 
     /** Parse content wrapped in curly braces. */
-    def braces[A](p: Parsley[A]): Parsley[A] = lexer.lexeme.enclosing.braces(p)
+    def braces[A](p: Parsley[A]): Parsley[A] = lexer.lexeme.braces(p)
 
     /** Parse a comma-separated list. */
     def commaSep[A](p: Parsley[A]): Parsley[List[A]] =
-        lexer.lexeme.separators.commaSep(p)
+        lexer.lexeme.commaSep(p)
 
     /** Parse a comma-separated list with at least one element. */
     def commaSep1[A](p: Parsley[A]): Parsley[List[A]] =
-        lexer.lexeme.separators.commaSep1(p)
+        lexer.lexeme.commaSep1(p)
