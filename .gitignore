@@ -9,6 +9,9 @@ out/
 .vscode/
 .cursor/
 
+# Claude Code — local overrides (user-specific)
+.claude/settings.local.json
+
 # Oh My Claude Code
 .omc/
 
