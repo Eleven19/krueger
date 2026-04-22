@@ -10,9 +10,10 @@ object CstVisitorSpec extends ZIOSpecDefault:
     private val sp = Span.zero
 
     private class TagVisitor extends CstVisitor[String]:
-        def visitNode(node: CstNode): String                          = "Node"
-        override def visitName(node: CstName): String                 = s"Name(${node.value})"
-        override def visitIntLiteral(node: CstIntLiteral): String     = s"Int(${node.value})"
+        def visitNode(node: CstNode): String                      = "Node"
+        override def visitName(node: CstName): String             = s"Name(${node.value})"
+        override def visitIntLiteral(node: CstIntLiteral): String = s"Int(${node.value})"
+
         override def visitVariablePattern(node: CstVariablePattern): String =
             s"VarPat(${node.name.value})"
 
@@ -60,7 +61,7 @@ object CstVisitorSpec extends ZIOSpecDefault:
                 assertTrue(CstVisitor.count(sampleModule) == 5)
             },
             test("foldLeft visits pre-order") {
-                val q    = CstQualifiedName(List(CstName("x")(sp)))(sp)
+                val q = CstQualifiedName(List(CstName("x")(sp)))(sp)
                 val tags = CstVisitor
                     .foldLeft(q, List.empty[String])((acc, n) =>
                         (n match
@@ -80,7 +81,7 @@ object CstVisitorSpec extends ZIOSpecDefault:
         ),
         suite("extension methods")(
             test("node.visit delegates to CstVisitor.visit") {
-                val v            = new TagVisitor
+                val v             = new TagVisitor
                 val node: CstNode = CstIntLiteral(7L)(sp)
                 assertTrue(node.visit(v) == "Int(7)")
             },
