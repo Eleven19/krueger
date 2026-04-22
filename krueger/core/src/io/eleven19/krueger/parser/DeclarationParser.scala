@@ -48,7 +48,7 @@ object DeclarationParser:
 
     private val recordType: Parsley[CstTypeExpression] =
         (pos <~> braces(
-            option(ModuleParser.lowerName <* symbol("|")) <~> commaSep1(recordFieldType)
+            option(atomic(ModuleParser.lowerName <* symbol("|"))) <~> commaSep1(recordFieldType)
         ) <~> pos).map { case ((s, (ext, fields)), e) =>
             CstRecordType(fields, ext)(mkSpan(s, e))
         }
@@ -146,7 +146,7 @@ object DeclarationParser:
 
     /** A top-level declaration. */
     val declaration: Parsley[CstDeclaration] =
-        typeAliasDeclaration
+        atomic(typeAliasDeclaration)
             | customTypeDeclaration
             | portDeclaration
             | infixDeclaration

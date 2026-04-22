@@ -40,9 +40,9 @@ object PatternParser:
         }
 
     private val unitPat: Parsley[CstPattern] =
-        (pos <~> parens(Parsley.pure(())) <~> pos).map { case ((s, _), e) =>
+        atomic((pos <~> parens(Parsley.pure(())) <~> pos).map { case ((s, _), e) =>
             CstUnitPattern()(mkSpan(s, e))
-        }
+        })
 
     private val tuplePat: Parsley[CstPattern] =
         (pos <~> parens(pattern <~> some(symbol(",") *> pattern)) <~> pos).map { case ((s, (first, rest)), e) =>

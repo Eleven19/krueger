@@ -44,9 +44,9 @@ object ExpressionParser:
         }
 
     private val unitLit: Parsley[CstExpression] =
-        (pos <~> parens(Parsley.pure(())) <~> pos).map { case ((s, _), e) =>
+        atomic((pos <~> parens(Parsley.pure(())) <~> pos).map { case ((s, _), e) =>
             CstUnitLiteral()(mkSpan(s, e))
-        }
+        })
 
     private val parenthesized: Parsley[CstExpression] =
         (pos <~> parens(expression) <~> pos).map { case ((s, expr), e) =>

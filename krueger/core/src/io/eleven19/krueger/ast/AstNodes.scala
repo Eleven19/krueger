@@ -36,16 +36,14 @@ sealed trait ExposingList extends AstNode
 
 case class ExposingAll()(val span: Span) extends ExposingList derives CanEqual
 
-case class ExposingExplicit(items: List[ExposedItem])(val span: Span)
-    extends ExposingList derives CanEqual
+case class ExposingExplicit(items: List[ExposedItem])(val span: Span) extends ExposingList derives CanEqual
 
 sealed trait ExposedItem extends AstNode
 
 case class ExposedValue(name: String)(val span: Span)    extends ExposedItem derives CanEqual
 case class ExposedOperator(name: String)(val span: Span) extends ExposedItem derives CanEqual
 
-case class ExposedType(name: String, exposeConstructors: Boolean)(val span: Span)
-    extends ExposedItem derives CanEqual
+case class ExposedType(name: String, exposeConstructors: Boolean)(val span: Span) extends ExposedItem derives CanEqual
 
 // ── Declarations ─────────────────────────────────────────────────────────────
 
@@ -100,11 +98,9 @@ enum Associativity derives CanEqual:
 
 sealed trait TypeExpression extends AstNode
 
-case class TypeReference(name: QualifiedName)(val span: Span)
-    extends TypeExpression derives CanEqual
+case class TypeReference(name: QualifiedName)(val span: Span) extends TypeExpression derives CanEqual
 
-case class TypeVariable(name: String)(val span: Span)
-    extends TypeExpression derives CanEqual
+case class TypeVariable(name: String)(val span: Span) extends TypeExpression derives CanEqual
 
 case class TypeApplication(
     constructor: TypeExpression,
@@ -112,11 +108,10 @@ case class TypeApplication(
 )(val span: Span)
     extends TypeExpression derives CanEqual
 
-case class FunctionType(from: TypeExpression, to: TypeExpression)(val span: Span)
-    extends TypeExpression derives CanEqual
+case class FunctionType(from: TypeExpression, to: TypeExpression)(val span: Span) extends TypeExpression
+    derives CanEqual
 
-case class TupleType(elements: List[TypeExpression])(val span: Span)
-    extends TypeExpression derives CanEqual
+case class TupleType(elements: List[TypeExpression])(val span: Span) extends TypeExpression derives CanEqual
 
 case class UnitType()(val span: Span) extends TypeExpression derives CanEqual
 
@@ -126,26 +121,22 @@ case class RecordType(
 )(val span: Span)
     extends TypeExpression derives CanEqual
 
-case class RecordFieldType(name: String, typeExpr: TypeExpression)(val span: Span)
-    extends AstNode derives CanEqual
+case class RecordFieldType(name: String, typeExpr: TypeExpression)(val span: Span) extends AstNode derives CanEqual
 
 // ── Expressions ──────────────────────────────────────────────────────────────
 
 sealed trait Expression extends AstNode
 
-case class IntLiteral(value: Long)(val span: Span)       extends Expression derives CanEqual
-case class FloatLiteral(value: Double)(val span: Span)    extends Expression derives CanEqual
-case class StringLiteral(value: String)(val span: Span)   extends Expression derives CanEqual
-case class CharLiteral(value: Char)(val span: Span)       extends Expression derives CanEqual
+case class IntLiteral(value: Long)(val span: Span)      extends Expression derives CanEqual
+case class FloatLiteral(value: Double)(val span: Span)  extends Expression derives CanEqual
+case class StringLiteral(value: String)(val span: Span) extends Expression derives CanEqual
+case class CharLiteral(value: Char)(val span: Span)     extends Expression derives CanEqual
 
-case class VariableRef(name: QualifiedName)(val span: Span)
-    extends Expression derives CanEqual
+case class VariableRef(name: QualifiedName)(val span: Span) extends Expression derives CanEqual
 
-case class ConstructorRef(name: QualifiedName)(val span: Span)
-    extends Expression derives CanEqual
+case class ConstructorRef(name: QualifiedName)(val span: Span) extends Expression derives CanEqual
 
-case class OperatorRef(name: String)(val span: Span)
-    extends Expression derives CanEqual
+case class OperatorRef(name: String)(val span: Span) extends Expression derives CanEqual
 
 case class FunctionApplication(
     function: Expression,
@@ -160,8 +151,7 @@ case class BinaryOp(
 )(val span: Span)
     extends Expression derives CanEqual
 
-case class Negate(expr: Expression)(val span: Span)
-    extends Expression derives CanEqual
+case class Negate(expr: Expression)(val span: Span) extends Expression derives CanEqual
 
 case class IfThenElse(
     condition: Expression,
@@ -202,19 +192,15 @@ case class Lambda(
 )(val span: Span)
     extends Expression derives CanEqual
 
-case class TupleLiteral(elements: List[Expression])(val span: Span)
-    extends Expression derives CanEqual
+case class TupleLiteral(elements: List[Expression])(val span: Span) extends Expression derives CanEqual
 
 case class UnitLiteral()(val span: Span) extends Expression derives CanEqual
 
-case class ListLiteral(elements: List[Expression])(val span: Span)
-    extends Expression derives CanEqual
+case class ListLiteral(elements: List[Expression])(val span: Span) extends Expression derives CanEqual
 
-case class RecordLiteral(fields: List[RecordField])(val span: Span)
-    extends Expression derives CanEqual
+case class RecordLiteral(fields: List[RecordField])(val span: Span) extends Expression derives CanEqual
 
-case class RecordField(name: String, value: Expression)(val span: Span)
-    extends AstNode derives CanEqual
+case class RecordField(name: String, value: Expression)(val span: Span) extends AstNode derives CanEqual
 
 case class RecordUpdate(
     record: String,
@@ -222,14 +208,11 @@ case class RecordUpdate(
 )(val span: Span)
     extends Expression derives CanEqual
 
-case class FieldAccess(record: Expression, field: String)(val span: Span)
-    extends Expression derives CanEqual
+case class FieldAccess(record: Expression, field: String)(val span: Span) extends Expression derives CanEqual
 
-case class FieldAccessFunction(field: String)(val span: Span)
-    extends Expression derives CanEqual
+case class FieldAccessFunction(field: String)(val span: Span) extends Expression derives CanEqual
 
-case class Parenthesized(expr: Expression)(val span: Span)
-    extends Expression derives CanEqual
+case class Parenthesized(expr: Expression)(val span: Span) extends Expression derives CanEqual
 
 case class Glsl(code: String)(val span: Span) extends Expression derives CanEqual
 
@@ -237,13 +220,13 @@ case class Glsl(code: String)(val span: Span) extends Expression derives CanEqua
 
 sealed trait Pattern extends AstNode
 
-case class AnythingPattern()(val span: Span)                extends Pattern derives CanEqual
-case class IntPattern(value: Long)(val span: Span)          extends Pattern derives CanEqual
-case class FloatPattern(value: Double)(val span: Span)      extends Pattern derives CanEqual
-case class StringPattern(value: String)(val span: Span)     extends Pattern derives CanEqual
-case class CharPattern(value: Char)(val span: Span)         extends Pattern derives CanEqual
-case class VariablePattern(name: String)(val span: Span)    extends Pattern derives CanEqual
-case class UnitPattern()(val span: Span)                    extends Pattern derives CanEqual
+case class AnythingPattern()(val span: Span)             extends Pattern derives CanEqual
+case class IntPattern(value: Long)(val span: Span)       extends Pattern derives CanEqual
+case class FloatPattern(value: Double)(val span: Span)   extends Pattern derives CanEqual
+case class StringPattern(value: String)(val span: Span)  extends Pattern derives CanEqual
+case class CharPattern(value: Char)(val span: Span)      extends Pattern derives CanEqual
+case class VariablePattern(name: String)(val span: Span) extends Pattern derives CanEqual
+case class UnitPattern()(val span: Span)                 extends Pattern derives CanEqual
 
 case class ConstructorPattern(
     name: QualifiedName,
@@ -251,17 +234,12 @@ case class ConstructorPattern(
 )(val span: Span)
     extends Pattern derives CanEqual
 
-case class TuplePattern(elements: List[Pattern])(val span: Span)
-    extends Pattern derives CanEqual
+case class TuplePattern(elements: List[Pattern])(val span: Span) extends Pattern derives CanEqual
 
-case class ListPattern(elements: List[Pattern])(val span: Span)
-    extends Pattern derives CanEqual
+case class ListPattern(elements: List[Pattern])(val span: Span) extends Pattern derives CanEqual
 
-case class ConsPattern(head: Pattern, tail: Pattern)(val span: Span)
-    extends Pattern derives CanEqual
+case class ConsPattern(head: Pattern, tail: Pattern)(val span: Span) extends Pattern derives CanEqual
 
-case class RecordPattern(fields: List[String])(val span: Span)
-    extends Pattern derives CanEqual
+case class RecordPattern(fields: List[String])(val span: Span) extends Pattern derives CanEqual
 
-case class AsPattern(pattern: Pattern, alias: String)(val span: Span)
-    extends Pattern derives CanEqual
+case class AsPattern(pattern: Pattern, alias: String)(val span: Span) extends Pattern derives CanEqual

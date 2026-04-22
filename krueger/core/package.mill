@@ -1,8 +1,9 @@
 package build.krueger.core
 
-import mill.*, scalalib.*, scalajslib.*
+import mill.*, scalalib.*, scalajslib.*, scalanativelib.*
 
 trait CoreModule extends _root_.build.CommonScalaModule
+    with PlatformScalaModule
     with _root_.build.PublishSupport {
 
     override def artifactName = "krueger-core"
@@ -12,26 +13,27 @@ trait CoreModule extends _root_.build.CommonScalaModule
     )
 }
 
-object jvm extends CoreModule {
-    object test extends ScalaTests
-        with _root_.build.CommonScalaTestModule
-        with TestModule.ZioTest {
+trait CoreTestModule extends _root_.build.CommonScalaTestModule
+    with TestModule.ZioTest {
 
-        def mvnDeps = Seq(
-            mvn"dev.zio::zio-test::2.1.24",
-            mvn"dev.zio::zio-test-sbt::2.1.24"
-        )
-    }
+    override def sources = Task.Sources(
+        moduleDir / os.up / "test" / "src"
+    )
+
+    def mvnDeps = Seq(
+        mvn"dev.zio::zio-test::2.1.24",
+        mvn"dev.zio::zio-test-sbt::2.1.24"
+    )
+}
+
+object jvm extends CoreModule {
+    object test extends ScalaTests with CoreTestModule
 }
 
 object js extends CoreModule with _root_.build.CommonScalaJSModule {
-    object test extends ScalaJSTests
-        with _root_.build.CommonScalaTestModule
-        with TestModule.ZioTest {
+    object test extends ScalaJSTests with CoreTestModule
+}
 
-        def mvnDeps = Seq(
-            mvn"dev.zio::zio-test::2.1.24",
-            mvn"dev.zio::zio-test-sbt::2.1.24"
-        )
-    }
+object native extends CoreModule with _root_.build.CommonScalaNativeModule {
+    object test extends ScalaNativeTests with CoreTestModule
 }

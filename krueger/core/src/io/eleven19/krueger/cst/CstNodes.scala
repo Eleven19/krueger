@@ -52,7 +52,7 @@ case class CstExposingExplicit(
 
 sealed trait CstExposedItem extends CstNode
 
-case class CstExposedValue(name: CstName)(val span: Span)   extends CstExposedItem derives CanEqual
+case class CstExposedValue(name: CstName)(val span: Span)    extends CstExposedItem derives CanEqual
 case class CstExposedOperator(name: CstName)(val span: Span) extends CstExposedItem derives CanEqual
 
 case class CstExposedType(
@@ -63,8 +63,8 @@ case class CstExposedType(
 
 sealed trait CstExposedConstructors extends CstNode
 
-case class CstExposedConstructorsAll()(val span: Span)   extends CstExposedConstructors derives CanEqual
-case class CstExposedConstructorsNone()(val span: Span)  extends CstExposedConstructors derives CanEqual
+case class CstExposedConstructorsAll()(val span: Span)  extends CstExposedConstructors derives CanEqual
+case class CstExposedConstructorsNone()(val span: Span) extends CstExposedConstructors derives CanEqual
 
 // ── Imports ──────────────────────────────────────────────────────────────────
 
@@ -134,11 +134,9 @@ enum Associativity derives CanEqual:
 
 sealed trait CstTypeExpression extends CstNode
 
-case class CstTypeReference(name: CstQualifiedName)(val span: Span)
-    extends CstTypeExpression derives CanEqual
+case class CstTypeReference(name: CstQualifiedName)(val span: Span) extends CstTypeExpression derives CanEqual
 
-case class CstTypeVariable(name: CstName)(val span: Span)
-    extends CstTypeExpression derives CanEqual
+case class CstTypeVariable(name: CstName)(val span: Span) extends CstTypeExpression derives CanEqual
 
 case class CstTypeApplication(
     constructor: CstTypeExpression,
@@ -175,19 +173,16 @@ case class CstRecordFieldType(
 
 sealed trait CstExpression extends CstNode
 
-case class CstIntLiteral(value: Long)(val span: Span)       extends CstExpression derives CanEqual
-case class CstFloatLiteral(value: Double)(val span: Span)    extends CstExpression derives CanEqual
-case class CstStringLiteral(value: String)(val span: Span)   extends CstExpression derives CanEqual
-case class CstCharLiteral(value: Char)(val span: Span)       extends CstExpression derives CanEqual
+case class CstIntLiteral(value: Long)(val span: Span)      extends CstExpression derives CanEqual
+case class CstFloatLiteral(value: Double)(val span: Span)  extends CstExpression derives CanEqual
+case class CstStringLiteral(value: String)(val span: Span) extends CstExpression derives CanEqual
+case class CstCharLiteral(value: Char)(val span: Span)     extends CstExpression derives CanEqual
 
-case class CstVariableRef(name: CstQualifiedName)(val span: Span)
-    extends CstExpression derives CanEqual
+case class CstVariableRef(name: CstQualifiedName)(val span: Span) extends CstExpression derives CanEqual
 
-case class CstConstructorRef(name: CstQualifiedName)(val span: Span)
-    extends CstExpression derives CanEqual
+case class CstConstructorRef(name: CstQualifiedName)(val span: Span) extends CstExpression derives CanEqual
 
-case class CstOperatorRef(name: CstName)(val span: Span)
-    extends CstExpression derives CanEqual
+case class CstOperatorRef(name: CstName)(val span: Span) extends CstExpression derives CanEqual
 
 case class CstFunctionApplication(
     function: CstExpression,
@@ -202,8 +197,7 @@ case class CstBinaryOp(
 )(val span: Span)
     extends CstExpression derives CanEqual
 
-case class CstNegate(expr: CstExpression)(val span: Span)
-    extends CstExpression derives CanEqual
+case class CstNegate(expr: CstExpression)(val span: Span) extends CstExpression derives CanEqual
 
 case class CstIfThenElse(
     condition: CstExpression,
@@ -295,13 +289,13 @@ case class CstGlsl(code: String)(val span: Span) extends CstExpression derives C
 
 sealed trait CstPattern extends CstNode
 
-case class CstAnythingPattern()(val span: Span)                    extends CstPattern derives CanEqual
-case class CstIntPattern(value: Long)(val span: Span)              extends CstPattern derives CanEqual
-case class CstFloatPattern(value: Double)(val span: Span)          extends CstPattern derives CanEqual
-case class CstStringPattern(value: String)(val span: Span)         extends CstPattern derives CanEqual
-case class CstCharPattern(value: Char)(val span: Span)             extends CstPattern derives CanEqual
-case class CstVariablePattern(name: CstName)(val span: Span)       extends CstPattern derives CanEqual
-case class CstUnitPattern()(val span: Span)                        extends CstPattern derives CanEqual
+case class CstAnythingPattern()(val span: Span)              extends CstPattern derives CanEqual
+case class CstIntPattern(value: Long)(val span: Span)        extends CstPattern derives CanEqual
+case class CstFloatPattern(value: Double)(val span: Span)    extends CstPattern derives CanEqual
+case class CstStringPattern(value: String)(val span: Span)   extends CstPattern derives CanEqual
+case class CstCharPattern(value: Char)(val span: Span)       extends CstPattern derives CanEqual
+case class CstVariablePattern(name: CstName)(val span: Span) extends CstPattern derives CanEqual
+case class CstUnitPattern()(val span: Span)                  extends CstPattern derives CanEqual
 
 case class CstConstructorPattern(
     name: CstQualifiedName,
