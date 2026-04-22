@@ -11,6 +11,10 @@ class ModuleParserSteps(driver: TestDriver) extends ScalaDsl with EN:
         driver.setSource(src)
     }
 
+    Given("the Elm fixture {string}") { (resourcePath: String) =>
+        driver.setSourceFromResource(resourcePath)
+    }
+
     When("the source is parsed") { () =>
         driver.parseCst()
     }

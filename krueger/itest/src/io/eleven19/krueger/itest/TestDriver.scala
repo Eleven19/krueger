@@ -2,6 +2,8 @@ package io.eleven19.krueger.itest
 
 import parsley.{Failure, Result, Success}
 
+import scala.io.Source
+
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.ast.Module
 import io.eleven19.krueger.cst.CstModule
@@ -16,6 +18,14 @@ final class TestDriver:
         source = raw
         cstResult = None
         astResult = None
+
+    def setSourceFromResource(resourcePath: String): Unit =
+        val stream = Option(getClass.getClassLoader.getResourceAsStream(resourcePath)) match
+            case Some(stream) => stream
+            case None         => throw new AssertionError(s"fixture resource not found: $resourcePath")
+
+        try setSource(Source.fromInputStream(stream, "UTF-8").mkString)
+        finally stream.close()
 
     def parseCst(): Unit = cstResult = Some(Krueger.parseCst(source))
     def parseAst(): Unit = astResult = Some(Krueger.parseAst(source))
