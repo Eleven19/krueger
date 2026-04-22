@@ -25,8 +25,8 @@ object CstVisitorSpec extends ZIOSpecDefault:
                 CstQualifiedName(List(CstName("M")(sp)))(sp),
                 CstExposingAll()(sp)
             )(sp),
-            Vector.empty,
-            Vector.empty
+            IndexedSeq.empty,
+            IndexedSeq.empty
         )(sp)
 
     def spec = suite("CstVisitor")(

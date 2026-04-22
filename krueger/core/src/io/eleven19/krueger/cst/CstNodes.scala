@@ -14,10 +14,10 @@ object CstNode:
 
 sealed trait CstTriviaItem extends CstNode
 
-case class CstTrivia(items: Vector[CstTriviaItem] = Vector.empty) derives CanEqual:
+case class CstTrivia(items: IndexedSeq[CstTriviaItem] = IndexedSeq.empty) derives CanEqual:
     def docComment: Option[CstComment] =
         items.collectFirst { case c: CstComment if c.kind == CommentKind.Doc => c }
-    def comments: Vector[CstComment] =
+    def comments: IndexedSeq[CstComment] =
         items.collect { case c: CstComment => c }
     def isEmpty: Boolean  = items.isEmpty
     def nonEmpty: Boolean = items.nonEmpty
@@ -29,8 +29,8 @@ object CstTrivia:
 
 case class CstModule(
     moduleDecl: CstModuleDeclaration,
-    imports: Vector[CstImport],
-    declarations: Vector[CstDeclaration],
+    imports: IndexedSeq[CstImport],
+    declarations: IndexedSeq[CstDeclaration],
     trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstNode derives CanEqual
@@ -110,7 +110,7 @@ sealed trait CstDeclaration extends CstNode:
 case class CstValueDeclaration(
     annotation: Option[CstTypeAnnotation],
     name: CstName,
-    patterns: Vector[CstPattern],
+    patterns: IndexedSeq[CstPattern],
     body: CstExpression,
     trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
@@ -124,7 +124,7 @@ case class CstTypeAnnotation(
 
 case class CstTypeAliasDeclaration(
     name: CstName,
-    typeVariables: Vector[CstName],
+    typeVariables: IndexedSeq[CstName],
     body: CstTypeExpression,
     trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
@@ -132,15 +132,15 @@ case class CstTypeAliasDeclaration(
 
 case class CstCustomTypeDeclaration(
     name: CstName,
-    typeVariables: Vector[CstName],
-    constructors: Vector[CstConstructor],
+    typeVariables: IndexedSeq[CstName],
+    constructors: IndexedSeq[CstConstructor],
     trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
 case class CstConstructor(
     name: CstName,
-    parameters: Vector[CstTypeExpression]
+    parameters: IndexedSeq[CstTypeExpression]
 )(val span: Span)
     extends CstNode derives CanEqual
 

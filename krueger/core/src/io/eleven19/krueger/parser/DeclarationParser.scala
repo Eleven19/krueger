@@ -105,19 +105,19 @@ object DeclarationParser:
             ModuleParser.lowerName <~>
             many(PatternParser.atomPattern) <~>
             (symbol("=") *> ExpressionParser.expression) <~> offset).map { case (((((s, ann), name), params), body), e) =>
-            CstValueDeclaration(ann, name, params.toVector, body)(mkSpan(s, e))
+            CstValueDeclaration(ann, name, params.toIndexedSeq, body)(mkSpan(s, e))
         }
 
     private val typeAliasDeclaration: Parsley[CstDeclaration] =
         (offset <~> (keyword("type") *> keyword("alias") *> ModuleParser.upperName) <~>
             many(ModuleParser.lowerName) <~>
             (symbol("=") *> typeExpression) <~> offset).map { case ((((s, name), vars), body), e) =>
-            CstTypeAliasDeclaration(name, vars.toVector, body)(mkSpan(s, e))
+            CstTypeAliasDeclaration(name, vars.toIndexedSeq, body)(mkSpan(s, e))
         }
 
     private val constructor: Parsley[CstConstructor] =
         (offset <~> ModuleParser.upperName <~> many(atomType) <~> offset).map { case (((s, name), params), e) =>
-            CstConstructor(name, params.toVector)(mkSpan(s, e))
+            CstConstructor(name, params.toIndexedSeq)(mkSpan(s, e))
         }
 
     private val customTypeDeclaration: Parsley[CstDeclaration] =
@@ -125,7 +125,7 @@ object DeclarationParser:
             many(ModuleParser.lowerName) <~>
             (symbol("=") *> constructor) <~>
             many(symbol("|") *> constructor) <~> offset).map { case (((((s, name), vars), first), rest), e) =>
-            CstCustomTypeDeclaration(name, vars.toVector, (first :: rest).toVector)(mkSpan(s, e))
+            CstCustomTypeDeclaration(name, vars.toIndexedSeq, (first :: rest).toIndexedSeq)(mkSpan(s, e))
         }
 
     private val portDeclaration: Parsley[CstDeclaration] =

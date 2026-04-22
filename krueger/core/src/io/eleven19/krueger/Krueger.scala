@@ -14,7 +14,7 @@ object Krueger:
                 module.moduleDecl,
                 module.imports,
                 module.declarations,
-                CstTrivia(CommentScanner.scan(source).toVector)
+                CstTrivia(CommentScanner.scan(source).toIndexedSeq)
             )(module.span)
             TriviaAssociator.associate(withComments)
         }

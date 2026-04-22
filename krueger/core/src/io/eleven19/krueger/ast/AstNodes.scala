@@ -15,8 +15,8 @@ object AstNode:
 case class Module(
     name: QualifiedName,
     exposing: ExposingList,
-    imports: Vector[Import],
-    declarations: Vector[Declaration],
+    imports: IndexedSeq[Import],
+    declarations: IndexedSeq[Declaration],
     docComment: Option[String] = None
 )(val span: Span)
     extends AstNode derives CanEqual
@@ -53,7 +53,7 @@ sealed trait Declaration extends AstNode
 case class ValueDeclaration(
     name: String,
     typeAnnotation: Option[TypeExpression],
-    parameters: Vector[Pattern],
+    parameters: IndexedSeq[Pattern],
     body: Expression,
     docComment: Option[String] = None
 )(val span: Span)
@@ -61,7 +61,7 @@ case class ValueDeclaration(
 
 case class TypeAliasDeclaration(
     name: String,
-    typeVariables: Vector[String],
+    typeVariables: IndexedSeq[String],
     body: TypeExpression,
     docComment: Option[String] = None
 )(val span: Span)
@@ -69,15 +69,15 @@ case class TypeAliasDeclaration(
 
 case class CustomTypeDeclaration(
     name: String,
-    typeVariables: Vector[String],
-    constructors: Vector[Constructor],
+    typeVariables: IndexedSeq[String],
+    constructors: IndexedSeq[Constructor],
     docComment: Option[String] = None
 )(val span: Span)
     extends Declaration derives CanEqual
 
 case class Constructor(
     name: String,
-    parameters: Vector[TypeExpression]
+    parameters: IndexedSeq[TypeExpression]
 )(val span: Span)
     extends AstNode derives CanEqual
 

@@ -78,7 +78,7 @@ object CstLowering:
             )(n.span)
 
     private def lowerConstructor(cst: CstConstructor): ast.Constructor =
-        ast.Constructor(cst.name.value, cst.parameters.map(lowerTypeExpression).toVector)(cst.span)
+        ast.Constructor(cst.name.value, cst.parameters.map(lowerTypeExpression))(cst.span)
 
     private def lowerAssociativity(a: Associativity): ast.Associativity = a match
         case Associativity.Left  => ast.Associativity.Left

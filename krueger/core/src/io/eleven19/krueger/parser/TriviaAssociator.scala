@@ -51,7 +51,7 @@ object TriviaAssociator:
             candidate match
                 case Some((doc, idx)) =>
                     used(idx) = true
-                    withTrivia(decl, CstTrivia(Vector(doc)))
+                    withTrivia(decl, CstTrivia(IndexedSeq(doc)))
                 case None => decl
         }
 
@@ -69,8 +69,8 @@ object TriviaAssociator:
 
         // Build module trivia: module doc comment (if any) + all non-doc comments + any unassigned doc comments
         val unassignedDocs = sortedDocs.zip(used).collect { case (doc, false) => doc }
-        val moduleTriviaItems: Vector[CstTriviaItem] =
-            moduleDocComment.map(_._1).toVector ++ nonDocComments ++ unassignedDocs
+        val moduleTriviaItems: IndexedSeq[CstTriviaItem] =
+            moduleDocComment.map(_._1).toIndexedSeq ++ nonDocComments ++ unassignedDocs
 
         CstModule(
             module.moduleDecl,

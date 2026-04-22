@@ -16,8 +16,8 @@ object AstVisitorSpec extends ZIOSpecDefault:
     private val sampleCst: CstModule =
         CstModule(
             CstModuleDeclaration(ModuleType.Plain, cqn("M"), CstExposingAll()(sp))(sp),
-            Vector(CstImport(cqn("List"), None, None)(sp)),
-            Vector.empty
+            IndexedSeq(CstImport(cqn("List"), None, None)(sp)),
+            IndexedSeq.empty
         )(sp)
 
     private val sampleAst: Module = CstLowering.lowerModule(sampleCst)

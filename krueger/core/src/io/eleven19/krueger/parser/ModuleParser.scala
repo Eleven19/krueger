@@ -130,6 +130,6 @@ object ModuleParser:
         fully(
             (offset <~> moduleDeclaration <~> many(importDecl) <~>
                 many(DeclarationParser.declaration) <~> offset).map { case ((((s, modDecl), imports), decls), e) =>
-                CstModule(modDecl, imports.toVector, decls.toVector)(mkSpan(s, e))
+                CstModule(modDecl, imports.toIndexedSeq, decls.toIndexedSeq)(mkSpan(s, e))
             }
         )

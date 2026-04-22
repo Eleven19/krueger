@@ -60,8 +60,8 @@ object KruegerSpec extends ZIOSpecDefault:
             // Non-doc comments remain in the module trivia
             val moduleComments = m.trivia.comments.filterNot(_.kind == CommentKind.Doc)
             assertTrue(
-                moduleComments.map(_.kind) == Vector(CommentKind.Line, CommentKind.Block),
-                moduleComments.map(_.text.trim) == Vector("regular line", "regular block"),
+                moduleComments.map(_.kind) == IndexedSeq(CommentKind.Line, CommentKind.Block),
+                moduleComments.map(_.text.trim) == IndexedSeq("regular line", "regular block"),
                 declDoc.contains("module docs")
             )
         },
