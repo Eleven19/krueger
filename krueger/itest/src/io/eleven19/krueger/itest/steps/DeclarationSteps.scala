@@ -67,7 +67,7 @@ class DeclarationSteps(driver: TestDriver) extends ScalaDsl with EN:
     }
 
     Then("declaration {int} has doc comment {string}") { (index: Int, expectedText: String) =>
-        val decl = driver.cst.declarations(index - 1)
+        val decl       = driver.cst.declarations(index - 1)
         val docComment = decl.trivia.docComment
         assert(
             docComment.isDefined,
