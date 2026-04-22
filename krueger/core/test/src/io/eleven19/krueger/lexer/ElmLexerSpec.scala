@@ -58,6 +58,14 @@ object ElmLexerSpec extends ZIOSpecDefault:
                 assertTrue(math.abs(v - 3.14) < 1e-9)
             }
         ),
+        suite("text literals")(
+            test("stringLiteral parses quoted text") {
+                assertTrue(valueOf(fully(stringLiteral).parse("\"hello\"")) == "hello")
+            },
+            test("charLiteral parses quoted characters") {
+                assertTrue(valueOf(fully(charLiteral).parse("'x'")) == 'x')
+            }
+        ),
         suite("enclosers")(
             test("parens wraps inner parser") {
                 assertTrue(ok(fully(parens(intLiteral)).parse("(1)")))

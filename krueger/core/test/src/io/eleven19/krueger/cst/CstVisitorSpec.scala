@@ -12,6 +12,7 @@ object CstVisitorSpec extends ZIOSpecDefault:
     private class TagVisitor extends CstVisitor[String]:
         def visitNode(node: CstNode): String                      = "Node"
         override def visitName(node: CstName): String             = s"Name(${node.value})"
+        override def visitComment(node: CstComment): String       = s"Comment(${node.kind})"
         override def visitIntLiteral(node: CstIntLiteral): String = s"Int(${node.value})"
 
         override def visitVariablePattern(node: CstVariablePattern): String =
@@ -24,8 +25,8 @@ object CstVisitorSpec extends ZIOSpecDefault:
                 CstQualifiedName(List(CstName("M")(sp)))(sp),
                 CstExposingAll()(sp)
             )(sp),
-            Nil,
-            Nil
+            IndexedSeq.empty,
+            IndexedSeq.empty
         )(sp)
 
     def spec = suite("CstVisitor")(
@@ -41,6 +42,10 @@ object CstVisitorSpec extends ZIOSpecDefault:
             test("visit dispatches int literal to visitIntLiteral") {
                 val v = new TagVisitor
                 assertTrue(CstVisitor.visit(CstIntLiteral(3L)(sp), v) == "Int(3)")
+            },
+            test("visit dispatches comments to visitComment") {
+                val v = new TagVisitor
+                assertTrue(CstVisitor.visit(CstComment(CommentKind.Doc, "docs")(sp), v) == "Comment(Doc)")
             },
             test("visit dispatches variable pattern to visitVariablePattern") {
                 val v = new TagVisitor

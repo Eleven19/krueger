@@ -65,3 +65,25 @@ class DeclarationSteps(driver: TestDriver) extends ScalaDsl with EN:
             case None    => throw new AssertionError(s"no AST value named [$name]")
         assert(v.typeAnnotation.isDefined, s"expected type annotation on [$name], got none")
     }
+
+    Then("declaration {int} has doc comment {string}") { (index: Int, expectedText: String) =>
+        val decl       = driver.cst.declarations(index - 1)
+        val docComment = decl.trivia.docComment
+        assert(
+            docComment.isDefined,
+            s"expected doc comment on declaration $index, but trivia has no doc comment"
+        )
+        val actual = docComment.get.text.trim
+        assert(
+            actual == expectedText,
+            s"expected doc comment [$expectedText] on declaration $index, got [$actual]"
+        )
+    }
+
+    Then("declaration {int} has no doc comment") { (index: Int) =>
+        val decl = driver.cst.declarations(index - 1)
+        assert(
+            decl.trivia.docComment.isEmpty,
+            s"expected no doc comment on declaration $index, but found [${decl.trivia.docComment.map(_.text.trim)}]"
+        )
+    }

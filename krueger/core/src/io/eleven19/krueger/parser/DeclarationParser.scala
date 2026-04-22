@@ -3,7 +3,7 @@ package io.eleven19.krueger.parser
 import parsley.Parsley
 import parsley.Parsley.{atomic, lookAhead, many, some}
 import parsley.combinator.option
-import parsley.position.pos
+import parsley.position.{offset, pos}
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.*
@@ -13,8 +13,8 @@ import io.eleven19.krueger.lexer.ElmLexer.*
   */
 object DeclarationParser:
 
-    private def mkSpan(start: (Int, Int), end: (Int, Int)): Span =
-        Span(start._1, end._1 - start._1)
+    private def mkSpan(start: Int, end: Int): Span =
+        Span(start, end - start)
 
     private def sameLineOrIndentedPast[A](start: (Int, Int))(p: Parsley[A]): Parsley[A] =
         lookAhead(pos.filter { case (line, col) => line == start._1 || col > start._2 }) *> p
@@ -24,35 +24,36 @@ object DeclarationParser:
     // -----------------------------------------------------------------------
 
     private val typeVariable: Parsley[CstTypeExpression] =
-        (pos <~> ModuleParser.lowerName <~> pos).map { case ((s, n), e) =>
+        (offset <~> ModuleParser.lowerName <~> offset).map { case ((s, n), e) =>
             CstTypeVariable(n)(mkSpan(s, e))
         }
 
     private val typeReference: Parsley[CstTypeExpression] =
-        (pos <~> ModuleParser.qualifiedName <~> pos).map { case ((s, qn), e) =>
+        (offset <~> ModuleParser.qualifiedName <~> offset).map { case ((s, qn), e) =>
             CstTypeReference(qn)(mkSpan(s, e))
         }
 
     private val unitType: Parsley[CstTypeExpression] =
-        (pos <~> parens(Parsley.pure(())) <~> pos).map { case ((s, _), e) =>
+        (offset <~> parens(Parsley.pure(())) <~> offset).map { case ((s, _), e) =>
             CstUnitType()(mkSpan(s, e))
         }
 
     private val tupleType: Parsley[CstTypeExpression] =
-        (pos <~> parens(typeExpression <~> some(symbol(",") *> typeExpression)) <~> pos).map {
+        (offset <~> parens(typeExpression <~> some(symbol(",") *> typeExpression)) <~> offset).map {
             case ((s, (first, rest)), e) =>
                 CstTupleType(first :: rest)(mkSpan(s, e))
         }
 
     private val recordFieldType: Parsley[CstRecordFieldType] =
-        (pos <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> pos).map { case (((s, n), t), e) =>
-            CstRecordFieldType(n, t)(mkSpan(s, e))
+        (offset <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> offset).map {
+            case (((s, n), t), e) =>
+                CstRecordFieldType(n, t)(mkSpan(s, e))
         }
 
     private val recordType: Parsley[CstTypeExpression] =
-        (pos <~> braces(
+        (offset <~> braces(
             option(atomic(ModuleParser.lowerName <* symbol("|"))) <~> commaSep1(recordFieldType)
-        ) <~> pos).map { case ((s, (ext, fields)), e) =>
+        ) <~> offset).map { case ((s, (ext, fields)), e) =>
             CstRecordType(fields, ext)(mkSpan(s, e))
         }
 
@@ -61,8 +62,8 @@ object DeclarationParser:
 
     /** An atomic type (not a function type or application). */
     val atomType: Parsley[CstTypeExpression] =
-        unitType
-            | atomic(tupleType)
+        atomic(tupleType)
+            | unitType
             | recordType
             | typeReference
             | typeVariable
@@ -70,19 +71,19 @@ object DeclarationParser:
 
     /** A type with optional type application. */
     val appType: Parsley[CstTypeExpression] =
-        (pos <~> atomType).flatMap { case (s, con) =>
-            (many(sameLineOrIndentedPast(s)(atomType)) <~> pos).map { case (args, e) =>
+        ((offset <~> pos) <~> atomType).flatMap { case ((so, sp), con) =>
+            (many(sameLineOrIndentedPast(sp)(atomType)) <~> offset).map { case (args, eo) =>
                 if args.isEmpty then con
-                else CstTypeApplication(con, args)(mkSpan(s, e))
+                else CstTypeApplication(con, args)(mkSpan(so, eo))
             }
         }
 
     /** A full type expression including function types (`a -> b`). */
     lazy val typeExpression: Parsley[CstTypeExpression] =
-        (pos <~> appType).flatMap { case (s, first) =>
-            (many(sameLineOrIndentedPast(s)(symbol("->") *> appType)) <~> pos).map { case (rest, e) =>
+        ((offset <~> pos) <~> appType).flatMap { case ((so, sp), first) =>
+            (many(sameLineOrIndentedPast(sp)(symbol("->") *> appType)) <~> offset).map { case (rest, eo) =>
                 rest.foldRight(first) { (next, acc) =>
-                    CstFunctionType(acc, next)(mkSpan(s, e))
+                    CstFunctionType(acc, next)(mkSpan(so, eo))
                 }
             }
         }
@@ -92,8 +93,9 @@ object DeclarationParser:
     // -----------------------------------------------------------------------
 
     val typeAnnotation: Parsley[CstTypeAnnotation] =
-        (pos <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> pos).map { case (((s, n), t), e) =>
-            CstTypeAnnotation(n, t)(mkSpan(s, e))
+        (offset <~> ModuleParser.lowerName <~> (symbol(":") *> typeExpression) <~> offset).map {
+            case (((s, n), t), e) =>
+                CstTypeAnnotation(n, t)(mkSpan(s, e))
         }
 
     // -----------------------------------------------------------------------
@@ -101,36 +103,37 @@ object DeclarationParser:
     // -----------------------------------------------------------------------
 
     private val valueDeclaration: Parsley[CstDeclaration] =
-        (pos <~> option(atomic(typeAnnotation)) <~>
+        (offset <~> option(atomic(typeAnnotation)) <~>
             ModuleParser.lowerName <~>
             many(PatternParser.atomPattern) <~>
-            (symbol("=") *> ExpressionParser.expression) <~> pos).map { case (((((s, ann), name), params), body), e) =>
-            CstValueDeclaration(ann, name, params, body)(mkSpan(s, e))
+            (symbol("=") *> ExpressionParser.expression) <~> offset).map {
+            case (((((s, ann), name), params), body), e) =>
+                CstValueDeclaration(ann, name, params.toIndexedSeq, body)(mkSpan(s, e))
         }
 
     private val typeAliasDeclaration: Parsley[CstDeclaration] =
-        (pos <~> (keyword("type") *> keyword("alias") *> ModuleParser.upperName) <~>
+        (offset <~> (keyword("type") *> keyword("alias") *> ModuleParser.upperName) <~>
             many(ModuleParser.lowerName) <~>
-            (symbol("=") *> typeExpression) <~> pos).map { case ((((s, name), vars), body), e) =>
-            CstTypeAliasDeclaration(name, vars, body)(mkSpan(s, e))
+            (symbol("=") *> typeExpression) <~> offset).map { case ((((s, name), vars), body), e) =>
+            CstTypeAliasDeclaration(name, vars.toIndexedSeq, body)(mkSpan(s, e))
         }
 
     private val constructor: Parsley[CstConstructor] =
-        (pos <~> ModuleParser.upperName <~> many(atomType) <~> pos).map { case (((s, name), params), e) =>
-            CstConstructor(name, params)(mkSpan(s, e))
+        (offset <~> ModuleParser.upperName <~> many(atomType) <~> offset).map { case (((s, name), params), e) =>
+            CstConstructor(name, params.toIndexedSeq)(mkSpan(s, e))
         }
 
     private val customTypeDeclaration: Parsley[CstDeclaration] =
-        (pos <~> (keyword("type") *> ModuleParser.upperName) <~>
+        (offset <~> (keyword("type") *> ModuleParser.upperName) <~>
             many(ModuleParser.lowerName) <~>
             (symbol("=") *> constructor) <~>
-            many(symbol("|") *> constructor) <~> pos).map { case (((((s, name), vars), first), rest), e) =>
-            CstCustomTypeDeclaration(name, vars, first :: rest)(mkSpan(s, e))
+            many(symbol("|") *> constructor) <~> offset).map { case (((((s, name), vars), first), rest), e) =>
+            CstCustomTypeDeclaration(name, vars.toIndexedSeq, (first :: rest).toIndexedSeq)(mkSpan(s, e))
         }
 
     private val portDeclaration: Parsley[CstDeclaration] =
-        (pos <~> (keyword("port") *> ModuleParser.lowerName) <~>
-            (symbol(":") *> typeExpression) <~> pos).map { case (((s, name), t), e) =>
+        (offset <~> (keyword("port") *> ModuleParser.lowerName) <~>
+            (symbol(":") *> typeExpression) <~> offset).map { case (((s, name), t), e) =>
             CstPortDeclaration(name, t)(mkSpan(s, e))
         }
 
@@ -140,14 +143,14 @@ object DeclarationParser:
             | (keyword("non") *> Parsley.pure(Associativity.Non))
 
     private val infixDeclaration: Parsley[CstDeclaration] =
-        (pos <~> (keyword("infix") *> associativity) <~>
+        (offset <~> (keyword("infix") *> associativity) <~>
             intLiteral <~>
             parens(
-                (pos <~> operator <~> pos).map { case ((s, op), e) =>
+                (offset <~> operator <~> offset).map { case ((s, op), e) =>
                     CstName(op)(mkSpan(s, e))
                 }
             ) <~>
-            (symbol("=") *> ModuleParser.lowerName) <~> pos).map { case (((((s, assoc), prec), op), fn), e) =>
+            (symbol("=") *> ModuleParser.lowerName) <~> offset).map { case (((((s, assoc), prec), op), fn), e) =>
             CstInfixDeclaration(assoc, prec.toInt, op, fn)(mkSpan(s, e))
         }
 

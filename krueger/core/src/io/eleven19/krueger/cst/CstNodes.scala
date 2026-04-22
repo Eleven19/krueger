@@ -10,12 +10,30 @@ sealed trait CstNode:
 object CstNode:
     given CanEqual[CstNode, CstNode] = CanEqual.derived
 
+// ── Trivia ──────────────────────────────────────────────────────────────────
+
+sealed trait CstTriviaItem extends CstNode
+
+case class CstTrivia(items: IndexedSeq[CstTriviaItem] = IndexedSeq.empty) derives CanEqual:
+
+    def docComment: Option[CstComment] =
+        items.collectFirst { case c: CstComment if c.kind == CommentKind.Doc => c }
+
+    def comments: IndexedSeq[CstComment] =
+        items.collect { case c: CstComment => c }
+    def isEmpty: Boolean  = items.isEmpty
+    def nonEmpty: Boolean = items.nonEmpty
+
+object CstTrivia:
+    val empty: CstTrivia = CstTrivia()
+
 // ── Module ───────────────────────────────────────────────────────────────────
 
 case class CstModule(
     moduleDecl: CstModuleDeclaration,
-    imports: List[CstImport],
-    declarations: List[CstDeclaration]
+    imports: IndexedSeq[CstImport],
+    declarations: IndexedSeq[CstDeclaration],
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstNode derives CanEqual
 
@@ -38,6 +56,17 @@ case class CstName(
     value: String
 )(val span: Span)
     extends CstNode derives CanEqual
+
+// ── Comments ─────────────────────────────────────────────────────────────────
+
+enum CommentKind derives CanEqual:
+    case Line, Block, Doc
+
+case class CstComment(
+    kind: CommentKind,
+    text: String
+)(val span: Span)
+    extends CstTriviaItem derives CanEqual
 
 // ── Exposing ─────────────────────────────────────────────────────────────────
 
@@ -77,13 +106,15 @@ case class CstImport(
 
 // ── Declarations ─────────────────────────────────────────────────────────────
 
-sealed trait CstDeclaration extends CstNode
+sealed trait CstDeclaration extends CstNode:
+    def trivia: CstTrivia
 
 case class CstValueDeclaration(
     annotation: Option[CstTypeAnnotation],
     name: CstName,
-    patterns: List[CstPattern],
-    body: CstExpression
+    patterns: IndexedSeq[CstPattern],
+    body: CstExpression,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
@@ -95,27 +126,30 @@ case class CstTypeAnnotation(
 
 case class CstTypeAliasDeclaration(
     name: CstName,
-    typeVariables: List[CstName],
-    body: CstTypeExpression
+    typeVariables: IndexedSeq[CstName],
+    body: CstTypeExpression,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
 case class CstCustomTypeDeclaration(
     name: CstName,
-    typeVariables: List[CstName],
-    constructors: List[CstConstructor]
+    typeVariables: IndexedSeq[CstName],
+    constructors: IndexedSeq[CstConstructor],
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
 case class CstConstructor(
     name: CstName,
-    parameters: List[CstTypeExpression]
+    parameters: IndexedSeq[CstTypeExpression]
 )(val span: Span)
     extends CstNode derives CanEqual
 
 case class CstPortDeclaration(
     name: CstName,
-    typeExpr: CstTypeExpression
+    typeExpr: CstTypeExpression,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
@@ -123,7 +157,8 @@ case class CstInfixDeclaration(
     associativity: Associativity,
     precedence: Int,
     operator: CstName,
-    function: CstName
+    function: CstName,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 

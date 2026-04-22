@@ -3,7 +3,7 @@ package io.eleven19.krueger.parser
 import parsley.Parsley
 import parsley.Parsley.{atomic, many, some}
 import parsley.combinator.option
-import parsley.position.pos
+import parsley.position.offset
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.*
@@ -16,71 +16,82 @@ import io.eleven19.krueger.lexer.ElmLexer.*
   */
 object ExpressionParser:
 
-    private def mkSpan(start: (Int, Int), end: (Int, Int)): Span =
-        Span(start._1, end._1 - start._1)
+    private def mkSpan(start: Int, end: Int): Span =
+        Span(start, end - start)
 
     // -----------------------------------------------------------------------
     // Atoms
     // -----------------------------------------------------------------------
 
     private val intLit: Parsley[CstExpression] =
-        (pos <~> intLiteral <~> pos).map { case ((s, v), e) =>
+        (offset <~> intLiteral <~> offset).map { case ((s, v), e) =>
             CstIntLiteral(v)(mkSpan(s, e))
         }
 
     private val floatLit: Parsley[CstExpression] =
-        (pos <~> floatLiteral <~> pos).map { case ((s, v), e) =>
+        (offset <~> floatLiteral <~> offset).map { case ((s, v), e) =>
             CstFloatLiteral(v)(mkSpan(s, e))
         }
 
+    private val stringLit: Parsley[CstExpression] =
+        (offset <~> stringLiteral <~> offset).map { case ((s, v), e) =>
+            CstStringLiteral(v)(mkSpan(s, e))
+        }
+
+    private val charLit: Parsley[CstExpression] =
+        (offset <~> charLiteral <~> offset).map { case ((s, v), e) =>
+            CstCharLiteral(v)(mkSpan(s, e))
+        }
+
     private val variableRef: Parsley[CstExpression] =
-        (pos <~> ModuleParser.qualifiedName <~> pos).map { case ((s, qn), e) =>
+        (offset <~> ModuleParser.qualifiedValueName <~> offset).map { case ((s, qn), e) =>
             CstVariableRef(qn)(mkSpan(s, e))
         }
 
     private val constructorRef: Parsley[CstExpression] =
-        (pos <~> ModuleParser.qualifiedName <~> pos).map { case ((s, qn), e) =>
+        (offset <~> ModuleParser.qualifiedName <~> offset).map { case ((s, qn), e) =>
             CstConstructorRef(qn)(mkSpan(s, e))
         }
 
     private val unitLit: Parsley[CstExpression] =
-        atomic((pos <~> parens(Parsley.pure(())) <~> pos).map { case ((s, _), e) =>
+        atomic((offset <~> parens(Parsley.pure(())) <~> offset).map { case ((s, _), e) =>
             CstUnitLiteral()(mkSpan(s, e))
         })
 
     private val parenthesized: Parsley[CstExpression] =
-        (pos <~> parens(expression) <~> pos).map { case ((s, expr), e) =>
+        (offset <~> parens(expression) <~> offset).map { case ((s, expr), e) =>
             CstParenthesized(expr)(mkSpan(s, e))
         }
 
     private val tupleLit: Parsley[CstExpression] =
-        (pos <~> parens(expression <~> some(symbol(",") *> expression)) <~> pos).map { case ((s, (first, rest)), e) =>
-            CstTupleLiteral(first :: rest)(mkSpan(s, e))
+        (offset <~> parens(expression <~> some(symbol(",") *> expression)) <~> offset).map {
+            case ((s, (first, rest)), e) =>
+                CstTupleLiteral(first :: rest)(mkSpan(s, e))
         }
 
     private val listLit: Parsley[CstExpression] =
-        (pos <~> brackets(commaSep(expression)) <~> pos).map { case ((s, elems), e) =>
+        (offset <~> brackets(commaSep(expression)) <~> offset).map { case ((s, elems), e) =>
             CstListLiteral(elems)(mkSpan(s, e))
         }
 
     private val recordField: Parsley[CstRecordField] =
-        (pos <~> ModuleParser.lowerName <~> (symbol("=") *> expression) <~> pos).map { case (((s, n), v), e) =>
+        (offset <~> ModuleParser.lowerName <~> (symbol("=") *> expression) <~> offset).map { case (((s, n), v), e) =>
             CstRecordField(n, v)(mkSpan(s, e))
         }
 
     private val recordLit: Parsley[CstExpression] =
-        (pos <~> braces(commaSep1(recordField)) <~> pos).map { case ((s, fields), e) =>
+        (offset <~> braces(commaSep1(recordField)) <~> offset).map { case ((s, fields), e) =>
             CstRecordLiteral(fields)(mkSpan(s, e))
         }
 
     private val recordUpdate: Parsley[CstExpression] =
-        (pos <~> braces(ModuleParser.lowerName <~> (symbol("|") *> commaSep1(recordField))) <~> pos).map {
+        (offset <~> braces(ModuleParser.lowerName <~> (symbol("|") *> commaSep1(recordField))) <~> offset).map {
             case ((s, (rec, fields)), e) =>
                 CstRecordUpdate(rec, fields)(mkSpan(s, e))
         }
 
     private val fieldAccessFn: Parsley[CstExpression] =
-        (pos <~> (symbol(".") *> ModuleParser.lowerName) <~> pos).map { case ((s, n), e) =>
+        (offset <~> (symbol(".") *> ModuleParser.lowerName) <~> offset).map { case ((s, n), e) =>
             CstFieldAccessFunction(n)(mkSpan(s, e))
         }
 
@@ -88,6 +99,8 @@ object ExpressionParser:
     val atom: Parsley[CstExpression] =
         atomic(floatLit)
             | intLit
+            | stringLit
+            | charLit
             | unitLit
             | atomic(tupleLit)
             | parenthesized
@@ -95,74 +108,85 @@ object ExpressionParser:
             | atomic(recordUpdate)
             | recordLit
             | fieldAccessFn
-            | constructorRef
             | variableRef
+            | constructorRef
 
     // -----------------------------------------------------------------------
     // Compound expressions
     // -----------------------------------------------------------------------
 
     private val ifThenElse: Parsley[CstExpression] =
-        (pos <~> (keyword("if") *> expression) <~>
+        (offset <~> (keyword("if") *> expression) <~>
             (keyword("then") *> expression) <~>
-            (keyword("else") *> expression) <~> pos).map { case ((((s, cond), thenE), elseE), e) =>
+            (keyword("else") *> expression) <~> offset).map { case ((((s, cond), thenE), elseE), e) =>
             CstIfThenElse(cond, thenE, elseE)(mkSpan(s, e))
         }
 
     private val letBinding: Parsley[CstLetBinding] =
-        (pos <~>
+        (offset <~>
             option(DeclarationParser.typeAnnotation) <~>
             PatternParser.pattern <~>
             many(PatternParser.pattern) <~>
-            (symbol("=") *> expression) <~> pos).map { case (((((s, ann), pat), params), body), e) =>
+            (symbol("=") *> expression) <~> offset).map { case (((((s, ann), pat), params), body), e) =>
             CstLetBinding(ann, pat, params, body)(mkSpan(s, e))
         }
 
     private val letIn: Parsley[CstExpression] =
-        (pos <~> (keyword("let") *> some(letBinding)) <~>
-            (keyword("in") *> expression) <~> pos).map { case (((s, bindings), body), e) =>
+        (offset <~> (keyword("let") *> some(letBinding)) <~>
+            (keyword("in") *> expression) <~> offset).map { case (((s, bindings), body), e) =>
             CstLetIn(bindings, body)(mkSpan(s, e))
         }
 
     private val caseBranch: Parsley[CstCaseBranch] =
-        (pos <~> PatternParser.pattern <~> (symbol("->") *> expression) <~> pos).map { case (((s, pat), body), e) =>
-            CstCaseBranch(pat, body)(mkSpan(s, e))
+        (offset <~> PatternParser.pattern <~> (symbol("->") *> expression) <~> offset).map {
+            case (((s, pat), body), e) =>
+                CstCaseBranch(pat, body)(mkSpan(s, e))
         }
 
     private val caseOf: Parsley[CstExpression] =
-        (pos <~> (keyword("case") *> expression) <~>
-            (keyword("of") *> some(caseBranch)) <~> pos).map { case (((s, expr), branches), e) =>
+        (offset <~> (keyword("case") *> expression) <~>
+            (keyword("of") *> some(caseBranch)) <~> offset).map { case (((s, expr), branches), e) =>
             CstCaseOf(expr, branches)(mkSpan(s, e))
         }
 
     private val lambda: Parsley[CstExpression] =
-        (pos <~> (symbol("\\") *> some(PatternParser.pattern)) <~>
-            (symbol("->") *> expression) <~> pos).map { case (((s, params), body), e) =>
+        (offset <~> (symbol("\\") *> some(PatternParser.pattern)) <~>
+            (symbol("->") *> expression) <~> offset).map { case (((s, params), body), e) =>
             CstLambda(params, body)(mkSpan(s, e))
         }
 
     private val negate: Parsley[CstExpression] =
-        (pos <~> (symbol("-") *> atom) <~> pos).map { case ((s, expr), e) =>
+        (offset <~> (symbol("-") *> atom) <~> offset).map { case ((s, expr), e) =>
             CstNegate(expr)(mkSpan(s, e))
+        }
+
+    private val fieldSuffix: Parsley[CstName] =
+        symbol(".") *> ModuleParser.lowerName
+
+    private val postfixAtom: Parsley[CstExpression] =
+        (offset <~> atom <~> many(fieldSuffix) <~> offset).map { case (((s, base), fields), e) =>
+            fields.foldLeft(base) { (record, field) =>
+                CstFieldAccess(record, field)(Span.between(record.span, field.span))
+            }
         }
 
     /** A non-operator expression: atom with optional function application and field access. */
     private val appExpr: Parsley[CstExpression] =
-        val base = ifThenElse | letIn | caseOf | lambda | negate | atom
-        (pos <~> base <~> many(atom) <~> pos).map { case (((s, fn), args), e) =>
+        val base = ifThenElse | letIn | caseOf | lambda | negate | postfixAtom
+        (offset <~> base <~> many(postfixAtom) <~> offset).map { case (((s, fn), args), e) =>
             if args.isEmpty then fn
             else CstFunctionApplication(fn, args)(mkSpan(s, e))
         }
 
     /** Parse a binary operator name. */
     private val binOp: Parsley[CstName] =
-        (pos <~> operator <~> pos).map { case ((s, op), e) =>
+        (offset <~> operator <~> offset).map { case ((s, op), e) =>
             CstName(op)(mkSpan(s, e))
         }
 
     /** A full expression including binary operators (flat, to be re-associated later). */
     lazy val expression: Parsley[CstExpression] =
-        (pos <~> appExpr <~> many(binOp <~> appExpr) <~> pos).map { case (((s, first), ops), e) =>
+        (offset <~> appExpr <~> many(binOp <~> appExpr) <~> offset).map { case (((s, first), ops), e) =>
             ops.foldLeft(first) { case (left, (op, right)) =>
                 CstBinaryOp(left, op, right)(mkSpan(s, e))
             }

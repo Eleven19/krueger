@@ -15,22 +15,22 @@ object CstLoweringSpec extends ZIOSpecDefault:
     private def moduleWithDecl(decl: CstDeclaration): CstModule =
         CstModule(
             CstModuleDeclaration(ModuleType.Plain, qn("M"), CstExposingAll()(sp))(sp),
-            Nil,
-            List(decl)
+            IndexedSeq.empty,
+            IndexedSeq(decl)
         )(sp)
 
     def spec = suite("CstLowering")(
         test("lowerModule maps module name, imports, and declarations") {
             val cst = CstModule(
                 CstModuleDeclaration(ModuleType.Plain, qn("Main"), CstExposingAll()(sp))(sp),
-                List(CstImport(qn("List"), None, None)(sp)),
-                Nil
+                IndexedSeq(CstImport(qn("List"), None, None)(sp)),
+                IndexedSeq.empty
             )(sp)
             val m = CstLowering.lowerModule(cst)
             assertTrue(
                 m.name.fullName == "Main",
                 m.exposing.isInstanceOf[ast.ExposingAll],
-                m.imports.map(_.moduleName.fullName) == List("List")
+                m.imports.map(_.moduleName.fullName) == IndexedSeq("List")
             )
         },
         test("lowerModule lowers an explicit exposing list") {
@@ -42,8 +42,8 @@ object CstLoweringSpec extends ZIOSpecDefault:
             )
             val cst = CstModule(
                 CstModuleDeclaration(ModuleType.Plain, qn("M"), CstExposingExplicit(items)(sp))(sp),
-                Nil,
-                Nil
+                IndexedSeq.empty,
+                IndexedSeq.empty
             )(sp)
             val m = CstLowering.lowerModule(cst)
             val exp = m.exposing match
@@ -61,8 +61,8 @@ object CstLoweringSpec extends ZIOSpecDefault:
         test("lowerQualifiedName flattens parts via fullName") {
             val cst = CstModule(
                 CstModuleDeclaration(ModuleType.Plain, qn("Http", "Body"), CstExposingAll()(sp))(sp),
-                Nil,
-                Nil
+                IndexedSeq.empty,
+                IndexedSeq.empty
             )(sp)
             assertTrue(CstLowering.lowerModule(cst).name.fullName == "Http.Body")
         },
@@ -86,7 +86,7 @@ object CstLoweringSpec extends ZIOSpecDefault:
             val decl = CstValueDeclaration(
                 None,
                 n("main"),
-                Nil,
+                IndexedSeq.empty,
                 CstLetIn(
                     List(
                         CstLetBinding(
@@ -107,7 +107,7 @@ object CstLoweringSpec extends ZIOSpecDefault:
             val decl = CstValueDeclaration(
                 None,
                 n("main"),
-                Nil,
+                IndexedSeq.empty,
                 CstLetIn(
                     List(
                         CstLetBinding(
@@ -133,7 +133,7 @@ object CstLoweringSpec extends ZIOSpecDefault:
                     )(sp)
                 ),
                 name = n("foo"),
-                patterns = Nil,
+                patterns = IndexedSeq.empty,
                 body = CstIntLiteral(42L)(sp)
             )(sp)
             val lowered = CstLowering.lowerDeclaration(annotated).asInstanceOf[ast.ValueDeclaration]

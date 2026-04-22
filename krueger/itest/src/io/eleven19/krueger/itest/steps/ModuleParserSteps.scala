@@ -11,6 +11,10 @@ class ModuleParserSteps(driver: TestDriver) extends ScalaDsl with EN:
         driver.setSource(src)
     }
 
+    Given("the Elm fixture {string}") { (resourcePath: String) =>
+        driver.setSourceFromResource(resourcePath)
+    }
+
     When("the source is parsed") { () =>
         driver.parseCst()
     }
@@ -49,6 +53,11 @@ class ModuleParserSteps(driver: TestDriver) extends ScalaDsl with EN:
         assert(actual == count, s"expected $count imports, got $actual")
     }
 
+    Then("the module has {int} comment(s)") { (count: Int) =>
+        val actual = driver.cst.trivia.comments.size
+        assert(actual == count, s"expected $count comments, got $actual")
+    }
+
     Then("the AST has {int} import(s)") { (count: Int) =>
         val actual = driver.ast.imports.size
         assert(actual == count, s"expected $count AST imports, got $actual")
@@ -81,4 +90,38 @@ class ModuleParserSteps(driver: TestDriver) extends ScalaDsl with EN:
             case _                            => Nil
         val expected = csv.split(",").toList.map(_.trim)
         assert(values == expected, s"expected values [$expected], got [$values]")
+    }
+
+    Then("the module doc comment is {string}") { (expectedText: String) =>
+        val docComment = driver.cst.trivia.docComment
+        assert(
+            docComment.isDefined,
+            "expected a module doc comment, but trivia has no doc comment"
+        )
+        val actual = docComment.get.text.trim
+        assert(
+            actual == expectedText,
+            s"expected module doc comment [$expectedText], got [$actual]"
+        )
+    }
+
+    Then("the module has no doc comment") { () =>
+        assert(
+            driver.cst.trivia.docComment.isEmpty,
+            s"expected no module doc comment, but found [${driver.cst.trivia.docComment.map(_.text.trim)}]"
+        )
+    }
+
+    Then("comment {int} is a {string} comment with text {string}") {
+        (index: Int, expectedKind: String, expectedText: String) =>
+            val comment = driver.cst.trivia.comments(index - 1)
+            val kind = expectedKind.trim.toLowerCase match
+                case "line"  => CommentKind.Line
+                case "block" => CommentKind.Block
+                case "doc"   => CommentKind.Doc
+                case other   => throw new AssertionError(s"unknown comment kind [$other]")
+            assert(
+                comment.kind == kind && comment.text.trim == expectedText,
+                s"expected $kind comment [$expectedText], got ${comment.kind} [${comment.text.trim}]"
+            )
     }

@@ -170,7 +170,7 @@ object AstVisitor:
 
     /** Return the direct children of a node. */
     def children(node: AstNode): List[AstNode] = node match
-        case n: Module                => n.exposing :: n.imports ::: n.declarations
+        case n: Module                => n.exposing :: n.imports.toList ::: n.declarations.toList
         case n: QualifiedName         => Nil
         case n: Import                => n.exposing.toList
         case n: ExposingAll           => Nil
@@ -178,12 +178,12 @@ object AstVisitor:
         case n: ExposedValue          => Nil
         case n: ExposedOperator       => Nil
         case n: ExposedType           => Nil
-        case n: ValueDeclaration      => n.typeAnnotation.toList ::: n.parameters ::: List(n.body)
+        case n: ValueDeclaration      => n.typeAnnotation.toList ::: n.parameters.toList ::: List(n.body)
         case n: TypeAliasDeclaration  => List(n.body)
-        case n: CustomTypeDeclaration => n.constructors
+        case n: CustomTypeDeclaration => n.constructors.toList
         case n: PortDeclaration       => List(n.typeExpr)
         case n: InfixDeclaration      => Nil
-        case n: Constructor           => n.parameters
+        case n: Constructor           => n.parameters.toList
         case n: TypeReference         => List(n.name)
         case n: TypeVariable          => Nil
         case n: TypeApplication       => n.constructor :: n.arguments
