@@ -12,6 +12,18 @@ Feature: Declarations
     Then the module has 1 declaration
     And declaration 1 is a value named "main"
 
+  Scenario: Value declaration with annotation
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      foo : Int
+      foo = 42
+      """
+    When the source is parsed
+    Then the module has 1 declaration
+    And declaration 1 is a value named "foo"
+
   Scenario: Type alias declaration
     Given the Elm source:
       """

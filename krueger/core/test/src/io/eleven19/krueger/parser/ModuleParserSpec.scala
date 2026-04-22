@@ -51,6 +51,18 @@ object ModuleParserSpec extends ZIOSpecDefault:
                 case _                            => Nil
             assertTrue(items == List("text", "div"))
         },
+        test("parses annotated value declaration without consuming the value name as a type argument") {
+            val m = parseOrFail("module M exposing (..)\nfoo : Int\nfoo = 42\n")
+            val decl = m.declarations.head match
+                case v: CstValueDeclaration => v
+                case other                  => throw new AssertionError(s"expected value declaration, got $other")
+            assertTrue(
+                decl.name.value == "foo",
+                decl.annotation.exists(_.name.value == "foo"),
+                decl.annotation.exists(_.typeExpr.isInstanceOf[CstTypeReference]),
+                decl.body == CstIntLiteral(42L)(decl.body.span)
+            )
+        },
         test("fails on malformed module header") {
             ModuleParser.module.parse("module !!!") match
                 case Failure(_) => assertCompletes

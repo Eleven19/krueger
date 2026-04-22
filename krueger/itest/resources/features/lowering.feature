@@ -29,3 +29,15 @@ Feature: CST to AST lowering
       """
     When the source is parsed to an AST
     Then AST declaration 1 is a value named "main"
+
+  Scenario: Lowering surfaces type annotations
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      foo : Int
+      foo = 42
+      """
+    When the source is parsed to an AST
+    Then AST declaration 1 is a value named "foo"
+    And AST value "foo" has a type annotation

@@ -1,7 +1,7 @@
 package io.eleven19.krueger.parser
 
 import parsley.Parsley
-import parsley.Parsley.{atomic, many, some}
+import parsley.Parsley.{atomic, lookAhead, many, some}
 import parsley.combinator.option
 import parsley.position.pos
 
@@ -15,6 +15,9 @@ object DeclarationParser:
 
     private def mkSpan(start: (Int, Int), end: (Int, Int)): Span =
         Span(start._1, end._1 - start._1)
+
+    private def sameLineOrIndentedPast[A](start: (Int, Int))(p: Parsley[A]): Parsley[A] =
+        lookAhead(pos.filter { case (line, col) => line == start._1 || col > start._2 }) *> p
 
     // -----------------------------------------------------------------------
     // Type expressions
@@ -67,16 +70,20 @@ object DeclarationParser:
 
     /** A type with optional type application. */
     val appType: Parsley[CstTypeExpression] =
-        (pos <~> atomType <~> many(atomType) <~> pos).map { case (((s, con), args), e) =>
-            if args.isEmpty then con
-            else CstTypeApplication(con, args)(mkSpan(s, e))
+        (pos <~> atomType).flatMap { case (s, con) =>
+            (many(sameLineOrIndentedPast(s)(atomType)) <~> pos).map { case (args, e) =>
+                if args.isEmpty then con
+                else CstTypeApplication(con, args)(mkSpan(s, e))
+            }
         }
 
     /** A full type expression including function types (`a -> b`). */
     lazy val typeExpression: Parsley[CstTypeExpression] =
-        (pos <~> appType <~> many(symbol("->") *> appType) <~> pos).map { case (((s, first), rest), e) =>
-            rest.foldRight(first) { (next, acc) =>
-                CstFunctionType(acc, next)(mkSpan(s, e))
+        (pos <~> appType).flatMap { case (s, first) =>
+            (many(sameLineOrIndentedPast(s)(symbol("->") *> appType)) <~> pos).map { case (rest, e) =>
+                rest.foldRight(first) { (next, acc) =>
+                    CstFunctionType(acc, next)(mkSpan(s, e))
+                }
             }
         }
 
