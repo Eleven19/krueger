@@ -14,7 +14,8 @@ object CstLowering:
             name = lowerQualifiedName(cst.moduleDecl.name),
             exposing = lowerExposingList(cst.moduleDecl.exposing),
             imports = cst.imports.map(lowerImport),
-            declarations = cst.declarations.map(lowerDeclaration)
+            declarations = cst.declarations.map(lowerDeclaration),
+            docComment = cst.trivia.docComment.map(_.text)
         )(cst.span)
 
     private def lowerQualifiedName(cst: CstQualifiedName): ast.QualifiedName =
@@ -44,35 +45,40 @@ object CstLowering:
                 name = n.name.value,
                 typeAnnotation = n.annotation.map(a => lowerTypeExpression(a.typeExpr)),
                 parameters = n.patterns.map(lowerPattern),
-                body = lowerExpression(n.body)
+                body = lowerExpression(n.body),
+                docComment = n.trivia.docComment.map(_.text)
             )(n.span)
         case n: CstTypeAliasDeclaration =>
             ast.TypeAliasDeclaration(
                 name = n.name.value,
                 typeVariables = n.typeVariables.map(_.value),
-                body = lowerTypeExpression(n.body)
+                body = lowerTypeExpression(n.body),
+                docComment = n.trivia.docComment.map(_.text)
             )(n.span)
         case n: CstCustomTypeDeclaration =>
             ast.CustomTypeDeclaration(
                 name = n.name.value,
                 typeVariables = n.typeVariables.map(_.value),
-                constructors = n.constructors.map(lowerConstructor)
+                constructors = n.constructors.map(lowerConstructor),
+                docComment = n.trivia.docComment.map(_.text)
             )(n.span)
         case n: CstPortDeclaration =>
             ast.PortDeclaration(
                 name = n.name.value,
-                typeExpr = lowerTypeExpression(n.typeExpr)
+                typeExpr = lowerTypeExpression(n.typeExpr),
+                docComment = n.trivia.docComment.map(_.text)
             )(n.span)
         case n: CstInfixDeclaration =>
             ast.InfixDeclaration(
                 associativity = lowerAssociativity(n.associativity),
                 precedence = n.precedence,
                 operator = n.operator.value,
-                function = n.function.value
+                function = n.function.value,
+                docComment = n.trivia.docComment.map(_.text)
             )(n.span)
 
     private def lowerConstructor(cst: CstConstructor): ast.Constructor =
-        ast.Constructor(cst.name.value, cst.parameters.map(lowerTypeExpression))(cst.span)
+        ast.Constructor(cst.name.value, cst.parameters.map(lowerTypeExpression).toVector)(cst.span)
 
     private def lowerAssociativity(a: Associativity): ast.Associativity = a match
         case Associativity.Left  => ast.Associativity.Left

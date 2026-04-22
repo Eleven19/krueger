@@ -15,8 +15,9 @@ object AstNode:
 case class Module(
     name: QualifiedName,
     exposing: ExposingList,
-    imports: List[Import],
-    declarations: List[Declaration]
+    imports: Vector[Import],
+    declarations: Vector[Declaration],
+    docComment: Option[String] = None
 )(val span: Span)
     extends AstNode derives CanEqual
 
@@ -52,34 +53,38 @@ sealed trait Declaration extends AstNode
 case class ValueDeclaration(
     name: String,
     typeAnnotation: Option[TypeExpression],
-    parameters: List[Pattern],
-    body: Expression
+    parameters: Vector[Pattern],
+    body: Expression,
+    docComment: Option[String] = None
 )(val span: Span)
     extends Declaration derives CanEqual
 
 case class TypeAliasDeclaration(
     name: String,
-    typeVariables: List[String],
-    body: TypeExpression
+    typeVariables: Vector[String],
+    body: TypeExpression,
+    docComment: Option[String] = None
 )(val span: Span)
     extends Declaration derives CanEqual
 
 case class CustomTypeDeclaration(
     name: String,
-    typeVariables: List[String],
-    constructors: List[Constructor]
+    typeVariables: Vector[String],
+    constructors: Vector[Constructor],
+    docComment: Option[String] = None
 )(val span: Span)
     extends Declaration derives CanEqual
 
 case class Constructor(
     name: String,
-    parameters: List[TypeExpression]
+    parameters: Vector[TypeExpression]
 )(val span: Span)
     extends AstNode derives CanEqual
 
 case class PortDeclaration(
     name: String,
-    typeExpr: TypeExpression
+    typeExpr: TypeExpression,
+    docComment: Option[String] = None
 )(val span: Span)
     extends Declaration derives CanEqual
 
@@ -87,7 +92,8 @@ case class InfixDeclaration(
     associativity: Associativity,
     precedence: Int,
     operator: String,
-    function: String
+    function: String,
+    docComment: Option[String] = None
 )(val span: Span)
     extends Declaration derives CanEqual
 

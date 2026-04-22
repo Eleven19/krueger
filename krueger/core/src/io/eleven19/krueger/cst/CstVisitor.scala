@@ -20,7 +20,8 @@ trait CstVisitor[A]:
     def visitModuleDeclaration(node: CstModuleDeclaration): A = visitNode(node)
     def visitQualifiedName(node: CstQualifiedName): A         = visitNode(node)
     def visitName(node: CstName): A                           = visitNode(node)
-    def visitComment(node: CstComment): A                     = visitNode(node)
+    def visitTriviaItem(node: CstTriviaItem): A               = visitNode(node)
+    def visitComment(node: CstComment): A                     = visitTriviaItem(node)
     def visitImport(node: CstImport): A                       = visitNode(node)
 
     // --- Exposing ---
@@ -182,7 +183,7 @@ object CstVisitor:
 
     /** Return the direct children of a node. */
     def children(node: CstNode): List[CstNode] = node match
-        case n: CstModule                  => n.moduleDecl :: n.imports ::: n.declarations ::: n.comments
+        case n: CstModule                  => n.moduleDecl :: n.imports.toList ::: n.declarations.toList ::: n.trivia.items.toList
         case n: CstModuleDeclaration       => List(n.name, n.exposing)
         case n: CstQualifiedName           => n.parts
         case n: CstName                    => Nil
@@ -195,13 +196,13 @@ object CstVisitor:
         case n: CstExposedType             => n.name :: n.constructors.toList
         case _: CstExposedConstructorsAll  => Nil
         case _: CstExposedConstructorsNone => Nil
-        case n: CstValueDeclaration        => n.annotation.toList ::: List(n.name) ::: n.patterns ::: List(n.body)
+        case n: CstValueDeclaration        => n.trivia.items.toList ::: n.annotation.toList ::: List(n.name) ::: n.patterns.toList ::: List(n.body)
         case n: CstTypeAnnotation          => List(n.name, n.typeExpr)
-        case n: CstTypeAliasDeclaration    => List(n.name) ::: n.typeVariables ::: List(n.body)
-        case n: CstCustomTypeDeclaration   => List(n.name) ::: n.typeVariables ::: n.constructors
-        case n: CstConstructor             => n.name :: n.parameters
-        case n: CstPortDeclaration         => List(n.name, n.typeExpr)
-        case n: CstInfixDeclaration        => List(n.operator, n.function)
+        case n: CstTypeAliasDeclaration    => n.trivia.items.toList ::: List(n.name) ::: n.typeVariables.toList ::: List(n.body)
+        case n: CstCustomTypeDeclaration   => n.trivia.items.toList ::: List(n.name) ::: n.typeVariables.toList ::: n.constructors.toList
+        case n: CstConstructor             => n.name :: n.parameters.toList
+        case n: CstPortDeclaration         => n.trivia.items.toList ::: List(n.name, n.typeExpr)
+        case n: CstInfixDeclaration        => n.trivia.items.toList ::: List(n.operator, n.function)
         case n: CstTypeReference           => List(n.name)
         case n: CstTypeVariable            => List(n.name)
         case n: CstTypeApplication         => n.constructor :: n.arguments

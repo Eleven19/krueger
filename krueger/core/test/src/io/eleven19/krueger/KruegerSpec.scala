@@ -54,9 +54,15 @@ object KruegerSpec extends ZIOSpecDefault:
                   |main = "-- not a comment"
                   |""".stripMargin
             )
+            // The doc comment is associated with the `main` declaration via trivia
+            val declDoc = m.declarations.head.asInstanceOf[io.eleven19.krueger.cst.CstValueDeclaration]
+                .trivia.docComment.map(_.text.trim)
+            // Non-doc comments remain in the module trivia
+            val moduleComments = m.trivia.comments.filterNot(_.kind == CommentKind.Doc)
             assertTrue(
-                m.comments.map(_.kind) == List(CommentKind.Line, CommentKind.Block, CommentKind.Doc),
-                m.comments.map(_.text.trim) == List("regular line", "regular block", "module docs")
+                moduleComments.map(_.kind) == Vector(CommentKind.Line, CommentKind.Block),
+                moduleComments.map(_.text.trim) == Vector("regular line", "regular block"),
+                declDoc.contains("module docs")
             )
         },
         test("parseAst lowers imports and declarations") {

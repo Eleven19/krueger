@@ -54,7 +54,7 @@ class ModuleParserSteps(driver: TestDriver) extends ScalaDsl with EN:
     }
 
     Then("the module has {int} comment(s)") { (count: Int) =>
-        val actual = driver.cst.comments.size
+        val actual = driver.cst.trivia.comments.size
         assert(actual == count, s"expected $count comments, got $actual")
     }
 
@@ -92,9 +92,29 @@ class ModuleParserSteps(driver: TestDriver) extends ScalaDsl with EN:
         assert(values == expected, s"expected values [$expected], got [$values]")
     }
 
+    Then("the module doc comment is {string}") { (expectedText: String) =>
+        val docComment = driver.cst.trivia.docComment
+        assert(
+            docComment.isDefined,
+            "expected a module doc comment, but trivia has no doc comment"
+        )
+        val actual = docComment.get.text.trim
+        assert(
+            actual == expectedText,
+            s"expected module doc comment [$expectedText], got [$actual]"
+        )
+    }
+
+    Then("the module has no doc comment") { () =>
+        assert(
+            driver.cst.trivia.docComment.isEmpty,
+            s"expected no module doc comment, but found [${driver.cst.trivia.docComment.map(_.text.trim)}]"
+        )
+    }
+
     Then("comment {int} is a {string} comment with text {string}") {
         (index: Int, expectedKind: String, expectedText: String) =>
-            val comment = driver.cst.comments(index - 1)
+            val comment = driver.cst.trivia.comments(index - 1)
             val kind = expectedKind.trim.toLowerCase match
                 case "line"  => CommentKind.Line
                 case "block" => CommentKind.Block

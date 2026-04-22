@@ -10,13 +10,28 @@ sealed trait CstNode:
 object CstNode:
     given CanEqual[CstNode, CstNode] = CanEqual.derived
 
+// ── Trivia ──────────────────────────────────────────────────────────────────
+
+sealed trait CstTriviaItem extends CstNode
+
+case class CstTrivia(items: Vector[CstTriviaItem] = Vector.empty) derives CanEqual:
+    def docComment: Option[CstComment] =
+        items.collectFirst { case c: CstComment if c.kind == CommentKind.Doc => c }
+    def comments: Vector[CstComment] =
+        items.collect { case c: CstComment => c }
+    def isEmpty: Boolean  = items.isEmpty
+    def nonEmpty: Boolean = items.nonEmpty
+
+object CstTrivia:
+    val empty: CstTrivia = CstTrivia()
+
 // ── Module ───────────────────────────────────────────────────────────────────
 
 case class CstModule(
     moduleDecl: CstModuleDeclaration,
-    imports: List[CstImport],
-    declarations: List[CstDeclaration],
-    comments: List[CstComment] = Nil
+    imports: Vector[CstImport],
+    declarations: Vector[CstDeclaration],
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstNode derives CanEqual
 
@@ -49,7 +64,7 @@ case class CstComment(
     kind: CommentKind,
     text: String
 )(val span: Span)
-    extends CstNode derives CanEqual
+    extends CstTriviaItem derives CanEqual
 
 // ── Exposing ─────────────────────────────────────────────────────────────────
 
@@ -89,13 +104,15 @@ case class CstImport(
 
 // ── Declarations ─────────────────────────────────────────────────────────────
 
-sealed trait CstDeclaration extends CstNode
+sealed trait CstDeclaration extends CstNode:
+    def trivia: CstTrivia
 
 case class CstValueDeclaration(
     annotation: Option[CstTypeAnnotation],
     name: CstName,
-    patterns: List[CstPattern],
-    body: CstExpression
+    patterns: Vector[CstPattern],
+    body: CstExpression,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
@@ -107,27 +124,30 @@ case class CstTypeAnnotation(
 
 case class CstTypeAliasDeclaration(
     name: CstName,
-    typeVariables: List[CstName],
-    body: CstTypeExpression
+    typeVariables: Vector[CstName],
+    body: CstTypeExpression,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
 case class CstCustomTypeDeclaration(
     name: CstName,
-    typeVariables: List[CstName],
-    constructors: List[CstConstructor]
+    typeVariables: Vector[CstName],
+    constructors: Vector[CstConstructor],
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
 case class CstConstructor(
     name: CstName,
-    parameters: List[CstTypeExpression]
+    parameters: Vector[CstTypeExpression]
 )(val span: Span)
     extends CstNode derives CanEqual
 
 case class CstPortDeclaration(
     name: CstName,
-    typeExpr: CstTypeExpression
+    typeExpr: CstTypeExpression,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 
@@ -135,7 +155,8 @@ case class CstInfixDeclaration(
     associativity: Associativity,
     precedence: Int,
     operator: CstName,
-    function: CstName
+    function: CstName,
+    trivia: CstTrivia = CstTrivia.empty
 )(val span: Span)
     extends CstDeclaration derives CanEqual
 

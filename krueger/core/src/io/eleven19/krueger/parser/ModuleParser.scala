@@ -3,7 +3,7 @@ package io.eleven19.krueger.parser
 import parsley.Parsley
 import parsley.Parsley.{atomic, many, some}
 import parsley.combinator.option
-import parsley.position.pos
+import parsley.position.{offset, pos}
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.*
@@ -20,36 +20,36 @@ import io.eleven19.krueger.lexer.ElmLexer.*
   */
 object ModuleParser:
 
-    /** Helper to build a Span from two parsley positions. */
-    private def mkSpan(start: (Int, Int), end: (Int, Int)): Span =
-        Span(start._1, end._1 - start._1)
+    /** Helper to build a Span from two byte offsets. */
+    private def mkSpan(start: Int, end: Int): Span =
+        Span(start, end - start)
 
     // -----------------------------------------------------------------------
     // Names
     // -----------------------------------------------------------------------
 
     val name: Parsley[CstName] =
-        (pos <~> identifier <~> pos).map { case ((s, n), e) =>
+        (offset <~> identifier <~> offset).map { case ((s, n), e) =>
             CstName(n)(mkSpan(s, e))
         }
 
     val lowerName: Parsley[CstName] =
-        (pos <~> lowerIdentifier <~> pos).map { case ((s, n), e) =>
+        (offset <~> lowerIdentifier <~> offset).map { case ((s, n), e) =>
             CstName(n)(mkSpan(s, e))
         }
 
     val upperName: Parsley[CstName] =
-        (pos <~> upperIdentifier <~> pos).map { case ((s, n), e) =>
+        (offset <~> upperIdentifier <~> offset).map { case ((s, n), e) =>
             CstName(n)(mkSpan(s, e))
         }
 
     val qualifiedName: Parsley[CstQualifiedName] =
-        (pos <~> upperName <~> many(atomic(symbol(".") *> upperName)) <~> pos).map { case (((s, first), rest), e) =>
+        (offset <~> upperName <~> many(atomic(symbol(".") *> upperName)) <~> offset).map { case (((s, first), rest), e) =>
             CstQualifiedName(first :: rest)(mkSpan(s, e))
         }
 
     val qualifiedValueName: Parsley[CstQualifiedName] =
-        atomic((pos <~> many(atomic(upperName <* symbol("."))) <~> lowerName <~> pos).map {
+        atomic((offset <~> many(atomic(upperName <* symbol("."))) <~> lowerName <~> offset).map {
             case (((s, prefix), last), e) =>
                 CstQualifiedName(prefix :+ last)(mkSpan(s, e))
         })
@@ -59,26 +59,26 @@ object ModuleParser:
     // -----------------------------------------------------------------------
 
     private val exposedValue: Parsley[CstExposedItem] =
-        (pos <~> lowerName <~> pos).map { case ((s, n), e) =>
+        (offset <~> lowerName <~> offset).map { case ((s, n), e) =>
             CstExposedValue(n)(mkSpan(s, e))
         }
 
     private val exposedOperator: Parsley[CstExposedItem] =
-        (pos <~> parens(
-            (pos <~> operator <~> pos).map { case ((s, op), e) =>
+        (offset <~> parens(
+            (offset <~> operator <~> offset).map { case ((s, op), e) =>
                 CstName(op)(mkSpan(s, e))
             }
-        ) <~> pos).map { case ((s, n), e) =>
+        ) <~> offset).map { case ((s, n), e) =>
             CstExposedOperator(n)(mkSpan(s, e))
         }
 
     private val exposedTypeConstructors: Parsley[CstExposedConstructors] =
-        (pos <~> parens(symbol("..")) <~> pos).map { case ((s, _), e) =>
+        (offset <~> parens(symbol("..")) <~> offset).map { case ((s, _), e) =>
             CstExposedConstructorsAll()(mkSpan(s, e))
         }
 
     private val exposedType: Parsley[CstExposedItem] =
-        (pos <~> upperName <~> option(exposedTypeConstructors) <~> pos).map { case (((s, n), ctors), e) =>
+        (offset <~> upperName <~> option(exposedTypeConstructors) <~> offset).map { case (((s, n), ctors), e) =>
             CstExposedType(n, ctors)(mkSpan(s, e))
         }
 
@@ -87,10 +87,10 @@ object ModuleParser:
 
     val exposingList: Parsley[CstExposingList] =
         keyword("exposing") *> (
-            atomic((pos <~> parens(symbol("..")) <~> pos).map { case ((s, _), e) =>
+            atomic((offset <~> parens(symbol("..")) <~> offset).map { case ((s, _), e) =>
                 CstExposingAll()(mkSpan(s, e))
             })
-                | (pos <~> parens(commaSep1(exposedItem)) <~> pos).map { case ((s, items), e) =>
+                | (offset <~> parens(commaSep1(exposedItem)) <~> offset).map { case ((s, items), e) =>
                     CstExposingExplicit(items)(mkSpan(s, e))
                 }
         )
@@ -105,7 +105,7 @@ object ModuleParser:
             | Parsley.pure(ModuleType.Plain)
 
     val moduleDeclaration: Parsley[CstModuleDeclaration] =
-        (pos <~> moduleType <* keyword("module") <~> qualifiedName <~> exposingList <~> pos).map {
+        (offset <~> moduleType <* keyword("module") <~> qualifiedName <~> exposingList <~> offset).map {
             case ((((s, mt), qn), exp), e) =>
                 CstModuleDeclaration(mt, qn, exp)(mkSpan(s, e))
         }
@@ -115,9 +115,9 @@ object ModuleParser:
     // -----------------------------------------------------------------------
 
     val importDecl: Parsley[CstImport] =
-        (pos <~> keyword("import") *> qualifiedName <~>
+        (offset <~> keyword("import") *> qualifiedName <~>
             option(keyword("as") *> upperName) <~>
-            option(exposingList) <~> pos).map { case ((((s, modName), alias), exp), e) =>
+            option(exposingList) <~> offset).map { case ((((s, modName), alias), exp), e) =>
             CstImport(modName, alias, exp)(mkSpan(s, e))
         }
 
@@ -128,8 +128,8 @@ object ModuleParser:
     /** Parse a complete Elm module. */
     val module: Parsley[CstModule] =
         fully(
-            (pos <~> moduleDeclaration <~> many(importDecl) <~>
-                many(DeclarationParser.declaration) <~> pos).map { case ((((s, modDecl), imports), decls), e) =>
-                CstModule(modDecl, imports, decls)(mkSpan(s, e))
+            (offset <~> moduleDeclaration <~> many(importDecl) <~>
+                many(DeclarationParser.declaration) <~> offset).map { case ((((s, modDecl), imports), decls), e) =>
+                CstModule(modDecl, imports.toVector, decls.toVector)(mkSpan(s, e))
             }
         )

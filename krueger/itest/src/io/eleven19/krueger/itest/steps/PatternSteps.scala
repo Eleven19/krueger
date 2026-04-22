@@ -7,7 +7,7 @@ import io.eleven19.krueger.itest.TestDriver
 
 class PatternSteps(driver: TestDriver) extends ScalaDsl with EN:
 
-    private def valueParams(driver: TestDriver, name: String): List[CstPattern] =
+    private def valueParams(driver: TestDriver, name: String): Vector[CstPattern] =
         driver.cst.declarations.collectFirst {
             case v: CstValueDeclaration if v.name.value == name => v.patterns
         } match
