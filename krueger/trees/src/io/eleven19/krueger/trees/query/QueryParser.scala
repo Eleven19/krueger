@@ -33,11 +33,16 @@ object QueryParser:
     def parse(source: String): Result[String, Query] =
         queryParser.parse(source) match
             case parsley.Success(q) =>
-                val missing = predicateCaptureRefs(q.predicates).diff(captureNames(q.root))
-                if missing.isEmpty then parsley.Success(q)
+                val dups = duplicateCaptureNames(q.root)
+                if dups.nonEmpty then
+                    val rendered = dups.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
+                    parsley.Failure(s"duplicate capture name(s): $rendered")
                 else
-                    val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
-                    parsley.Failure(s"Predicate references unknown capture(s): $rendered")
+                    val missing = predicateCaptureRefs(q.predicates).diff(captureNames(q.root))
+                    if missing.isEmpty then parsley.Success(q)
+                    else
+                        val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
+                        parsley.Failure(s"Predicate references unknown capture(s): $rendered")
             case parsley.Failure(msg) =>
                 parsley.Failure(normalizeFailure(msg.toString))
 
@@ -80,6 +85,32 @@ object QueryParser:
                 case MatchPredicate(arg, _) =>
                     acc ++ argCapture(arg)
         }
+
+    private def duplicateCaptureNames(p: Pattern): Set[CaptureName] =
+        captureNameCounts(p).collect { case (name, count) if count > 1 => name }.toSet
+
+    private def captureNameCounts(p: Pattern): Map[CaptureName, Int] =
+        val own: Map[CaptureName, Int] = p.capture match
+            case Some(name) => Map(name -> 1)
+            case None       => Map.empty
+
+        p match
+            case NodePattern(_, fields, children, _) =>
+                val fromFields = fields.map(fp => captureNameCounts(fp.pattern))
+                val fromKids   = children.map(captureNameCounts)
+                (own :: (fromFields ::: fromKids)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
+                    m.foldLeft(acc) { case (acc2, (name, count)) =>
+                        acc2.updated(name, acc2.getOrElse(name, 0) + count)
+                    }
+                }
+            case MultiPattern(patterns) =>
+                (own :: patterns.map(captureNameCounts)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
+                    m.foldLeft(acc) { case (acc2, (name, count)) =>
+                        acc2.updated(name, acc2.getOrElse(name, 0) + count)
+                    }
+                }
+            case _: WildcardPattern =>
+                own
 
     private def argCapture(arg: PredicateArg): Option[CaptureName] = arg match
         case CaptureRef(name) => Some(name)

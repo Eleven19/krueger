@@ -168,3 +168,13 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstName) @n (#foo? @n \"main\")"
     Then the query fails with message containing "#foo?"
+
+  Scenario: Duplicate capture names fail query parse
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (CstIntLiteral) @n"
+    Then the query fails with message containing "duplicate capture"

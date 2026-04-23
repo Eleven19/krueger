@@ -175,6 +175,16 @@ object QueryParserSpec extends ZIOSpecDefault:
             test("accepts predicates that reference bound captures") {
                 val res = QueryParser.parse("(Leaf) @l (#eq? @l \"x\")")
                 assertTrue(res.isSuccess)
+            },
+            test("rejects duplicate capture names in a single pattern tree") {
+                val res: parsley.Result[String, Query] = QueryParser.parse("(Branch (Leaf) @x (Leaf) @x)")
+                val msg: String                        = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.contains("duplicate capture"), msg.contains("@x"))
+            },
+            test("rejects duplicate capture names across multi-pattern roots") {
+                val res: parsley.Result[String, Query] = QueryParser.parse("(Leaf) @x (Named) @x")
+                val msg: String                        = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.contains("duplicate capture"), msg.contains("@x"))
             }
         ),
         suite("errors")(
