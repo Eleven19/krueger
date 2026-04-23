@@ -23,6 +23,41 @@ This file provides instructions and context for AI coding agents working on this
 - If ordering or determinism matters, assert order explicitly in tests.
 - Do not mark work complete until acceptance criteria and key edge cases are covered by tests.
 
+## Acceptance Criteria Clarity (Mandatory)
+
+- Express acceptance criteria in EARS-style requirements whenever practical:
+  - `When <trigger>, the system shall <response>.`
+  - `If <precondition>, then the system shall <response>.`
+  - `While <state>, the system shall <response>.`
+  - `Where <variant>, the system shall <response>.`
+- Require at least one success, one negative/failure, and one edge/boundary requirement for non-trivial work.
+- Ensure tests and feature scenarios can be traced back to those requirements.
+
+## BDD Step Language Expansion (Mandatory)
+
+- Expand Gherkin step language when existing steps are insufficient to clearly express new behavior.
+- Any new or modified step phrase must be validated by:
+  - a positive scenario,
+  - a negative scenario,
+  - an edge/boundary scenario where relevant.
+- Prefer composable generic steps and avoid one-off specialized steps unless clarity requires them.
+
+## Fixture Rigor and Dogfooding (Mandatory)
+
+- Use more than minimal toy fixtures when validating behavior with meaningful interactions.
+- Prefer a layered fixture approach:
+  - toy fixtures for narrow unit invariants,
+  - richer synthetic syntax-tree fixtures for semantics interactions,
+  - real Elm CST/AST fixtures for integration behavior,
+  - dogfooded query-AST fixtures when validating query language internals.
+- For cross-tree behavior, verify both CST and AST paths.
+
+## Retroactive Coverage Upgrades (Mandatory)
+
+- Apply this testing rigor to existing implemented features, not only new gaps.
+- Track retrofit coverage as explicit issues and complete them through standard RGR cycles.
+- Preserve existing green happy-path coverage while adding negative, edge, and regression tests.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 

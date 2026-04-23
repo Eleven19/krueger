@@ -23,6 +23,44 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 - Add deterministic-order assertions where ordering is part of behavior.
 - Before closing an issue, verify that tests exercise the full issue acceptance criteria, including edge cases explicitly mentioned in the issue description.
 
+## Acceptance Criteria Clarity (Mandatory)
+
+- Write issue acceptance criteria using EARS-style requirements whenever practical:
+  - `When <trigger>, the system shall <response>.`
+  - `If <precondition>, then the system shall <response>.`
+  - `While <state>, the system shall <response>.`
+  - `Where <variant>, the system shall <response>.`
+- For every non-trivial change, include at least:
+  - one success requirement,
+  - one negative/failure requirement,
+  - one boundary/edge requirement.
+- Feature scenarios and tests should map clearly back to acceptance criteria requirements.
+
+## BDD Step Language Expansion (Mandatory)
+
+- When existing Gherkin steps cannot express a new behavior clearly, expand the step language.
+- New or updated step phrases must be verified by:
+  - at least one positive scenario,
+  - at least one negative scenario,
+  - at least one edge/boundary scenario when applicable.
+- Prefer composable reusable steps; add highly specialized steps only when readability or precision requires them.
+
+## Fixture Rigor and Dogfooding (Mandatory)
+
+- Do not rely only on minimal toy fixtures for end-state confidence.
+- Use a layered fixture strategy as appropriate:
+  - toy fixtures for local invariants,
+  - richer synthetic syntax-tree fixtures for interaction coverage,
+  - real CST/AST fixtures for integration behavior,
+  - dogfooded query-AST fixtures when validating query-language internals.
+- For parser/lifting/query behavior, include CST and AST verification where behavior is meant to be cross-tree.
+
+## Retroactive Coverage Upgrades (Mandatory)
+
+- Apply this rigor to existing features, not only newly added ones.
+- File and track dedicated retrofit issues for existing behavior that lacks sufficient negative/edge/regression coverage.
+- Keep existing happy-path coverage green while adding retrofit tests.
+
 ## Quick Reference
 
 ```bash
