@@ -178,3 +178,40 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstName) @n (CstIntLiteral) @n"
     Then the query fails with message containing "duplicate capture"
+
+  Scenario: Parity baseline - CST and AST produce same match count for declaration query
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n)"
+    And the query match count is remembered as "cstDeclCount"
+    When the AST is queried with "(ValueDeclaration) @v"
+    Then the query match count equals remembered "cstDeclCount"
+
+  Scenario: Parity negative - CST and AST both return zero matches for absent type query
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstFloatLiteral)"
+    And the query match count is remembered as "cstZeroCount"
+    When the AST is queried with "(FloatLiteral)"
+    Then the query match count equals remembered "cstZeroCount"
+    And the query has no matches
+
+  Scenario: Parity failure - malformed query fails for both CST and AST paths
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName"
+    Then the query fails with message containing "Query parse failed:"
+    When the AST is queried with "(ValueDeclaration"
+    Then the query fails with message containing "Query parse failed:"

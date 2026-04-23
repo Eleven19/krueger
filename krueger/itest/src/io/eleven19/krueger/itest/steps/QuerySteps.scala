@@ -6,6 +6,7 @@ import io.eleven19.krueger.itest.TestDriver
 
 class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
     private var lastQueryFailure: Option[AssertionError] = None
+    private var rememberedMatchCounts: Map[String, Int]  = Map.empty
 
     private def runAndCaptureFailure(run: => Unit): Unit =
         try
@@ -62,6 +63,21 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
                |${failure.getMessage}
                |""".stripMargin
         )
+    }
+
+    Then("the query match count is remembered as {string}") { (name: String) =>
+        assertNoQueryFailure()
+        rememberedMatchCounts = rememberedMatchCounts.updated(name, driver.lastMatches.size)
+    }
+
+    Then("the query match count equals remembered {string}") { (name: String) =>
+        assertNoQueryFailure()
+        val expected = rememberedMatchCounts.getOrElse(
+            name,
+            throw new AssertionError(s"no remembered query count named [$name]")
+        )
+        val actual = driver.lastMatches.size
+        assert(actual == expected, s"expected query match count [$actual] to equal remembered [$name]=$expected")
     }
 
     Then("capture {string} of match {int} is a {string}") {
