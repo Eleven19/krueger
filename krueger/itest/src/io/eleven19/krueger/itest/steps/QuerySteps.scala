@@ -14,6 +14,14 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
         driver.queryAst(queryText)
     }
 
+    When("the CST is queried with:") { (queryText: String) =>
+        driver.queryCst(queryText)
+    }
+
+    When("the AST is queried with:") { (queryText: String) =>
+        driver.queryAst(queryText)
+    }
+
     Then("the query matches exactly {int} time(s)") { (count: Int) =>
         val actual = driver.lastMatches.size
         assert(actual == count, s"expected exactly $count match(es), got $actual")

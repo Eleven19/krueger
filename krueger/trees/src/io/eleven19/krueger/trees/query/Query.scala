@@ -1,5 +1,7 @@
 package io.eleven19.krueger.trees.query
 
+import scala.annotation.tailrec
+
 /** Root of the query AST. A parsed query is one pattern plus zero or more predicates that constrain captured nodes. */
 final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEqual:
 
@@ -8,14 +10,17 @@ final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEq
       * Useful for validation (e.g. confirming every `@foo` referenced by a predicate is actually bound by the pattern).
       */
     def captureNames: Set[String] =
-        def go(p: Pattern, acc: Set[String]): Set[String] =
-            val withOwn = p.capture.fold(acc)(acc + _)
-            p match
-                case NodePattern(_, fields, _) =>
-                    fields.foldLeft(withOwn)((a, fp) => go(fp.pattern, a))
-                case _: WildcardPattern =>
-                    withOwn
-        go(root, Set.empty)
+        @tailrec
+        def go(stack: List[Pattern], acc: Set[String]): Set[String] = stack match
+            case Nil => acc
+            case p :: rest =>
+                val withOwn = p.capture.fold(acc)(acc + _)
+                p match
+                    case NodePattern(_, fields, _) =>
+                        go(fields.map(_.pattern) ::: rest, withOwn)
+                    case _: WildcardPattern =>
+                        go(rest, withOwn)
+        go(List(root), Set.empty)
 
 /** A tree pattern: either a node pattern with an optional list of named sub-patterns, or a wildcard that matches any
   * node.
