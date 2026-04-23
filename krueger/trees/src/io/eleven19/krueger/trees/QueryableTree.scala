@@ -1,0 +1,25 @@
+package io.eleven19.krueger.trees
+
+/** Generic contract for tree-shaped data that participates in the query DSL.
+  *
+  * An instance describes how to navigate values of `T`: what kind of node it is, its children in traversal order,
+  * optional named sub-trees ("fields"), and optional leaf text.
+  *
+  * v1 is intentionally string-based. Compile-time type narrowing and derivation are tracked in the krueger-trees v2
+  * epic.
+  */
+trait QueryableTree[T]:
+    /** Human- and query-readable name of the node's kind. Must be non-empty. */
+    def nodeType(t: T): String
+
+    /** Every child of `t` in a stable traversal order. */
+    def children(t: T): Seq[T]
+
+    /** Named sub-trees keyed by field name. Values must be a (possibly empty) subset of `children(t)`. */
+    def fields(t: T): Map[String, Seq[T]]
+
+    /** Raw text for leaf nodes; `None` for compound nodes. */
+    def text(t: T): Option[String]
+
+object QueryableTree:
+    inline def apply[T](using qt: QueryableTree[T]): QueryableTree[T] = qt

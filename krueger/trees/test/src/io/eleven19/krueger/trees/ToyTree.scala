@@ -1,0 +1,34 @@
+package io.eleven19.krueger.trees
+
+/** Minimal tree fixture used by the QueryableTree test suite.
+  *
+  * Covers the three shapes callers need to exercise: leaves with text, anonymous containers, and nodes with named
+  * fields.
+  */
+sealed trait ToyTree derives CanEqual
+
+object ToyTree:
+
+    final case class Leaf(value: String)                 extends ToyTree derives CanEqual
+    final case class Branch(items: Seq[ToyTree])         extends ToyTree derives CanEqual
+    final case class Named(name: ToyTree, body: ToyTree) extends ToyTree derives CanEqual
+
+    given QueryableTree[ToyTree] with
+
+        def nodeType(t: ToyTree): String = t match
+            case _: Leaf   => "Leaf"
+            case _: Branch => "Branch"
+            case _: Named  => "Named"
+
+        def children(t: ToyTree): Seq[ToyTree] = t match
+            case _: Leaf           => Seq.empty
+            case Branch(items)     => items
+            case Named(name, body) => Seq(name, body)
+
+        def fields(t: ToyTree): Map[String, Seq[ToyTree]] = t match
+            case _: Leaf | _: Branch => Map.empty
+            case Named(name, body)   => Map("name" -> Seq(name), "body" -> Seq(body))
+
+        def text(t: ToyTree): Option[String] = t match
+            case Leaf(v) => Some(v)
+            case _       => None
