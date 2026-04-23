@@ -27,6 +27,8 @@ import io.eleven19.krueger.trees.NodeTypeName
   */
 object QueryParser:
 
+    private val parseFailurePrefix = "Query parse failed: "
+
     /** Parse a query without validating node-type names. */
     def parse(source: String): Result[String, Query] =
         queryParser.parse(source) match
@@ -36,7 +38,8 @@ object QueryParser:
                 else
                     val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
                     parsley.Failure(s"Predicate references unknown capture(s): $rendered")
-            case f: parsley.Failure[String] => f
+            case parsley.Failure(msg) =>
+                parsley.Failure(s"$parseFailurePrefix$msg")
 
     /** Parse a query and validate every node-type name against `knownTypes`.
       *

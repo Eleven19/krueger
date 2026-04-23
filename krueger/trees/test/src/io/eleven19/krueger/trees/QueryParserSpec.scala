@@ -171,6 +171,21 @@ object QueryParserSpec extends ZIOSpecDefault:
             },
             test("invalid regex in #match? fails cleanly") {
                 assertTrue(QueryParser.parse("(Leaf) @l (#match? @l \"[unclosed\")").isFailure)
+            },
+            test("malformed input matrix returns stable parse-failure prefix") {
+                val malformed = List(
+                    "(Leaf",
+                    "(Leaf) @",
+                    "(Named name (Leaf))",
+                    "(Leaf) @l (#eq? @l)",
+                    "(Leaf) @l (#match? @l \"[unterminated\")"
+                )
+
+                val messages = malformed.map { source =>
+                    QueryParser.parse(source).toEither.left.getOrElse("")
+                }
+
+                assertTrue(messages.forall(_.startsWith("Query parse failed:")))
             }
         )
     )

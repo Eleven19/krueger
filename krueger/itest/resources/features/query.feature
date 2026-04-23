@@ -128,3 +128,23 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstName) @n (CstIntLiteral) (#eq? @missing \"x\")"
     Then the query fails with message containing "@missing"
+
+  Scenario: Malformed query with unmatched paren fails with stable parse prefix
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName"
+    Then the query fails with message containing "Query parse failed:"
+
+  Scenario: Malformed predicate arity fails with stable parse prefix
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (#eq? @n)"
+    Then the query fails with message containing "Query parse failed:"
