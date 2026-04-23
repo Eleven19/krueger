@@ -61,6 +61,10 @@ object MatcherSpec extends ZIOSpecDefault:
                 val ms = Matcher.matches(q("(Named name: (Leaf) @n)"), branch).toList
                 assertTrue(ms.size == 1, ms.head.captures.get(nCap).contains(leafHi))
             },
+            test("negated field constraint matches when field is absent") {
+                val ms = Matcher.matches(q("(Leaf !name)"), branch).toList
+                assertTrue(ms.size == 4)
+            },
             test("field pattern with multiple fields binds each capture") {
                 val ms = Matcher.matches(q("(Named name: (Leaf) @n body: (Leaf) @b)"), branch).toList
                 assertTrue(
@@ -68,6 +72,10 @@ object MatcherSpec extends ZIOSpecDefault:
                     ms.head.captures.get(nCap).contains(leafHi),
                     ms.head.captures.get(bCap).contains(leafBye)
                 )
+            },
+            test("negated field constraint fails when field is present") {
+                val ms = Matcher.matches(q("(Named !name)"), branch).toList
+                assertTrue(ms.isEmpty)
             },
             test("field pattern fails when sub-pattern does not match") {
                 val ms = Matcher.matches(q("(Named name: (Branch))"), named).toList

@@ -93,6 +93,13 @@ object QueryParserSpec extends ZIOSpecDefault:
                 )
                 assertTrue(parseOrFail("(Named (Leaf) @n . (Leaf) @b)") == expected)
             },
+            test("node with negated field constraint") {
+                val expected = Query(
+                    NodePattern(namedType, Nil, Nil, None, Set.empty, Set(nameField)),
+                    Nil
+                )
+                assertTrue(parseOrFail("(Named !name)") == expected)
+            },
             test("multiple top-level patterns in one query are accepted") {
                 val res = QueryParser.parse("(Leaf) (Named)")
                 assertTrue(res.isSuccess)
@@ -289,6 +296,11 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val res = QueryParser.parse("(Named (Leaf) @n .)")
                 val msg = res.toEither.left.getOrElse("")
                 assertTrue(res.isFailure, msg.toLowerCase.contains("invalid anchor placement"))
+            },
+            test("conflicting positive and negated field constraints fail with explicit diagnostic") {
+                val res = QueryParser.parse("(Named !name name: (Leaf) @n)")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("conflicting field constraints"), msg.contains("name"))
             }
         )
     )

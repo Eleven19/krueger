@@ -49,8 +49,9 @@ object Matcher:
                     .flatMap(p => matchPattern(p, node, captures))
                     .nextOption()
 
-            case NodePattern(expectedType, fieldPatterns, childPatterns, capture, adjacentChildAnchors) =>
+            case NodePattern(expectedType, fieldPatterns, childPatterns, capture, adjacentChildAnchors, negatedFields) =>
                 if qt.nodeType(node) != expectedType then None
+                else if !negatedFields.forall(fn => qt.fields(node).getOrElse(fn, Seq.empty).isEmpty) then None
                 else
                     val base      = bind(capture, node, captures)
                     val fieldsMap = qt.fields(node)

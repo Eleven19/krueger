@@ -59,7 +59,7 @@ object QueryParser:
             case f: parsley.Failure[String] => f
 
     private def gatherNodeTypes(p: Pattern): Set[NodeTypeName] = p match
-        case NodePattern(nt, fields, children, _, _) =>
+        case NodePattern(nt, fields, children, _, _, _) =>
             val withFields = fields.foldLeft(Set(nt))((acc, fp) => acc ++ gatherNodeTypes(fp.pattern))
             children.foldLeft(withFields)((acc, child) => acc ++ gatherNodeTypes(child))
         case MultiPattern(patterns) =>
@@ -67,7 +67,7 @@ object QueryParser:
         case _: WildcardPattern => Set.empty
 
     private def captureNames(p: Pattern): Set[CaptureName] = p match
-        case NodePattern(_, fields, children, capture, _) =>
+        case NodePattern(_, fields, children, capture, _, _) =>
             val own        = capture.toSet
             val fromFields = fields.foldLeft(Set.empty[CaptureName])((acc, fp) => acc ++ captureNames(fp.pattern))
             val fromKids   = children.foldLeft(Set.empty[CaptureName])((acc, kid) => acc ++ captureNames(kid))
@@ -99,7 +99,7 @@ object QueryParser:
             case None       => Map.empty
 
         p match
-            case NodePattern(_, fields, children, _, _) =>
+            case NodePattern(_, fields, children, _, _, _) =>
                 val fromFields = fields.map(fp => captureNameCounts(fp.pattern))
                 val fromKids   = children.map(captureNameCounts)
                 (own :: (fromFields ::: fromKids)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
@@ -198,9 +198,11 @@ object QueryParser:
         case Field(value: FieldPattern)
         case Child(value: Pattern)
         case Anchor
+        case NegatedField(value: FieldName)
 
     private lazy val nodeMember: Parsley[NodeMember] =
         fieldPattern.map(NodeMember.Field(_)) |
+            (tok(char('!')) *> tok(fieldName)).map(NodeMember.NegatedField(_)) |
             tok(char('.')).as(NodeMember.Anchor) |
             pattern.map(NodeMember.Child(_))
 
@@ -229,11 +231,18 @@ object QueryParser:
             case None =>
                 val fields = members.collect { case NodeMember.Field(value) => value }
                 val children = members.collect { case NodeMember.Child(value) => value }
-                val anchors = members.indices.collect {
-                    case i if members(i) == NodeMember.Anchor =>
-                        members.take(i).count(_.isInstanceOf[NodeMember.Child]) - 1
-                }.toSet
-                Right(NodePattern(nt, fields, children, cap, anchors))
+                val negatedFields = members.collect { case NodeMember.NegatedField(value) => value }.toSet
+                val conflictingFields = fields.map(_.name).toSet.intersect(negatedFields)
+                if conflictingFields.nonEmpty then
+                    Left(
+                        s"conflicting field constraints: ${conflictingFields.toList.map(FieldName.unwrap).sorted.mkString(", ")}"
+                    )
+                else
+                    val anchors = members.indices.collect {
+                        case i if members(i) == NodeMember.Anchor =>
+                            members.take(i).count(_.isInstanceOf[NodeMember.Child]) - 1
+                    }.toSet
+                    Right(NodePattern(nt, fields, children, cap, anchors, negatedFields))
 
     // --- Predicates ----------------------------------------------------------
 

@@ -127,6 +127,18 @@ Feature: Tree queries
     And capture "n" of match 1 has text "main"
     And capture "i" of match 1 has text "42"
 
+  @REQ-QRY-001
+  Scenario: Negated field constraint matches when optional field is absent
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration !annotation name: (CstName) @n)"
+    Then the query matches exactly 1 time
+    And capture "n" of match 1 has text "main"
+
   @REQ-QRY-001 @REQ-QRY-004
   Scenario: CST query with multiple top-level patterns
     Given the Elm source:
@@ -236,6 +248,17 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstValueDeclaration . (CstName) @n (CstIntLiteral) @i)"
     Then the query fails with message containing "invalid anchor placement"
+
+  @REQ-QRY-002
+  Scenario: Conflicting negated and positive field constraints fail parse
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration !name name: (CstName) @n)"
+    Then the query fails with message containing "conflicting field constraints"
 
   @REQ-QRY-002
   Scenario: Duplicate capture names fail query parse
