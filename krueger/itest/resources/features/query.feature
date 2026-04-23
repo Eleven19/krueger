@@ -158,3 +158,13 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstName) @n (#match? \"main\" \"^m\")"
     Then the query fails with message containing "Query parse failed:"
+
+  Scenario: Unknown predicate fails with explicit predicate diagnostic
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (#foo? @n \"main\")"
+    Then the query fails with message containing "#foo?"

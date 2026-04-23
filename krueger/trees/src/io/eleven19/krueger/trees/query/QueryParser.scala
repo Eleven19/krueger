@@ -39,7 +39,7 @@ object QueryParser:
                     val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
                     parsley.Failure(s"Predicate references unknown capture(s): $rendered")
             case parsley.Failure(msg) =>
-                parsley.Failure(s"$parseFailurePrefix$msg")
+                parsley.Failure(normalizeFailure(msg.toString))
 
     /** Parse a query and validate every node-type name against `knownTypes`.
       *
@@ -84,6 +84,16 @@ object QueryParser:
     private def argCapture(arg: PredicateArg): Option[CaptureName] = arg match
         case CaptureRef(name) => Some(name)
         case StringArg(_)     => None
+
+    private def normalizeFailure(msg: String): String =
+        val withPrefix = s"$parseFailurePrefix$msg"
+        val unknownPredicatePattern = """unexpected \"(#\w+\?)\"""".r
+        unknownPredicatePattern.findFirstMatchIn(msg) match
+            case Some(m) if msg.contains("expected \"#eq?\", \"#match?\"") =>
+                val token = m.group(1)
+                s"$parseFailurePrefix Unknown predicate: $token\n$msg"
+            case _ =>
+                withPrefix
 
     // --- Trivia --------------------------------------------------------------
 

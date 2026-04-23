@@ -204,6 +204,16 @@ object QueryParserSpec extends ZIOSpecDefault:
                 }
 
                 assertTrue(messages.forall(_.startsWith("Query parse failed:")))
+            },
+            test("unknown predicate fails with predicate token in message") {
+                val res = QueryParser.parse("(Leaf) @l (#foo? @l \"x\")")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.contains("#foo?"))
+            },
+            test("unknown predicate has explicit unknown-predicate wording") {
+                val res = QueryParser.parse("(Leaf) @l (#foo? @l \"x\")")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("unknown predicate"))
             }
         )
     )
