@@ -87,6 +87,19 @@ object QueryParserSpec extends ZIOSpecDefault:
             test("multiple top-level patterns can still include predicates") {
                 val res = QueryParser.parse("(Leaf) @l (Named) (#eq? @l \"hi\")")
                 assertTrue(res.isSuccess)
+            },
+            test("multiple top-level pattern order is deterministic") {
+                val q = parseOrFail("(Leaf) @l (Named) @n")
+                val expected = Query(
+                    MultiPattern(
+                        List(
+                            NodePattern(leafType, Nil, Nil, Some(l)),
+                            NodePattern(namedType, Nil, Nil, Some(n))
+                        )
+                    ),
+                    Nil
+                )
+                assertTrue(q == expected)
             }
         ),
         suite("wildcards")(
@@ -204,7 +217,9 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val malformed = List(
                     "(Leaf",
                     "(Leaf) @",
+                    "(Leaf) @1bad",
                     "(Named name (Leaf))",
+                    "(Leaf) @l (#eq? @l \"unterminated)",
                     "(Leaf) @l (#eq? @l)",
                     "(Leaf) @l (#match? @l \"[unterminated\")"
                 )
@@ -214,6 +229,20 @@ object QueryParserSpec extends ZIOSpecDefault:
                 }
 
                 assertTrue(messages.forall(_.startsWith("Query parse failed:")))
+            },
+            test("unterminated string literal fails with stable actionable diagnostics") {
+                val res = QueryParser.parse("(Leaf) @l (#eq? @l \"unterminated)")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(
+                    res.isFailure,
+                    msg.startsWith("Query parse failed:"),
+                    msg.toLowerCase.contains("unexpected") || msg.toLowerCase.contains("expected")
+                )
+            },
+            test("dangling capture sigil fails with parser failure instead of runtime exception") {
+                val res = QueryParser.parse("(Leaf) @")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.startsWith("Query parse failed:"))
             },
             test("unknown predicate fails with predicate token in message") {
                 val res = QueryParser.parse("(Leaf) @l (#foo? @l \"x\")")
