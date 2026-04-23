@@ -120,6 +120,24 @@ object QueryParserSpec extends ZIOSpecDefault:
             test("multiple predicates accumulate in order") {
                 val q = parseOrFail("(Leaf) @l (#eq? @l @l) (#match? @l \"x\")")
                 assertTrue(q.predicates.size == 2)
+            },
+            test("#eq? with too few args fails cleanly") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#eq? @l)").isFailure)
+            },
+            test("#eq? with too many args fails cleanly") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#eq? @l @l @l)").isFailure)
+            },
+            test("#match? with too few args fails cleanly") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#match? @l)").isFailure)
+            },
+            test("#match? with too many args fails cleanly") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#match? @l \"x\" \"y\")").isFailure)
+            },
+            test("#eq? rejects string left-hand side argument kind") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#eq? \"x\" @l)").isFailure)
+            },
+            test("#match? rejects string left-hand side argument kind") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#match? \"x\" \"^x\")").isFailure)
             }
         ),
         suite("trivia")(

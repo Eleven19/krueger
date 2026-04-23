@@ -153,11 +153,14 @@ object QueryParser:
 
     // --- Predicates ----------------------------------------------------------
 
+    private val captureArg: Parsley[CaptureRef] =
+        tok(captureTail).map(CaptureRef(_))
+
     private val predicateArg: Parsley[PredicateArg] =
-        tok(captureTail).map(CaptureRef(_)) | tok(stringLit).map(StringArg(_))
+        captureArg | tok(stringLit).map(StringArg(_))
 
     private val eqPredicate: Parsley[Predicate] =
-        (atomic(tok('(' <~ skipTrivia) *> tok("#eq?")) *> predicateArg <~> predicateArg <~ tok(')'))
+        (atomic(tok('(' <~ skipTrivia) *> tok("#eq?")) *> captureArg <~> predicateArg <~ tok(')'))
             .map { case (l, r) => EqPredicate(l, r) }
 
     private val regexArg: Parsley[RegexPattern] =
@@ -170,7 +173,7 @@ object QueryParser:
     private val matchPredicate: Parsley[Predicate] =
         (
             atomic(tok('(' <~ skipTrivia) *> tok("#match?"))
-                *> predicateArg
+                *> captureArg
                 <~> regexArg
                 <~ tok(')')
         ).map { case (a, r) => MatchPredicate(a, r) }

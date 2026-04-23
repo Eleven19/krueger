@@ -148,3 +148,13 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstName) @n (#eq? @n)"
     Then the query fails with message containing "Query parse failed:"
+
+  Scenario: Predicate argument kind mismatch fails query parse
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (#match? \"main\" \"^m\")"
+    Then the query fails with message containing "Query parse failed:"
