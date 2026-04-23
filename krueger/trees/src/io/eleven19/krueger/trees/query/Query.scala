@@ -55,6 +55,8 @@ sealed trait Predicate derives CanEqual
 
 final case class EqPredicate(left: PredicateArg, right: PredicateArg)   extends Predicate derives CanEqual
 final case class MatchPredicate(arg: PredicateArg, regex: RegexPattern) extends Predicate derives CanEqual
+final case class NotEqPredicate(left: PredicateArg, right: PredicateArg)   extends Predicate derives CanEqual
+final case class NotMatchPredicate(arg: PredicateArg, regex: RegexPattern) extends Predicate derives CanEqual
 
 /** Argument supplied to a predicate: a reference to a capture or a string literal. */
 sealed trait PredicateArg derives CanEqual

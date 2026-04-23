@@ -124,6 +124,16 @@ object MatcherSpec extends ZIOSpecDefault:
                 val ms = Matcher.matches(q("(Leaf) @l (#match? @l \"^z\")"), branch).toList
                 assertTrue(ms.isEmpty)
             },
+            test("#not-eq? keeps captures whose text differs from the literal") {
+                val ms = Matcher.matches(q("(Leaf) @l (#not-eq? @l \"hi\")"), branch).toList
+                val values = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
+                assertTrue(ms.size == 2, values.forall(_ != "hi"))
+            },
+            test("#not-match? keeps captures whose text does not match regex") {
+                val ms = Matcher.matches(q("(Leaf) @l (#not-match? @l \"^h\")"), branch).toList
+                val values = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
+                assertTrue(ms.size == 2, values.forall(v => !v.startsWith("h")))
+            },
             test("#eq? deterministically fails when capture has no text") {
                 val ms = Matcher.matches(q("(Named) @n (#eq? @n \"hi\")"), branch).toList
                 assertTrue(ms.isEmpty)

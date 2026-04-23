@@ -19,7 +19,7 @@ import io.eleven19.krueger.trees.NodeTypeName
   *   - Field pattern: `(NodeType field_name: (ChildType))`
   *   - Capture: `@name` appended to any pattern
   *   - Wildcard: `_` or `(_)`, optionally followed by `@name`
-  *   - Predicate clauses at top level: `(#eq? @a @b)` or `(#match? @x "regex")`
+  *   - Predicate clauses at top level: `(#eq? @a @b)`, `(#not-eq? @a "x")`, `(#match? @x "regex")`, `(#not-match? @x "regex")`
   *   - Line comments: `;; ...` to end of line
   *   - Flexible whitespace between tokens
   *
@@ -84,6 +84,10 @@ object QueryParser:
                     acc ++ argCapture(left) ++ argCapture(right)
                 case MatchPredicate(arg, _) =>
                     acc ++ argCapture(arg)
+                case NotEqPredicate(left, right) =>
+                    acc ++ argCapture(left) ++ argCapture(right)
+                case NotMatchPredicate(arg, _) =>
+                    acc ++ argCapture(arg)
         }
 
     private def duplicateCaptureNames(p: Pattern): Set[CaptureName] =
@@ -118,13 +122,19 @@ object QueryParser:
 
     private def normalizeFailure(msg: String): String =
         val withPrefix = s"$parseFailurePrefix$msg"
-        val unknownPredicatePattern = """unexpected \"(#\w+\?)\"""".r
-        unknownPredicatePattern.findFirstMatchIn(msg) match
-            case Some(m) if msg.contains("expected \"#eq?\", \"#match?\"") =>
+        val unknownPredicatePattern    = """unexpected \"(#[\w-]+\?)\"""".r
+        val unsupportedDirectivePattern = """unexpected \"(#[\w-]+!)\"""".r
+        unsupportedDirectivePattern.findFirstMatchIn(msg) match
+            case Some(m) if msg.contains("expected") =>
                 val token = m.group(1)
-                s"$parseFailurePrefix Unknown predicate: $token\n$msg"
+                s"$parseFailurePrefix Unsupported directive: $token\n$msg"
             case _ =>
-                withPrefix
+                unknownPredicatePattern.findFirstMatchIn(msg) match
+                    case Some(m) if msg.contains("expected") =>
+                        val token = m.group(1)
+                        s"$parseFailurePrefix Unknown predicate: $token\n$msg"
+                    case _ =>
+                        withPrefix
 
     // --- Trivia --------------------------------------------------------------
 
@@ -219,7 +229,20 @@ object QueryParser:
                 <~ tok(')')
         ).map { case (a, r) => MatchPredicate(a, r) }
 
-    private val predicate: Parsley[Predicate] = eqPredicate | matchPredicate
+    private val notEqPredicate: Parsley[Predicate] =
+        (atomic(tok('(' <~ skipTrivia) *> tok("#not-eq?")) *> captureArg <~> predicateArg <~ tok(')'))
+            .map { case (l, r) => NotEqPredicate(l, r) }
+
+    private val notMatchPredicate: Parsley[Predicate] =
+        (
+            atomic(tok('(' <~ skipTrivia) *> tok("#not-match?"))
+                *> captureArg
+                <~> regexArg
+                <~ tok(')')
+        ).map { case (a, r) => NotMatchPredicate(a, r) }
+
+    private val predicate: Parsley[Predicate] =
+        eqPredicate | matchPredicate | notEqPredicate | notMatchPredicate
 
     // --- Top-level -----------------------------------------------------------
 

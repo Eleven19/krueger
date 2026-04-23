@@ -23,3 +23,9 @@ object PredicateName extends Newtype[String]:
 
     /** Built-in: regex text match. */
     val Match: PredicateName = unsafeMake("#match?")
+
+    /** Built-in: text inequality. */
+    val NotEq: PredicateName = unsafeMake("#not-eq?")
+
+    /** Built-in: regex text non-match. */
+    val NotMatch: PredicateName = unsafeMake("#not-match?")

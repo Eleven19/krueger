@@ -130,6 +130,14 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val q = parseOrFail("(Leaf) @l (#match? @l \"^hi\")")
                 assertTrue(q.predicates == List(MatchPredicate(CaptureRef(l), rx("^hi"))))
             },
+            test("not-eq? accepts capture ref and string literal") {
+                val q = parseOrFail("(Leaf) @l (#not-eq? @l \"bye\")")
+                assertTrue(q.predicates == List(NotEqPredicate(CaptureRef(l), StringArg("bye"))))
+            },
+            test("not-match? accepts capture ref and regex") {
+                val q = parseOrFail("(Leaf) @l (#not-match? @l \"^z\")")
+                assertTrue(q.predicates == List(NotMatchPredicate(CaptureRef(l), rx("^z"))))
+            },
             test("multiple predicates accumulate in order") {
                 val q = parseOrFail("(Leaf) @l (#eq? @l @l) (#match? @l \"x\")")
                 assertTrue(q.predicates.size == 2)
@@ -253,6 +261,11 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val res = QueryParser.parse("(Leaf) @l (#foo? @l \"x\")")
                 val msg = res.toEither.left.getOrElse("")
                 assertTrue(res.isFailure, msg.toLowerCase.contains("unknown predicate"))
+            },
+            test("unsupported directive has explicit unsupported-directive wording") {
+                val res = QueryParser.parse("(Leaf) @l (#set! @l \"name\")")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("unsupported directive"), msg.contains("#set!"))
             }
         )
     )

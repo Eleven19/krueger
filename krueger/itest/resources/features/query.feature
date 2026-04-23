@@ -191,6 +191,28 @@ Feature: Tree queries
     When the CST is queried with "(CstName) @n (#foo? @n \"main\")"
     Then the query fails with message containing "#foo?"
 
+  @REQ-QRY-001
+  Scenario: CST query with #not-eq? excludes matching text
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n) (#not-eq? @n \"main\")"
+    Then the query has no matches
+
+  @REQ-QRY-002
+  Scenario: Unsupported directive fails with explicit directive diagnostic
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (#set! @n \"kind\")"
+    Then the query fails with message containing "Unsupported directive"
+
   @REQ-QRY-002
   Scenario: Duplicate capture names fail query parse
     Given the Elm source:

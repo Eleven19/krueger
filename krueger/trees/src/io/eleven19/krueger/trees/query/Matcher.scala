@@ -114,6 +114,14 @@ object Matcher:
                 registry.predicates
                     .get(PredicateName.Match)
                     .exists(_.evaluate(PredicateArgs.Match(arg, regex), captures))
+            case NotEqPredicate(l, r) =>
+                registry.predicates
+                    .get(PredicateName.NotEq)
+                    .exists(_.evaluate(PredicateArgs.NotEq(l, r), captures))
+            case NotMatchPredicate(arg, regex) =>
+                registry.predicates
+                    .get(PredicateName.NotMatch)
+                    .exists(_.evaluate(PredicateArgs.NotMatch(arg, regex), captures))
 
 /** Typed argument bundle handed to a [[PredicateImpl]]. Each built-in predicate has a dedicated variant that preserves
   * arity and type information — no `List[PredicateArg]` / arity checking at runtime.
@@ -123,6 +131,8 @@ sealed trait PredicateArgs derives CanEqual
 object PredicateArgs:
     final case class Eq(left: PredicateArg, right: PredicateArg)           extends PredicateArgs derives CanEqual
     final case class Match(arg: PredicateArg, regex: RegexPattern)         extends PredicateArgs derives CanEqual
+    final case class NotEq(left: PredicateArg, right: PredicateArg)        extends PredicateArgs derives CanEqual
+    final case class NotMatch(arg: PredicateArg, regex: RegexPattern)      extends PredicateArgs derives CanEqual
     final case class Custom(name: PredicateName, args: List[PredicateArg]) extends PredicateArgs derives CanEqual
 
 /** Pluggable implementation of a named predicate. */
@@ -142,7 +152,9 @@ object PredicateRegistry:
     val default: PredicateRegistry = PredicateRegistry(
         Map(
             PredicateName.Eq    -> EqImpl,
-            PredicateName.Match -> MatchImpl
+            PredicateName.Match -> MatchImpl,
+            PredicateName.NotEq -> NotEqImpl,
+            PredicateName.NotMatch -> NotMatchImpl
         )
     )
 
@@ -170,4 +182,33 @@ private object MatchImpl extends PredicateImpl:
         args match
             case PredicateArgs.Match(CaptureRef(name), regex) =>
                 captures.get(name).flatMap(qt.text).exists(text => regex.compiled.findFirstIn(text).isDefined)
+            case _ => false
+
+private object NotEqImpl extends PredicateImpl:
+
+    def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean =
+        args match
+            case PredicateArgs.NotEq(l, r) =>
+                (resolveText(l, captures), resolveText(r, captures)) match
+                    case (Some(a), Some(b)) => a != b
+                    case _                  => false
+            case _ => false
+
+    private def resolveText[T](
+        arg: PredicateArg,
+        captures: Map[CaptureName, T]
+    )(using qt: QueryableTree[T]): Option[String] =
+        arg match
+            case CaptureRef(name) => captures.get(name).flatMap(qt.text)
+            case StringArg(v)     => Some(v)
+
+private object NotMatchImpl extends PredicateImpl:
+
+    def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean =
+        args match
+            case PredicateArgs.NotMatch(CaptureRef(name), regex) =>
+                captures
+                    .get(name)
+                    .flatMap(qt.text)
+                    .exists(text => regex.compiled.findFirstIn(text).isEmpty)
             case _ => false

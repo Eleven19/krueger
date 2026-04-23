@@ -42,9 +42,13 @@ AST; third parties write one for their own tree.
 | `(#eq? @a @b)`                    | Predicate: captured texts must be equal                |
 | `(#eq? @a "literal")`             | Predicate: captured text equals a literal              |
 | `(#match? @a "regex")`            | Predicate: captured text matches the regex             |
+| `(#not-eq? @a "literal")`         | Predicate: captured text must differ from a literal    |
+| `(#not-match? @a "regex")`        | Predicate: captured text must not match the regex      |
 | `;; line comment`                 | Ignored through to end of line                         |
 
 Alternation, quantifiers, anchors, and negation are deferred to v2.
+Directives (for example `#set!`) are currently unsupported and fail with an
+explicit `Unsupported directive: ...` parse diagnostic.
 
 ## CST example
 
@@ -149,7 +153,7 @@ fixture for the typeclass's unit tests.
 ## Predicate registry
 
 Predicates are looked up in a `PredicateRegistry`. The default registry
-ships `#eq?` and `#match?`; callers register custom predicates per-query
+ships `#eq?`, `#match?`, `#not-eq?`, and `#not-match?`; callers register custom predicates per-query
 without touching the matcher:
 
 ```scala
