@@ -55,7 +55,15 @@ object Matcher:
                     .map(updated => bind(capture, node, updated))
                     .nextOption()
 
-            case NodePattern(expectedType, fieldPatterns, childPatterns, capture, adjacentChildAnchors, negatedFields) =>
+            case NodePattern(
+                    expectedType,
+                    fieldPatterns,
+                    childPatterns,
+                    capture,
+                    adjacentChildAnchors,
+                    negatedFields,
+                    childQuantifiers
+                ) =>
                 if qt.nodeType(node) != expectedType then None
                 else if !negatedFields.forall(fn => qt.fields(node).getOrElse(fn, Seq.empty).isEmpty) then None
                 else
@@ -74,7 +82,7 @@ object Matcher:
                         }
                     withFields.flatMap { case (acc, usedChildren) =>
                         val remainingChildren = excludeUsed(qt.children(node), usedChildren)
-                        matchOrderedChildren(childPatterns, remainingChildren, acc, adjacentChildAnchors)
+                        matchOrderedChildren(childPatterns, remainingChildren, acc, adjacentChildAnchors, childQuantifiers)
                     }
 
     private def excludeUsed[T](children: Seq[T], used: List[T]): Seq[T] =
@@ -87,7 +95,8 @@ object Matcher:
         patterns: List[Pattern],
         children: Seq[T],
         captures: Map[CaptureName, T],
-        adjacentChildAnchors: Set[Int]
+        adjacentChildAnchors: Set[Int],
+        childQuantifiers: Map[Int, QuantifierKind]
     )(using qt: QueryableTree[T]): Option[Map[CaptureName, T]] =
         def go(
             remaining: List[Pattern],
@@ -99,17 +108,62 @@ object Matcher:
             remaining match
                 case Nil => Some(accCaptures)
                 case wanted :: rest =>
-                    (startChildIdx until children.size).iterator
-                        .flatMap { i =>
-                            val anchoredToPrev = adjacentChildAnchors.contains(nextPatternIdx - 1)
-                            val placementOk = !anchoredToPrev || lastMatchedChildIdx.contains(i - 1)
-                            if !placementOk then Iterator.empty
-                            else
-                                matchPattern(wanted, children(i), accCaptures)
-                                    .flatMap(updated => go(rest, nextPatternIdx + 1, i + 1, Some(i), updated))
-                                    .iterator
+                    val quantOpt = childQuantifiers.get(nextPatternIdx)
+
+                    def matchOneAt(i: Int, inCaps: Map[CaptureName, T]): Option[Map[CaptureName, T]] =
+                        val anchoredToPrev = adjacentChildAnchors.contains(nextPatternIdx - 1)
+                        val placementOk = !anchoredToPrev || lastMatchedChildIdx.contains(i - 1)
+                        if !placementOk then None
+                        else matchPattern(wanted, children(i), inCaps)
+
+                    def repeatAtLeast(
+                        minMatches: Int,
+                        currentStart: Int,
+                        currentLast: Option[Int],
+                        currentCaps: Map[CaptureName, T],
+                        matched: Int
+                    ): Option[Map[CaptureName, T]] =
+                        val continuation =
+                            if matched >= minMatches then
+                                go(rest, nextPatternIdx + 1, currentStart, currentLast, currentCaps)
+                            else None
+
+                        continuation.orElse {
+                            (currentStart until children.size).iterator
+                                .flatMap { i =>
+                                    val anchoredToPrev = adjacentChildAnchors.contains(nextPatternIdx - 1)
+                                    val placementOk = !anchoredToPrev || currentLast.contains(i - 1)
+                                    if !placementOk then Iterator.empty
+                                    else
+                                        matchPattern(wanted, children(i), currentCaps)
+                                            .flatMap(updated => repeatAtLeast(minMatches, i + 1, Some(i), updated, matched + 1))
+                                            .iterator
+                                }
+                                .nextOption()
                         }
-                        .nextOption()
+
+                    quantOpt match
+                        case Some(QuantifierKind.Optional) =>
+                            (startChildIdx until children.size).iterator
+                                .flatMap { i =>
+                                    matchOneAt(i, accCaptures)
+                                        .flatMap(updated => go(rest, nextPatternIdx + 1, i + 1, Some(i), updated))
+                                        .iterator
+                                }
+                                .nextOption()
+                                .orElse(go(rest, nextPatternIdx + 1, startChildIdx, lastMatchedChildIdx, accCaptures))
+                        case Some(QuantifierKind.ZeroOrMore) =>
+                            repeatAtLeast(minMatches = 0, startChildIdx, lastMatchedChildIdx, accCaptures, matched = 0)
+                        case Some(QuantifierKind.OneOrMore) =>
+                            repeatAtLeast(minMatches = 1, startChildIdx, lastMatchedChildIdx, accCaptures, matched = 0)
+                        case None =>
+                            (startChildIdx until children.size).iterator
+                                .flatMap { i =>
+                                    matchOneAt(i, accCaptures)
+                                        .flatMap(updated => go(rest, nextPatternIdx + 1, i + 1, Some(i), updated))
+                                        .iterator
+                                }
+                                .nextOption()
 
         go(patterns, nextPatternIdx = 0, startChildIdx = 0, lastMatchedChildIdx = None, captures)
 

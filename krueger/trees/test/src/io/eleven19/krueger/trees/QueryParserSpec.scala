@@ -113,6 +113,21 @@ object QueryParserSpec extends ZIOSpecDefault:
                 )
                 assertTrue(parseOrFail("[(Leaf) @n (Named) @b] @x") == expected)
             },
+            test("node with child quantifiers parses") {
+                val expected = Query(
+                    NodePattern(
+                        namedType,
+                        Nil,
+                        List(NodePattern(leafType, Nil, Nil, Some(n)), NodePattern(leafType, Nil, Nil, Some(b))),
+                        None,
+                        Set.empty,
+                        Set.empty,
+                        Map(0 -> QuantifierKind.Optional, 1 -> QuantifierKind.OneOrMore)
+                    ),
+                    Nil
+                )
+                assertTrue(parseOrFail("(Named (Leaf) @n? (Leaf) @b+)") == expected)
+            },
             test("field can contain alternation sub-pattern") {
                 val expected = Query(
                     NodePattern(
@@ -339,6 +354,16 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val res = QueryParser.parse("[]")
                 val msg = res.toEither.left.getOrElse("")
                 assertTrue(res.isFailure, msg.toLowerCase.contains("alternation requires at least one branch"))
+            },
+            test("quantifier without preceding child pattern fails with explicit diagnostic") {
+                val res = QueryParser.parse("(Named ? (Leaf) @n)")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("invalid quantifier placement"))
+            },
+            test("stacked quantifiers fail with explicit placement diagnostic") {
+                val res = QueryParser.parse("(Named (Leaf) @n?*)")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("invalid quantifier placement"))
             }
         )
     )

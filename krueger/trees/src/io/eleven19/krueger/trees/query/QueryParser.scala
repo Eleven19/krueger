@@ -59,7 +59,7 @@ object QueryParser:
             case f: parsley.Failure[String] => f
 
     private def gatherNodeTypes(p: Pattern): Set[NodeTypeName] = p match
-        case NodePattern(nt, fields, children, _, _, _) =>
+        case NodePattern(nt, fields, children, _, _, _, _) =>
             val withFields = fields.foldLeft(Set(nt))((acc, fp) => acc ++ gatherNodeTypes(fp.pattern))
             children.foldLeft(withFields)((acc, child) => acc ++ gatherNodeTypes(child))
         case MultiPattern(patterns) =>
@@ -69,7 +69,7 @@ object QueryParser:
         case _: WildcardPattern => Set.empty
 
     private def captureNames(p: Pattern): Set[CaptureName] = p match
-        case NodePattern(_, fields, children, capture, _, _) =>
+        case NodePattern(_, fields, children, capture, _, _, _) =>
             val own        = capture.toSet
             val fromFields = fields.foldLeft(Set.empty[CaptureName])((acc, fp) => acc ++ captureNames(fp.pattern))
             val fromKids   = children.foldLeft(Set.empty[CaptureName])((acc, kid) => acc ++ captureNames(kid))
@@ -103,7 +103,7 @@ object QueryParser:
             case None       => Map.empty
 
         p match
-            case NodePattern(_, fields, children, _, _, _) =>
+            case NodePattern(_, fields, children, _, _, _, _) =>
                 val fromFields = fields.map(fp => captureNameCounts(fp.pattern))
                 val fromKids   = children.map(captureNameCounts)
                 (own :: (fromFields ::: fromKids)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
@@ -220,11 +220,15 @@ object QueryParser:
         case Child(value: Pattern)
         case Anchor
         case NegatedField(value: FieldName)
+        case Quantifier(value: QuantifierKind)
 
     private lazy val nodeMember: Parsley[NodeMember] =
         fieldPattern.map(NodeMember.Field(_)) |
             (tok(char('!')) *> tok(fieldName)).map(NodeMember.NegatedField(_)) |
             tok(char('.')).as(NodeMember.Anchor) |
+            tok(char('?')).as(NodeMember.Quantifier(QuantifierKind.Optional)) |
+            tok(char('*')).as(NodeMember.Quantifier(QuantifierKind.ZeroOrMore)) |
+            tok(char('+')).as(NodeMember.Quantifier(QuantifierKind.OneOrMore)) |
             pattern.map(NodeMember.Child(_))
 
     private lazy val fieldPattern: Parsley[FieldPattern] =
@@ -250,20 +254,39 @@ object QueryParser:
             case Some(_) =>
                 Left("invalid anchor placement: '.' must appear between two unfielded child patterns")
             case None =>
-                val fields = members.collect { case NodeMember.Field(value) => value }
-                val children = members.collect { case NodeMember.Child(value) => value }
-                val negatedFields = members.collect { case NodeMember.NegatedField(value) => value }.toSet
-                val conflictingFields = fields.map(_.name).toSet.intersect(negatedFields)
-                if conflictingFields.nonEmpty then
-                    Left(
-                        s"conflicting field constraints: ${conflictingFields.toList.map(FieldName.unwrap).sorted.mkString(", ")}"
-                    )
-                else
-                    val anchors = members.indices.collect {
-                        case i if members(i) == NodeMember.Anchor =>
-                            members.take(i).count(_.isInstanceOf[NodeMember.Child]) - 1
-                    }.toSet
-                    Right(NodePattern(nt, fields, children, cap, anchors, negatedFields))
+                val invalidQuantifierIndex = members.indices.find { i =>
+                    members(i) match
+                        case NodeMember.Quantifier(_) =>
+                            i == 0 || !members(i - 1).isInstanceOf[NodeMember.Child]
+                        case _ => false
+                }
+                invalidQuantifierIndex match
+                    case Some(_) =>
+                        Left("invalid quantifier placement: quantifiers must follow an unfielded child pattern")
+                    case None =>
+                        val fields = members.collect { case NodeMember.Field(value) => value }
+                        val children = members.collect { case NodeMember.Child(value) => value }
+                        val negatedFields = members.collect { case NodeMember.NegatedField(value) => value }.toSet
+                        val conflictingFields = fields.map(_.name).toSet.intersect(negatedFields)
+                        if conflictingFields.nonEmpty then
+                            Left(
+                                s"conflicting field constraints: ${conflictingFields.toList.map(FieldName.unwrap).sorted.mkString(", ")}"
+                            )
+                        else
+                            val anchors = members.indices.collect {
+                                case i if members(i) == NodeMember.Anchor =>
+                                    members.take(i).count(_.isInstanceOf[NodeMember.Child]) - 1
+                            }.toSet
+                            val quantifiers = members.indices.collect {
+                                case i if members(i).isInstanceOf[NodeMember.Quantifier] =>
+                                    val childIdx = members.take(i).count(_.isInstanceOf[NodeMember.Child]) - 1
+                                    val q = members(i) match
+                                        case NodeMember.Quantifier(value) => value
+                                        case _ =>
+                                            throw new IllegalStateException("unreachable quantifier shape")
+                                    (childIdx, q)
+                            }.toMap
+                            Right(NodePattern(nt, fields, children, cap, anchors, negatedFields, quantifiers))
 
     // --- Predicates ----------------------------------------------------------
 

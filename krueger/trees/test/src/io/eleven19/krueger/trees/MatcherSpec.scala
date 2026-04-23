@@ -131,6 +131,18 @@ object MatcherSpec extends ZIOSpecDefault:
             test("anchored child patterns fail when only non-adjacent match exists") {
                 val ms = Matcher.matches(q("(Branch (Leaf) @n . (Leaf) @b)"), branch).toList
                 assertTrue(ms.isEmpty)
+            },
+            test("optional child quantifier allows missing child") {
+                val ms = Matcher.matches(q("(Named (Leaf) @n?)"), named).toList
+                assertTrue(ms.size == 1, ms.head.captures.get(nCap).contains(leafHi))
+            },
+            test("one-or-more child quantifier requires at least one match") {
+                val ms = Matcher.matches(q("(Named (Branch)+)"), named).toList
+                assertTrue(ms.isEmpty)
+            },
+            test("zero-or-more child quantifier allows zero matches") {
+                val ms = Matcher.matches(q("(Named (Branch)*)"), named).toList
+                assertTrue(ms.size == 1)
             }
         ),
         suite("predicates")(

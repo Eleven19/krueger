@@ -20,7 +20,7 @@ final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEq
             case p :: rest =>
                 val withOwn = p.capture.fold(acc)(acc + _)
                 p match
-                    case NodePattern(_, fields, children, _, _, _) =>
+                    case NodePattern(_, fields, children, _, _, _, _) =>
                         go(fields.map(_.pattern) ::: children ::: rest, withOwn)
                     case MultiPattern(patterns) =>
                         go(patterns ::: rest, withOwn)
@@ -43,7 +43,8 @@ final case class NodePattern(
     childPatterns: List[Pattern],
     capture: Option[CaptureName],
     adjacentChildAnchors: Set[Int] = Set.empty,
-    negatedFields: Set[FieldName] = Set.empty
+    negatedFields: Set[FieldName] = Set.empty,
+    childQuantifiers: Map[Int, QuantifierKind] = Map.empty
 ) extends Pattern derives CanEqual
 
 final case class MultiPattern(patterns: List[Pattern]) extends Pattern derives CanEqual:
@@ -52,6 +53,11 @@ final case class MultiPattern(patterns: List[Pattern]) extends Pattern derives C
 final case class AlternationPattern(patterns: List[Pattern], capture: Option[CaptureName]) extends Pattern derives CanEqual
 
 final case class WildcardPattern(capture: Option[CaptureName]) extends Pattern derives CanEqual
+
+enum QuantifierKind derives CanEqual:
+    case Optional
+    case ZeroOrMore
+    case OneOrMore
 
 /** A named sub-pattern attached to a parent NodePattern. */
 final case class FieldPattern(name: FieldName, pattern: Pattern) derives CanEqual
