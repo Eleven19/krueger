@@ -215,3 +215,50 @@ Feature: Tree queries
     Then the query fails with message containing "Query parse failed:"
     When the AST is queried with "(ValueDeclaration"
     Then the query fails with message containing "Query parse failed:"
+
+  Scenario: Ordered capture assertions report deterministic match ordering
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      alpha = 1
+      beta = 2
+      """
+    When the AST is queried with "(ValueDeclaration) @v"
+    Then capture "v" texts in match order are:
+      """
+      alpha
+      beta
+      """
+
+  Scenario: Failure phase assertion distinguishes query parse failures
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the AST is queried with "(ValueDeclaration"
+    Then the query fails during "query-parse"
+
+  Scenario: Failure phase assertion distinguishes tree parse failures
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main =
+      """
+    When the AST is queried with "(ValueDeclaration) @v"
+    Then the query fails during "tree-parse"
+
+  Scenario: Failure message hook can remember and compare diagnostics
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName"
+    Then the query failure message is remembered as "parseDiag"
+    When the CST is queried with "(CstName"
+    Then the query failure message equals remembered "parseDiag"

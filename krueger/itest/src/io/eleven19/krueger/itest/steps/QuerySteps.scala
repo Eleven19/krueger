@@ -7,6 +7,7 @@ import io.eleven19.krueger.itest.TestDriver
 class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
     private var lastQueryFailure: Option[AssertionError] = None
     private var rememberedMatchCounts: Map[String, Int]  = Map.empty
+    private var rememberedFailureMessages: Map[String, String] = Map.empty
 
     private def runAndCaptureFailure(run: => Unit): Unit =
         try
@@ -18,6 +19,11 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
 
     private def assertNoQueryFailure(): Unit =
         assert(lastQueryFailure.isEmpty, s"query failed unexpectedly: ${lastQueryFailure.map(_.getMessage).getOrElse("")}")
+
+    private def currentFailureMessage(): String =
+        lastQueryFailure.map(_.getMessage).getOrElse(
+            throw new AssertionError("expected query to fail, but it succeeded")
+        )
 
     When("the CST is queried with {string}") { (queryText: String) =>
         runAndCaptureFailure(driver.queryCst(queryText))
@@ -54,15 +60,30 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
     }
 
     Then("the query fails with message containing {string}") { (needle: String) =>
-        val failure = lastQueryFailure.getOrElse(
-            throw new AssertionError("expected query to fail, but it succeeded")
-        )
+        val failure = currentFailureMessage()
         assert(
-            failure.getMessage.contains(needle),
+            failure.contains(needle),
             s"""expected query failure message to contain [$needle], got:
-               |${failure.getMessage}
+               |$failure
                |""".stripMargin
         )
+    }
+
+    Then("the query fails during {string}") { (phase: String) =>
+        val failure = currentFailureMessage().toLowerCase
+        phase.trim.toLowerCase match
+            case "query-parse" =>
+                assert(
+                    failure.contains("query parse failed:"),
+                    s"expected query-parse failure, got: ${currentFailureMessage()}"
+                )
+            case "tree-parse" =>
+                assert(
+                    failure.contains("cst parse failed:") || failure.contains("ast parse failed:"),
+                    s"expected tree-parse failure, got: ${currentFailureMessage()}"
+                )
+            case other =>
+                throw new AssertionError(s"unsupported failure phase [$other]; expected query-parse or tree-parse")
     }
 
     Then("the query match count is remembered as {string}") { (name: String) =>
@@ -78,6 +99,48 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
         )
         val actual = driver.lastMatches.size
         assert(actual == expected, s"expected query match count [$actual] to equal remembered [$name]=$expected")
+    }
+
+    Then("the query failure message is remembered as {string}") { (name: String) =>
+        rememberedFailureMessages = rememberedFailureMessages.updated(name, currentFailureMessage())
+    }
+
+    Then("the query failure message equals remembered {string}") { (name: String) =>
+        val expected = rememberedFailureMessages.getOrElse(
+            name,
+            throw new AssertionError(s"no remembered query failure named [$name]")
+        )
+        val actual = currentFailureMessage()
+        assert(actual == expected, s"expected remembered failure [$name] to equal current failure.\nExpected: $expected\nActual:   $actual")
+    }
+
+    Then("the query failure message contains remembered {string}") { (name: String) =>
+        val expectedFragment = rememberedFailureMessages.getOrElse(
+            name,
+            throw new AssertionError(s"no remembered query failure named [$name]")
+        )
+        val actual = currentFailureMessage()
+        assert(
+            actual.contains(expectedFragment),
+            s"expected current failure to contain remembered failure [$name].\nRemembered: $expectedFragment\nActual:     $actual"
+        )
+    }
+
+    Then("capture {string} texts in match order are:") { (captureName: String, expectedRows: String) =>
+        assertNoQueryFailure()
+        val expected = expectedRows.linesIterator.map(_.trim).filter(_.nonEmpty).toVector
+        val actual = driver.lastMatches.zipWithIndex.map { (m, idx) =>
+            m.captures.get(captureName).getOrElse(
+                throw new AssertionError(
+                    s"no capture named [$captureName] in match ${idx + 1}; available: ${m.captures.keySet.mkString(", ")}"
+                )
+            ).text.getOrElse(
+                throw new AssertionError(
+                    s"capture [$captureName] in match ${idx + 1} has no text (node type ${m.captures(captureName).nodeType})"
+                )
+            )
+        }.toVector
+        assert(actual == expected, s"expected capture [$captureName] texts in order $expected, got $actual")
     }
 
     Then("capture {string} of match {int} is a {string}") {
