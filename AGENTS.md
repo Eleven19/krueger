@@ -36,6 +36,39 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
   - one boundary/edge requirement.
 - Feature scenarios and tests should map clearly back to acceptance criteria requirements.
 
+## Issue Authoring Template (Mandatory)
+
+- Use the following reusable template for all new issues (gap work and retrofit work):
+
+```text
+Context:
+- <what gap/behavior/problem is being addressed and why>
+
+EARS requirements:
+- REQ-<slug>-001 (When): When <trigger>, the system shall <response>.
+- REQ-<slug>-002 (If): If <precondition>, then the system shall <response>.
+- REQ-<slug>-003 (Where/While): Where/While <variant/state>, the system shall <response>.
+
+Acceptance:
+1) Implementation expectations:
+   - <parser/matcher/runtime/docs changes expected>
+2) Test matrix (mandatory):
+   - happy-path coverage
+   - negative/failure coverage
+   - edge/boundary coverage
+   - regression coverage
+3) User-visible behavior:
+   - if user-visible, require both unit + BDD/integration assertions
+4) Determinism and diagnostics:
+   - assert ordering determinism where observable
+   - assert stable, actionable diagnostics for failures
+```
+
+- Apply this template to:
+  - new feature/gap issues,
+  - retrofit/backfill issues,
+  - process/docs issues that change expected engineering workflow.
+
 ## BDD Step Language Expansion (Mandatory)
 
 - When existing Gherkin steps cannot express a new behavior clearly, expand the step language.
