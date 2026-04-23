@@ -40,6 +40,20 @@ object MatcherSpec extends ZIOSpecDefault:
             test("no match yields an empty lazy list") {
                 val ms = Matcher.matches(q("(Branch)"), leafHi)
                 assertTrue(ms.isEmpty)
+            },
+            test("multiple top-level patterns return combined matches") {
+                val ms = Matcher.matches(q("(Named) (Leaf)"), branch).toList
+                assertTrue(ms.size == 5)
+            },
+            test("multiple top-level patterns preserve pattern-order grouping") {
+                val ms = Matcher.matches(q("(Named) @n (Leaf) @l"), branch).toList
+                val firstIsNamed = ms.head.captures.contains(nCap)
+                val namedCount   = ms.count(_.captures.contains(nCap))
+                val leafCount    = ms.count(_.captures.contains(lCap))
+                val splitAt      = namedCount
+                val grouped = ms.take(splitAt).forall(_.captures.contains(nCap)) &&
+                    ms.drop(splitAt).forall(_.captures.contains(lCap))
+                assertTrue(firstIsNamed, namedCount == 1, leafCount == 4, grouped)
             }
         ),
         suite("fields")(
@@ -58,6 +72,28 @@ object MatcherSpec extends ZIOSpecDefault:
             test("field pattern fails when sub-pattern does not match") {
                 val ms = Matcher.matches(q("(Named name: (Branch))"), named).toList
                 assertTrue(ms.isEmpty)
+            }
+        ),
+        suite("ordered child matching")(
+            test("unfielded child patterns match children in order") {
+                val ms = Matcher.matches(q("(Branch (Leaf) @n (Named) @b)"), branch).toList
+                assertTrue(
+                    ms.size == 1,
+                    ms.head.captures.get(nCap).contains(leafHi),
+                    ms.head.captures.get(bCap).contains(named)
+                )
+            },
+            test("unfielded child patterns fail when ordered sequence cannot be found") {
+                val ms = Matcher.matches(q("(Branch (Named) @b (Named) @n)"), branch).toList
+                assertTrue(ms.isEmpty)
+            },
+            test("field and unfielded child patterns can be mixed") {
+                val ms = Matcher.matches(q("(Named name: (Leaf) @n (Leaf) @b)"), named).toList
+                assertTrue(
+                    ms.size == 1,
+                    ms.head.captures.get(nCap).contains(leafHi),
+                    ms.head.captures.get(bCap).contains(leafBye)
+                )
             }
         ),
         suite("predicates")(

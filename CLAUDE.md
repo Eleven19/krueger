@@ -2,6 +2,27 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
+## TDD Red-Green-Refactor (Mandatory)
+
+- Use strict **Red-Green-Refactor** for all functional changes.
+- **Red:** author or update tests first; run them and verify failure for the intended reason.
+- **Green:** implement the smallest production change that makes the new tests pass.
+- **Refactor:** improve structure/readability only after green, with full test suite still passing.
+- Do not write production code before tests unless the user explicitly requests a non-TDD approach.
+- If this order is violated, reset the premature code changes and restart from Red.
+
+## Testing Coverage and Edge Cases (Mandatory)
+
+- A single happy-path test is insufficient for non-trivial features.
+- For each behavior change, author tests for:
+  - nominal success behavior,
+  - validation/error behavior,
+  - edge/boundary behavior,
+  - regression scenarios tied to known issues.
+- When behavior is externally visible, include both unit tests and higher-level integration/BDD scenarios.
+- If ordering or determinism matters, assert order explicitly in tests.
+- Do not mark work complete until acceptance criteria and key edge cases are covered by tests.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 

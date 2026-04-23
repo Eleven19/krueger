@@ -29,7 +29,14 @@ object QueryParser:
 
     /** Parse a query without validating node-type names. */
     def parse(source: String): Result[String, Query] =
-        queryParser.parse(source)
+        queryParser.parse(source) match
+            case parsley.Success(q) =>
+                val missing = predicateCaptureRefs(q.predicates).diff(captureNames(q.root))
+                if missing.isEmpty then parsley.Success(q)
+                else
+                    val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
+                    parsley.Failure(s"Predicate references unknown capture(s): $rendered")
+            case f: parsley.Failure[String] => f
 
     /** Parse a query and validate every node-type name against `knownTypes`.
       *
@@ -44,9 +51,36 @@ object QueryParser:
             case f: parsley.Failure[String] => f
 
     private def gatherNodeTypes(p: Pattern): Set[NodeTypeName] = p match
-        case NodePattern(nt, fields, _) =>
-            fields.foldLeft(Set(nt))((acc, fp) => acc ++ gatherNodeTypes(fp.pattern))
+        case NodePattern(nt, fields, children, _) =>
+            val withFields = fields.foldLeft(Set(nt))((acc, fp) => acc ++ gatherNodeTypes(fp.pattern))
+            children.foldLeft(withFields)((acc, child) => acc ++ gatherNodeTypes(child))
+        case MultiPattern(patterns) =>
+            patterns.foldLeft(Set.empty[NodeTypeName])((acc, child) => acc ++ gatherNodeTypes(child))
         case _: WildcardPattern => Set.empty
+
+    private def captureNames(p: Pattern): Set[CaptureName] = p match
+        case NodePattern(_, fields, children, capture) =>
+            val own        = capture.toSet
+            val fromFields = fields.foldLeft(Set.empty[CaptureName])((acc, fp) => acc ++ captureNames(fp.pattern))
+            val fromKids   = children.foldLeft(Set.empty[CaptureName])((acc, kid) => acc ++ captureNames(kid))
+            own ++ fromFields ++ fromKids
+        case MultiPattern(patterns) =>
+            patterns.foldLeft(Set.empty[CaptureName])((acc, pattern) => acc ++ captureNames(pattern))
+        case WildcardPattern(capture) =>
+            capture.toSet
+
+    private def predicateCaptureRefs(predicates: List[Predicate]): Set[CaptureName] =
+        predicates.foldLeft(Set.empty[CaptureName]) { (acc, p) =>
+            p match
+                case EqPredicate(left, right) =>
+                    acc ++ argCapture(left) ++ argCapture(right)
+                case MatchPredicate(arg, _) =>
+                    acc ++ argCapture(arg)
+        }
+
+    private def argCapture(arg: PredicateArg): Option[CaptureName] = arg match
+        case CaptureRef(name) => Some(name)
+        case StringArg(_)     => None
 
     // --- Trivia --------------------------------------------------------------
 
@@ -97,12 +131,17 @@ object QueryParser:
         (
             tok('(' <~ skipTrivia)
                 *> tok(nodeTypeName)
-                <~> many(fieldPattern)
+                <~> many(fieldPatternOrChildPattern)
                 <~ tok(')')
                 <~> option(tok(captureTail))
-        ).map { case ((nt, fs), cap) =>
-            NodePattern(nt, fs, cap)
+        ).map { case ((nt, members), cap) =>
+            val fields   = members.collect { case Left(f)  => f }
+            val children = members.collect { case Right(p) => p }
+            NodePattern(nt, fields, children, cap)
         }
+
+    private lazy val fieldPatternOrChildPattern: Parsley[Either[FieldPattern, Pattern]] =
+        fieldPattern.map(Left(_)) | pattern.map(Right(_))
 
     private lazy val fieldPattern: Parsley[FieldPattern] =
         (atomic(tok(fieldName) <~ tok(':')) <~> pattern).map { case (name, p) =>
@@ -137,7 +176,17 @@ object QueryParser:
 
     // --- Top-level -----------------------------------------------------------
 
+    private val queryPart: Parsley[Either[Pattern, Predicate]] =
+        predicate.map(Right(_)) | pattern.map(Left(_))
+
     private val queryParser: Parsley[Query] =
-        (skipTrivia *> pattern <~> many(predicate) <~ eof).map { case (p, preds) =>
-            Query(p, preds)
+        (skipTrivia *> many(queryPart) <~ eof).flatMap { parts =>
+            val roots = parts.collect { case Left(p)   => p }
+            val preds = parts.collect { case Right(pr) => pr }
+            roots match
+                case Nil =>
+                    Parsley.empty.label("at least one query pattern")
+                case first :: rest =>
+                    val root = if rest.isEmpty then first else MultiPattern(first :: rest)
+                    Parsley.pure(Query(root, preds))
         }

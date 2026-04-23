@@ -16,11 +16,17 @@ object Matcher:
         root: T,
         registry: PredicateRegistry = PredicateRegistry.default
     )(using qt: QueryableTree[T]): LazyList[Match[T]] =
-        preOrder(root)
-            .flatMap { node =>
-                matchPattern(query.root, node, Map.empty).map(caps => Match(node, caps))
-            }
-            .filter(m => query.predicates.forall(p => evaluatePredicate(p, m.captures, registry)))
+        query.root match
+            case MultiPattern(patterns) =>
+                patterns.to(LazyList).flatMap { p =>
+                    matches(Query(p, query.predicates), root, registry)
+                }
+            case _ =>
+                preOrder(root)
+                    .flatMap { node =>
+                        matchPattern(query.root, node, Map.empty).map(caps => Match(node, caps))
+                    }
+                    .filter(m => query.predicates.forall(p => evaluatePredicate(p, m.captures, registry)))
 
     // --- Traversal -----------------------------------------------------------
 
@@ -38,19 +44,52 @@ object Matcher:
             case WildcardPattern(capture) =>
                 Some(bind(capture, node, captures))
 
-            case NodePattern(expectedType, fieldPatterns, capture) =>
+            case MultiPattern(patterns) =>
+                patterns.iterator
+                    .flatMap(p => matchPattern(p, node, captures))
+                    .nextOption()
+
+            case NodePattern(expectedType, fieldPatterns, childPatterns, capture) =>
                 if qt.nodeType(node) != expectedType then None
                 else
                     val base      = bind(capture, node, captures)
                     val fieldsMap = qt.fields(node)
-                    fieldPatterns.foldLeft[Option[Map[CaptureName, T]]](Some(base)) { (accOpt, fp) =>
-                        accOpt.flatMap { acc =>
-                            val values = fieldsMap.getOrElse(fp.name, Seq.empty)
-                            values.iterator
-                                .flatMap(v => matchPattern(fp.pattern, v, acc))
-                                .nextOption()
+                    val withFields =
+                        fieldPatterns.foldLeft[Option[(Map[CaptureName, T], List[T])]](Some((base, Nil))) {
+                            (accOpt, fp) =>
+                                accOpt.flatMap { acc =>
+                                    val (accCaptures, usedChildren) = acc
+                                    val values                      = fieldsMap.getOrElse(fp.name, Seq.empty)
+                                    values.iterator
+                                        .flatMap(v => matchPattern(fp.pattern, v, accCaptures).map(c => (c, usedChildren :+ v)))
+                                        .nextOption()
+                                }
                         }
+                    withFields.flatMap { case (acc, usedChildren) =>
+                        val remainingChildren = excludeUsed(qt.children(node), usedChildren)
+                        matchOrderedChildren(childPatterns, remainingChildren, acc)
                     }
+
+    private def excludeUsed[T](children: Seq[T], used: List[T]): Seq[T] =
+        used.foldLeft(children) { (accChildren, usedChild) =>
+            val idx = accChildren.indexWhere(c => c.equals(usedChild))
+            if idx < 0 then accChildren else accChildren.patch(idx, Nil, 1)
+        }
+
+    private def matchOrderedChildren[T](
+        patterns: List[Pattern],
+        children: Seq[T],
+        captures: Map[CaptureName, T]
+    )(using qt: QueryableTree[T]): Option[Map[CaptureName, T]] =
+        patterns match
+            case Nil => Some(captures)
+            case wanted :: rest =>
+                children.indices.iterator
+                    .flatMap { i =>
+                        matchPattern(wanted, children(i), captures)
+                            .flatMap(updated => matchOrderedChildren(rest, children.drop(i + 1), updated))
+                    }
+                    .nextOption()
 
     private def bind[T](
         capture: Option[CaptureName],

@@ -76,3 +76,55 @@ Feature: Tree queries
       """
     When the AST is queried with "(ValueDeclaration) @v (#eq? @v \"main\")"
     Then the query matches exactly 1 time
+
+  Scenario: Predicate capture must be bound
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (#eq? @missing \"main\")"
+    Then the query fails with message containing "@missing"
+
+  Scenario: CST query supports ordered unfielded child patterns
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration (CstName) @n (CstIntLiteral) @i)"
+    Then the query matches exactly 1 time
+    And capture "n" of match 1 has text "main"
+    And capture "i" of match 1 has text "42"
+
+  Scenario: CST query with multiple top-level patterns
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) (CstIntLiteral)"
+    Then the query matches at least 2 times
+
+  Scenario: Multi-pattern query can include predicates
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (CstIntLiteral) (#eq? @n \"main\")"
+    Then the query matches at least 1 time
+
+  Scenario: Unknown capture in multi-pattern query fails query parse
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstName) @n (CstIntLiteral) (#eq? @missing \"x\")"
+    Then the query fails with message containing "@missing"

@@ -2,6 +2,27 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
+## TDD Red-Green-Refactor (Mandatory)
+
+- For any behavior change or bug fix, follow strict **Red-Green-Refactor**.
+- **Red first:** write/modify tests to express the desired behavior *before* changing production code, then run tests and confirm they fail for the expected reason.
+- **Green second:** make the minimal production code change needed to pass the new failing tests.
+- **Refactor third:** clean up code/tests while keeping all tests green.
+- Do not implement production code ahead of tests unless the user explicitly asks to skip TDD.
+- If code was written before tests by mistake, perform a strict reset of those changes and restart with Red first.
+
+## Testing Depth and Edge Cases (Mandatory)
+
+- Do not treat a feature as done based on a single happy-path test.
+- For behavior changes, include tests that cover:
+  - happy path(s),
+  - failure/validation path(s),
+  - boundary/edge cases,
+  - regression cases for previously reported bugs.
+- Prefer both unit-level and integration/BDD coverage when user-facing behavior changes.
+- Add deterministic-order assertions where ordering is part of behavior.
+- Before closing an issue, verify that tests exercise the full issue acceptance criteria, including edge cases explicitly mentioned in the issue description.
+
 ## Quick Reference
 
 ```bash

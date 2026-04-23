@@ -20,8 +20,10 @@ final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEq
             case p :: rest =>
                 val withOwn = p.capture.fold(acc)(acc + _)
                 p match
-                    case NodePattern(_, fields, _) =>
-                        go(fields.map(_.pattern) ::: rest, withOwn)
+                    case NodePattern(_, fields, children, _) =>
+                        go(fields.map(_.pattern) ::: children ::: rest, withOwn)
+                    case MultiPattern(patterns) =>
+                        go(patterns ::: rest, withOwn)
                     case _: WildcardPattern =>
                         go(rest, withOwn)
         go(List(root), Set.empty)
@@ -36,8 +38,12 @@ sealed trait Pattern derives CanEqual:
 final case class NodePattern(
     nodeType: NodeTypeName,
     fieldPatterns: List[FieldPattern],
+    childPatterns: List[Pattern],
     capture: Option[CaptureName]
 ) extends Pattern derives CanEqual
+
+final case class MultiPattern(patterns: List[Pattern]) extends Pattern derives CanEqual:
+    val capture: Option[CaptureName] = None
 
 final case class WildcardPattern(capture: Option[CaptureName]) extends Pattern derives CanEqual
 
