@@ -7,6 +7,10 @@ trait TreesModule extends _root_.build.CommonScalaModule
     with _root_.build.PublishSupport {
 
     override def artifactName = "krueger-trees"
+
+    def mvnDeps = Seq(
+        mvn"com.github.j-mie6::parsley::4.6.2"
+    )
 }
 
 trait TreesTestModule extends _root_.build.CommonScalaTestModule
