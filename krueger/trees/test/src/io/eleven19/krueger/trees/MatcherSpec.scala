@@ -94,6 +94,13 @@ object MatcherSpec extends ZIOSpecDefault:
                     ms.head.captures.get(nCap).contains(leafHi),
                     ms.head.captures.get(bCap).contains(leafBye)
                 )
+            },
+            test("ordered child matching is deterministic when multiple alignments are possible") {
+                val root: ToyTree = Branch(Seq(Leaf("a"), Leaf("b"), Leaf("c")))
+                val ms   = Matcher.matches(q("(Branch (Leaf) @n (Leaf) @b)"), root).toList
+                val capN = ms.head.captures(nCap)
+                val capB = ms.head.captures(bCap)
+                assertTrue(ms.size == 1, capN == Leaf("a"), capB == Leaf("b"))
             }
         ),
         suite("predicates")(
@@ -116,6 +123,20 @@ object MatcherSpec extends ZIOSpecDefault:
             test("#match? filters out captures whose text does not match") {
                 val ms = Matcher.matches(q("(Leaf) @l (#match? @l \"^z\")"), branch).toList
                 assertTrue(ms.isEmpty)
+            },
+            test("#eq? deterministically fails when capture has no text") {
+                val ms = Matcher.matches(q("(Named) @n (#eq? @n \"hi\")"), branch).toList
+                assertTrue(ms.isEmpty)
+            },
+            test("#match? deterministically fails when capture has no text") {
+                val ms = Matcher.matches(q("(Named) @n (#match? @n \"^h\")"), branch).toList
+                assertTrue(ms.isEmpty)
+            },
+            test("multi-pattern predicate does not produce hidden success for non-captured matches") {
+                val ms = Matcher.matches(q("(Named) (Leaf) @l (#eq? @l \"bye\")"), branch).toList
+                val onlyLeafCapture = ms.forall(_.captures.keySet == Set(lCap))
+                val leafValues = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
+                assertTrue(ms.size == 1, onlyLeafCapture, leafValues == List("bye"))
             }
         ),
         suite("custom predicates")(
