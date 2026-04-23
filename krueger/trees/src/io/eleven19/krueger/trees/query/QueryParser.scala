@@ -5,8 +5,11 @@ import parsley.Parsley.{atomic, eof, many}
 import parsley.Result
 import parsley.character.{char, digit, letter, satisfy, stringOfMany}
 import parsley.combinator.option
+import parsley.errors.combinator.ErrorMethods
 import parsley.syntax.character.{charLift, stringLift}
 
+import io.eleven19.krueger.trees.CaptureName
+import io.eleven19.krueger.trees.FieldName
 import io.eleven19.krueger.trees.NodeTypeName
 
 /** Parses tree-sitter-style query strings into the v1 query AST.
@@ -63,13 +66,21 @@ object QueryParser:
     private val identStart: Parsley[Char] = letter | char('_')
     private val identCont: Parsley[Char]  = letter | digit | char('_')
 
+    /** Raw identifier text. The grammar guarantees non-empty, non-whitespace, starting with a letter or underscore —
+      * exactly what [[NodeTypeName]], [[FieldName]], and [[CaptureName]] require — so the `unsafeMake` wrappers below
+      * are safe by construction.
+      */
     private val identifier: Parsley[String] =
         (identStart <~> stringOfMany(identCont)).map { case (h, t) => s"$h$t" }
+
+    private val nodeTypeName: Parsley[NodeTypeName] = identifier.map(NodeTypeName.unsafeMake)
+    private val fieldName: Parsley[FieldName]       = identifier.map(FieldName.unsafeMake)
+    private val captureName: Parsley[CaptureName]   = identifier.map(CaptureName.unsafeMake)
 
     private val stringLit: Parsley[String] =
         char('"') *> stringOfMany(satisfy(_ != '"')) <* char('"')
 
-    private val captureTail: Parsley[String] = char('@') *> identifier
+    private val captureTail: Parsley[CaptureName] = char('@') *> captureName
 
     // --- Patterns ------------------------------------------------------------
 
@@ -85,19 +96,16 @@ object QueryParser:
     private lazy val nodePattern: Parsley[Pattern] =
         (
             tok('(' <~ skipTrivia)
-                *> tok(identifier)
+                *> tok(nodeTypeName)
                 <~> many(fieldPattern)
                 <~ tok(')')
                 <~> option(tok(captureTail))
         ).map { case ((nt, fs), cap) =>
-            // The identifier grammar guarantees a non-empty non-whitespace string,
-            // so NodeTypeName validation cannot fail here.
-            val name = NodeTypeName.make(nt).toOption.get
-            NodePattern(name, fs, cap)
+            NodePattern(nt, fs, cap)
         }
 
     private lazy val fieldPattern: Parsley[FieldPattern] =
-        (atomic(tok(identifier) <~ tok(':')) <~> pattern).map { case (name, p) =>
+        (atomic(tok(fieldName) <~ tok(':')) <~> pattern).map { case (name, p) =>
             FieldPattern(name, p)
         }
 
@@ -110,11 +118,18 @@ object QueryParser:
         (atomic(tok('(' <~ skipTrivia) *> tok("#eq?")) *> predicateArg <~> predicateArg <~ tok(')'))
             .map { case (l, r) => EqPredicate(l, r) }
 
+    private val regexArg: Parsley[RegexPattern] =
+        tok(stringLit).flatMap { raw =>
+            RegexPattern.make(raw) match
+                case Right(rx) => Parsley.pure(rx)
+                case Left(msg) => Parsley.empty.label(msg)
+        }
+
     private val matchPredicate: Parsley[Predicate] =
         (
             atomic(tok('(' <~ skipTrivia) *> tok("#match?"))
                 *> predicateArg
-                <~> tok(stringLit)
+                <~> regexArg
                 <~ tok(')')
         ).map { case (a, r) => MatchPredicate(a, r) }
 

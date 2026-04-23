@@ -10,6 +10,17 @@ object QueryParserSpec extends ZIOSpecDefault:
     private val leafType: NodeTypeName  = NodeTypeName.make("Leaf").toOption.get
     private val namedType: NodeTypeName = NodeTypeName.make("Named").toOption.get
 
+    private val n: CaptureName     = CaptureName.make("n").toOption.get
+    private val b: CaptureName     = CaptureName.make("b").toOption.get
+    private val l: CaptureName     = CaptureName.make("l").toOption.get
+    private val x: CaptureName     = CaptureName.make("x").toOption.get
+    private val outer: CaptureName = CaptureName.make("outer").toOption.get
+
+    private val nameField: FieldName = FieldName.make("name").toOption.get
+    private val bodyField: FieldName = FieldName.make("body").toOption.get
+
+    private def rx(s: String): RegexPattern = RegexPattern.make(s).toOption.get
+
     private def parseOrFail(source: String): Query =
         QueryParser.parse(source) match
             case Success(q)   => q
@@ -21,11 +32,11 @@ object QueryParserSpec extends ZIOSpecDefault:
                 assertTrue(parseOrFail("(Leaf)") == Query(NodePattern(leafType, Nil, None), Nil))
             },
             test("node with capture") {
-                assertTrue(parseOrFail("(Leaf) @l") == Query(NodePattern(leafType, Nil, Some("l")), Nil))
+                assertTrue(parseOrFail("(Leaf) @l") == Query(NodePattern(leafType, Nil, Some(l)), Nil))
             },
             test("node with one field") {
                 val expected = Query(
-                    NodePattern(namedType, List(FieldPattern("name", NodePattern(leafType, Nil, None))), None),
+                    NodePattern(namedType, List(FieldPattern(nameField, NodePattern(leafType, Nil, None))), None),
                     Nil
                 )
                 assertTrue(parseOrFail("(Named name: (Leaf))") == expected)
@@ -35,10 +46,10 @@ object QueryParserSpec extends ZIOSpecDefault:
                     NodePattern(
                         namedType,
                         List(
-                            FieldPattern("name", NodePattern(leafType, Nil, Some("n"))),
-                            FieldPattern("body", NodePattern(leafType, Nil, Some("b")))
+                            FieldPattern(nameField, NodePattern(leafType, Nil, Some(n))),
+                            FieldPattern(bodyField, NodePattern(leafType, Nil, Some(b)))
                         ),
-                        Some("outer")
+                        Some(outer)
                     ),
                     Nil
                 )
@@ -50,11 +61,11 @@ object QueryParserSpec extends ZIOSpecDefault:
                 assertTrue(parseOrFail("_") == Query(WildcardPattern(None), Nil))
             },
             test("parenthesised wildcard with capture") {
-                assertTrue(parseOrFail("(_) @x") == Query(WildcardPattern(Some("x")), Nil))
+                assertTrue(parseOrFail("(_) @x") == Query(WildcardPattern(Some(x)), Nil))
             },
             test("wildcard as field sub-pattern") {
                 val expected = Query(
-                    NodePattern(namedType, List(FieldPattern("body", WildcardPattern(Some("b")))), None),
+                    NodePattern(namedType, List(FieldPattern(bodyField, WildcardPattern(Some(b)))), None),
                     Nil
                 )
                 assertTrue(parseOrFail("(Named body: _ @b)") == expected)
@@ -63,15 +74,15 @@ object QueryParserSpec extends ZIOSpecDefault:
         suite("predicates")(
             test("eq? with two capture refs") {
                 val q = parseOrFail("(Leaf) @l (#eq? @l @l)")
-                assertTrue(q.predicates == List(EqPredicate(CaptureRef("l"), CaptureRef("l"))))
+                assertTrue(q.predicates == List(EqPredicate(CaptureRef(l), CaptureRef(l))))
             },
             test("eq? accepts a string literal on the right") {
                 val q = parseOrFail("(Leaf) @l (#eq? @l \"hello\")")
-                assertTrue(q.predicates == List(EqPredicate(CaptureRef("l"), StringArg("hello"))))
+                assertTrue(q.predicates == List(EqPredicate(CaptureRef(l), StringArg("hello"))))
             },
             test("match? pairs capture ref and regex") {
                 val q = parseOrFail("(Leaf) @l (#match? @l \"^hi\")")
-                assertTrue(q.predicates == List(MatchPredicate(CaptureRef("l"), "^hi")))
+                assertTrue(q.predicates == List(MatchPredicate(CaptureRef(l), rx("^hi"))))
             },
             test("multiple predicates accumulate in order") {
                 val q = parseOrFail("(Leaf) @l (#eq? @l @l) (#match? @l \"x\")")
@@ -85,7 +96,7 @@ object QueryParserSpec extends ZIOSpecDefault:
             },
             test("whitespace is flexible") {
                 val q = parseOrFail("  \n  ( Leaf   )  \n  @l  ")
-                assertTrue(q == Query(NodePattern(leafType, Nil, Some("l")), Nil))
+                assertTrue(q == Query(NodePattern(leafType, Nil, Some(l)), Nil))
             }
         ),
         suite("known-type validation")(
@@ -108,6 +119,9 @@ object QueryParserSpec extends ZIOSpecDefault:
             },
             test("missing colon after field name fails cleanly") {
                 assertTrue(QueryParser.parse("(Named name (Leaf))").isFailure)
+            },
+            test("invalid regex in #match? fails cleanly") {
+                assertTrue(QueryParser.parse("(Leaf) @l (#match? @l \"[unclosed\")").isFailure)
             }
         )
     )

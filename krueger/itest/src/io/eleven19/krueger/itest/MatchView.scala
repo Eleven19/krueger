@@ -1,5 +1,6 @@
 package io.eleven19.krueger.itest
 
+import io.eleven19.krueger.trees.CaptureName
 import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.Match
@@ -21,7 +22,7 @@ object MatchView:
         MatchView(
             rootNodeType = NodeTypeName.unwrap(qt.nodeType(m.root)),
             rootText = qt.text(m.root),
-            captures = m.captures.map((name, node) => name -> view(node))
+            captures = m.captures.map((name, node) => CaptureName.unwrap(name) -> view(node))
         )
 
 /** A captured node reduced to its nodeType, optional text, and direct child count. Enough to write all v1 capture

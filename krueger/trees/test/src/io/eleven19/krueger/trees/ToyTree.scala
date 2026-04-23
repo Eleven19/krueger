@@ -29,9 +29,12 @@ object ToyTree:
             case Branch(items)     => items
             case Named(name, body) => Seq(name, body)
 
-        def fields(t: ToyTree): Map[String, Seq[ToyTree]] = t match
+        private val NameField: FieldName = FieldName.unsafeMake("name")
+        private val BodyField: FieldName = FieldName.unsafeMake("body")
+
+        def fields(t: ToyTree): Map[FieldName, Seq[ToyTree]] = t match
             case _: Leaf | _: Branch => Map.empty
-            case Named(name, body)   => Map("name" -> Seq(name), "body" -> Seq(body))
+            case Named(name, body)   => Map(NameField -> Seq(name), BodyField -> Seq(body))
 
         def text(t: ToyTree): Option[String] = t match
             case Leaf(v) => Some(v)

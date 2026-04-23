@@ -6,6 +6,8 @@ import zio.test.*
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.CstQueryableTree.given
+import io.eleven19.krueger.trees.CaptureName
+import io.eleven19.krueger.trees.FieldName
 import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
@@ -29,6 +31,9 @@ object CstQueryableTreeSpec extends ZIOSpecDefault:
     private val qt: QueryableTree[CstNode] = summon[QueryableTree[CstNode]]
 
     private def typeNameOf(n: CstNode): String = NodeTypeName.unwrap(qt.nodeType(n))
+
+    private def field(s: String): FieldName = FieldName.make(s).toOption.get
+    private def cap(s: String): CaptureName = CaptureName.make(s).toOption.get
 
     def spec = suite("QueryableTree[CstNode]")(
         suite("nodeType")(
@@ -65,22 +70,22 @@ object CstQueryableTreeSpec extends ZIOSpecDefault:
                     .getOrElse(throw new AssertionError("no value declaration"))
                 val fs = qt.fields(valueDecl)
                 assertTrue(
-                    fs.keySet == Set("annotation", "name", "patterns", "body"),
-                    fs("name") == Seq(valueDecl.name),
-                    fs("body") == Seq(valueDecl.body),
-                    fs("patterns") == valueDecl.patterns.toSeq,
-                    fs("annotation") == valueDecl.annotation.toSeq
+                    fs.keySet == Set(field("annotation"), field("name"), field("patterns"), field("body")),
+                    fs(field("name")) == Seq(valueDecl.name),
+                    fs(field("body")) == Seq(valueDecl.body),
+                    fs(field("patterns")) == valueDecl.patterns.toSeq,
+                    fs(field("annotation")) == valueDecl.annotation.toSeq
                 )
             },
             test("CstModule exposes moduleDecl, imports, declarations") {
                 val fs = qt.fields(moduleTree)
                 assertTrue(
-                    fs.keySet.contains("moduleDecl"),
-                    fs.keySet.contains("imports"),
-                    fs.keySet.contains("declarations"),
-                    fs("moduleDecl") == Seq(moduleTree.moduleDecl),
-                    fs("imports") == moduleTree.imports.toSeq,
-                    fs("declarations") == moduleTree.declarations.toSeq
+                    fs.keySet.contains(field("moduleDecl")),
+                    fs.keySet.contains(field("imports")),
+                    fs.keySet.contains(field("declarations")),
+                    fs(field("moduleDecl")) == Seq(moduleTree.moduleDecl),
+                    fs(field("imports")) == moduleTree.imports.toSeq,
+                    fs(field("declarations")) == moduleTree.declarations.toSeq
                 )
             },
             test("CstName has no fields") {
@@ -111,7 +116,7 @@ object CstQueryableTreeSpec extends ZIOSpecDefault:
                     case Success(q) => q
                     case Failure(e) => throw new AssertionError(s"bad query: $e")
                 val ms    = Matcher.matches(query, root).toList
-                val names = ms.flatMap(_.captures.get("n")).collect { case n: CstName => n.value }
+                val names = ms.flatMap(_.captures.get(cap("n"))).collect { case n: CstName => n.value }
                 assertTrue(names.toSet == Set("main"))
             }
         )

@@ -11,6 +11,11 @@ object MatcherSpec extends ZIOSpecDefault:
         case parsley.Success(x) => x
         case parsley.Failure(m) => throw new AssertionError(s"bad fixture: $m")
 
+    private val xCap: CaptureName = CaptureName.make("x").toOption.get
+    private val nCap: CaptureName = CaptureName.make("n").toOption.get
+    private val bCap: CaptureName = CaptureName.make("b").toOption.get
+    private val lCap: CaptureName = CaptureName.make("l").toOption.get
+
     // A small forest used across tests.
     private val leafHi: ToyTree  = Leaf("hi")
     private val leafBye: ToyTree = Leaf("bye")
@@ -30,7 +35,7 @@ object MatcherSpec extends ZIOSpecDefault:
             },
             test("a wildcard can be captured") {
                 val ms = Matcher.matches(q("_ @x"), leafHi).toList
-                assertTrue(ms.size == 1, ms.head.captures.get("x").contains(leafHi))
+                assertTrue(ms.size == 1, ms.head.captures.get(xCap).contains(leafHi))
             },
             test("no match yields an empty lazy list") {
                 val ms = Matcher.matches(q("(Branch)"), leafHi)
@@ -40,14 +45,14 @@ object MatcherSpec extends ZIOSpecDefault:
         suite("fields")(
             test("field pattern constrains a named child") {
                 val ms = Matcher.matches(q("(Named name: (Leaf) @n)"), branch).toList
-                assertTrue(ms.size == 1, ms.head.captures.get("n").contains(leafHi))
+                assertTrue(ms.size == 1, ms.head.captures.get(nCap).contains(leafHi))
             },
             test("field pattern with multiple fields binds each capture") {
                 val ms = Matcher.matches(q("(Named name: (Leaf) @n body: (Leaf) @b)"), branch).toList
                 assertTrue(
                     ms.size == 1,
-                    ms.head.captures.get("n").contains(leafHi),
-                    ms.head.captures.get("b").contains(leafBye)
+                    ms.head.captures.get(nCap).contains(leafHi),
+                    ms.head.captures.get(bCap).contains(leafBye)
                 )
             },
             test("field pattern fails when sub-pattern does not match") {
@@ -69,7 +74,7 @@ object MatcherSpec extends ZIOSpecDefault:
             test("#match? passes captures whose text matches the regex") {
                 val ms = Matcher.matches(q("(Leaf) @l (#match? @l \"^h\")"), branch).toList
                 // Only leaves whose text starts with 'h' — that's leafHi (twice: top-level + inside named)
-                val leafValues = ms.map(_.captures("l")).collect { case Leaf(v) => v }
+                val leafValues = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
                 assertTrue(ms.size == 2, leafValues.forall(_.startsWith("h")))
             },
             test("#match? filters out captures whose text does not match") {
@@ -80,9 +85,9 @@ object MatcherSpec extends ZIOSpecDefault:
         suite("custom predicates")(
             test("a user-registered predicate is evaluated like the built-ins") {
                 val customRegistry = PredicateRegistry.default.withPredicate(
-                    "#eq?",
+                    PredicateName.Eq,
                     new PredicateImpl:
-                        def evaluate[T](args: List[PredicateArg], captures: Map[String, T])(using
+                        def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using
                             qt: QueryableTree[T]
                         ): Boolean = false // flip #eq? to always-false for this registry
                 )

@@ -18,16 +18,18 @@ third-party tree that provides an instance of the `QueryableTree` typeclass.
 
 ```scala
 trait QueryableTree[T]:
-    def nodeType(t: T): String
+    def nodeType(t: T): NodeTypeName
     def children(t: T): Seq[T]
-    def fields(t: T): Map[String, Seq[T]]
+    def fields(t: T): Map[FieldName, Seq[T]]
     def text(t: T): Option[String]
 ```
 
 The four methods describe: the kind of node, its children in traversal
 order, its named sub-trees (so patterns can navigate by field name), and
-optional leaf text. krueger ships instances for both CST and AST; third
-parties write one for their own tree.
+optional leaf text. `NodeTypeName` and `FieldName` are validated newtypes
+(non-empty, non-blank, identifier-shaped) — see the `trees` package for
+the full set of domain types. krueger ships instances for both CST and
+AST; third parties write one for their own tree.
 
 ## Query syntax (v1)
 
@@ -165,12 +167,13 @@ Matcher.matches(query, root, registry)
 
 Delivered in v1:
 
-- String-based `QueryableTree[T]` typeclass.
+- `QueryableTree[T]` typeclass with validated domain types throughout —
+  `NodeTypeName`, `FieldName`, `CaptureName`, `PredicateName` newtypes
+  (via [neotype](https://github.com/kitlangton/neotype)) and a validated
+  `RegexPattern` that pre-compiles at construction.
 - Parsley-backed S-expression parser and matcher.
 - Given instances for `CstNode` and `AstNode`.
 - `QuerySteps` BDD step pack.
-- `NodeTypeName` validated newtype (non-empty, non-blank) as the return
-  type of `nodeType` — implemented with [neotype](https://github.com/kitlangton/neotype).
 
 Follow-up in the v2 epic:
 

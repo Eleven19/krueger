@@ -6,6 +6,8 @@ import zio.test.*
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.ast.AstQueryableTree.given
+import io.eleven19.krueger.trees.CaptureName
+import io.eleven19.krueger.trees.FieldName
 import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
@@ -29,6 +31,9 @@ object AstQueryableTreeSpec extends ZIOSpecDefault:
     private val qt: QueryableTree[AstNode] = summon[QueryableTree[AstNode]]
 
     private def typeNameOf(n: AstNode): String = NodeTypeName.unwrap(qt.nodeType(n))
+
+    private def field(s: String): FieldName = FieldName.make(s).toOption.get
+    private def cap(s: String): CaptureName = CaptureName.make(s).toOption.get
 
     def spec = suite("QueryableTree[AstNode]")(
         suite("nodeType")(
@@ -54,19 +59,19 @@ object AstQueryableTreeSpec extends ZIOSpecDefault:
                     .getOrElse(throw new AssertionError("no value declaration"))
                 val fs = qt.fields(valueDecl)
                 assertTrue(
-                    fs.keySet == Set("typeAnnotation", "parameters", "body"),
-                    fs("body") == Seq(valueDecl.body),
-                    fs("parameters") == valueDecl.parameters.toSeq,
-                    fs("typeAnnotation") == valueDecl.typeAnnotation.toSeq
+                    fs.keySet == Set(field("typeAnnotation"), field("parameters"), field("body")),
+                    fs(field("body")) == Seq(valueDecl.body),
+                    fs(field("parameters")) == valueDecl.parameters.toSeq,
+                    fs(field("typeAnnotation")) == valueDecl.typeAnnotation.toSeq
                 )
             },
             test("Module exposes exposing, imports, declarations as fields") {
                 val fs = qt.fields(moduleTree)
                 assertTrue(
-                    fs.keySet == Set("exposing", "imports", "declarations"),
-                    fs("exposing") == Seq(moduleTree.exposing),
-                    fs("imports") == moduleTree.imports.toSeq,
-                    fs("declarations") == moduleTree.declarations.toSeq
+                    fs.keySet == Set(field("exposing"), field("imports"), field("declarations")),
+                    fs(field("exposing")) == Seq(moduleTree.exposing),
+                    fs(field("imports")) == moduleTree.imports.toSeq,
+                    fs(field("declarations")) == moduleTree.declarations.toSeq
                 )
             }
         ),
@@ -95,7 +100,7 @@ object AstQueryableTreeSpec extends ZIOSpecDefault:
                     case Success(q) => q
                     case Failure(e) => throw new AssertionError(s"bad query: $e")
                 val ms    = Matcher.matches(query, root).toList
-                val names = ms.flatMap(_.captures.get("v")).collect { case v: ValueDeclaration => v.name }
+                val names = ms.flatMap(_.captures.get(cap("v"))).collect { case v: ValueDeclaration => v.name }
                 assertTrue(names.toSet == Set("main"))
             }
         )

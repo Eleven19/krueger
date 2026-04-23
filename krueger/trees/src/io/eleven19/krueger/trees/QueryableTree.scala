@@ -16,7 +16,7 @@ trait QueryableTree[T]:
     def children(t: T): Seq[T]
 
     /** Named sub-trees keyed by field name. Values must be a (possibly empty) subset of `children(t)`. */
-    def fields(t: T): Map[String, Seq[T]]
+    def fields(t: T): Map[FieldName, Seq[T]]
 
     /** Raw text for leaf nodes; `None` for compound nodes. */
     def text(t: T): Option[String]

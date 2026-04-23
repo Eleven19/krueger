@@ -1,5 +1,6 @@
 package io.eleven19.krueger.cst
 
+import io.eleven19.krueger.trees.FieldName
 import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 
@@ -20,7 +21,11 @@ object CstQueryableTree:
 
         def children(t: CstNode): Seq[CstNode] = CstVisitor.children(t)
 
-        def fields(t: CstNode): Map[String, Seq[CstNode]] = t match
+        def fields(t: CstNode): Map[FieldName, Seq[CstNode]] =
+            // rawFields' keys are compile-time-constant case-class field names — always valid FieldNames.
+            rawFields(t).iterator.map((k, v) => FieldName.unsafeMake(k) -> v).toMap
+
+        private def rawFields(t: CstNode): Map[String, Seq[CstNode]] = t match
             case n: CstModule =>
                 Map(
                     "moduleDecl"   -> Seq(n.moduleDecl),

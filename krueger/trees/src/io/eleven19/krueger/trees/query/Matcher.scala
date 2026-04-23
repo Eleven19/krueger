@@ -1,7 +1,6 @@
 package io.eleven19.krueger.trees.query
 
-import scala.util.matching.Regex
-
+import io.eleven19.krueger.trees.CaptureName
 import io.eleven19.krueger.trees.QueryableTree
 
 /** Runs a parsed Query against any tree with a QueryableTree instance. */
@@ -33,8 +32,8 @@ object Matcher:
     private def matchPattern[T](
         pattern: Pattern,
         node: T,
-        captures: Map[String, T]
-    )(using qt: QueryableTree[T]): Option[Map[String, T]] =
+        captures: Map[CaptureName, T]
+    )(using qt: QueryableTree[T]): Option[Map[CaptureName, T]] =
         pattern match
             case WildcardPattern(capture) =>
                 Some(bind(capture, node, captures))
@@ -44,7 +43,7 @@ object Matcher:
                 else
                     val base      = bind(capture, node, captures)
                     val fieldsMap = qt.fields(node)
-                    fieldPatterns.foldLeft[Option[Map[String, T]]](Some(base)) { (accOpt, fp) =>
+                    fieldPatterns.foldLeft[Option[Map[CaptureName, T]]](Some(base)) { (accOpt, fp) =>
                         accOpt.flatMap { acc =>
                             val values = fieldsMap.getOrElse(fp.name, Seq.empty)
                             values.iterator
@@ -53,35 +52,49 @@ object Matcher:
                         }
                     }
 
-    private def bind[T](capture: Option[String], node: T, captures: Map[String, T]): Map[String, T] =
+    private def bind[T](
+        capture: Option[CaptureName],
+        node: T,
+        captures: Map[CaptureName, T]
+    ): Map[CaptureName, T] =
         capture.fold(captures)(name => captures.updated(name, node))
 
     // --- Predicates ----------------------------------------------------------
 
     private def evaluatePredicate[T](
         pred: Predicate,
-        captures: Map[String, T],
+        captures: Map[CaptureName, T],
         registry: PredicateRegistry
     )(using QueryableTree[T]): Boolean =
         pred match
             case EqPredicate(l, r) =>
                 registry.predicates
-                    .get("#eq?")
-                    .exists(_.evaluate(List(l, r), captures))
+                    .get(PredicateName.Eq)
+                    .exists(_.evaluate(PredicateArgs.Eq(l, r), captures))
             case MatchPredicate(arg, regex) =>
                 registry.predicates
-                    .get("#match?")
-                    .exists(_.evaluate(List(arg, StringArg(regex)), captures))
+                    .get(PredicateName.Match)
+                    .exists(_.evaluate(PredicateArgs.Match(arg, regex), captures))
+
+/** Typed argument bundle handed to a [[PredicateImpl]]. Each built-in predicate has a dedicated variant that preserves
+  * arity and type information — no `List[PredicateArg]` / arity checking at runtime.
+  */
+sealed trait PredicateArgs derives CanEqual
+
+object PredicateArgs:
+    final case class Eq(left: PredicateArg, right: PredicateArg)           extends PredicateArgs derives CanEqual
+    final case class Match(arg: PredicateArg, regex: RegexPattern)         extends PredicateArgs derives CanEqual
+    final case class Custom(name: PredicateName, args: List[PredicateArg]) extends PredicateArgs derives CanEqual
 
 /** Pluggable implementation of a named predicate. */
 trait PredicateImpl:
-    def evaluate[T](args: List[PredicateArg], captures: Map[String, T])(using qt: QueryableTree[T]): Boolean
+    def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean
 
 /** A lookup table of predicate names to implementations. */
-final case class PredicateRegistry(predicates: Map[String, PredicateImpl]):
+final case class PredicateRegistry(predicates: Map[PredicateName, PredicateImpl]):
 
     /** Register or override a predicate under `name`. */
-    def withPredicate(name: String, impl: PredicateImpl): PredicateRegistry =
+    def withPredicate(name: PredicateName, impl: PredicateImpl): PredicateRegistry =
         PredicateRegistry(predicates.updated(name, impl))
 
 object PredicateRegistry:
@@ -89,16 +102,16 @@ object PredicateRegistry:
     /** Default registry with `#eq?` and `#match?` for text-based comparison. */
     val default: PredicateRegistry = PredicateRegistry(
         Map(
-            "#eq?"    -> EqImpl,
-            "#match?" -> MatchImpl
+            PredicateName.Eq    -> EqImpl,
+            PredicateName.Match -> MatchImpl
         )
     )
 
 private object EqImpl extends PredicateImpl:
 
-    def evaluate[T](args: List[PredicateArg], captures: Map[String, T])(using qt: QueryableTree[T]): Boolean =
+    def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean =
         args match
-            case l :: r :: Nil =>
+            case PredicateArgs.Eq(l, r) =>
                 (resolveText(l, captures), resolveText(r, captures)) match
                     case (Some(a), Some(b)) => a == b
                     case _                  => false
@@ -106,7 +119,7 @@ private object EqImpl extends PredicateImpl:
 
     private def resolveText[T](
         arg: PredicateArg,
-        captures: Map[String, T]
+        captures: Map[CaptureName, T]
     )(using qt: QueryableTree[T]): Option[String] =
         arg match
             case CaptureRef(name) => captures.get(name).flatMap(qt.text)
@@ -114,9 +127,8 @@ private object EqImpl extends PredicateImpl:
 
 private object MatchImpl extends PredicateImpl:
 
-    def evaluate[T](args: List[PredicateArg], captures: Map[String, T])(using qt: QueryableTree[T]): Boolean =
+    def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean =
         args match
-            case CaptureRef(name) :: StringArg(pattern) :: Nil =>
-                val compiled: Regex = pattern.r
-                captures.get(name).flatMap(qt.text).exists(text => compiled.findFirstIn(text).isDefined)
+            case PredicateArgs.Match(CaptureRef(name), regex) =>
+                captures.get(name).flatMap(qt.text).exists(text => regex.compiled.findFirstIn(text).isDefined)
             case _ => false

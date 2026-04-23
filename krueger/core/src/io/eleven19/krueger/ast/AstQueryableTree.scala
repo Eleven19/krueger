@@ -1,5 +1,6 @@
 package io.eleven19.krueger.ast
 
+import io.eleven19.krueger.trees.FieldName
 import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 
@@ -20,7 +21,11 @@ object AstQueryableTree:
 
         def children(t: AstNode): Seq[AstNode] = AstVisitor.children(t)
 
-        def fields(t: AstNode): Map[String, Seq[AstNode]] = t match
+        def fields(t: AstNode): Map[FieldName, Seq[AstNode]] =
+            // rawFields' keys are compile-time-constant case-class field names — always valid FieldNames.
+            rawFields(t).iterator.map((k, v) => FieldName.unsafeMake(k) -> v).toMap
+
+        private def rawFields(t: AstNode): Map[String, Seq[AstNode]] = t match
             case n: Module =>
                 Map(
                     "exposing"     -> Seq(n.exposing),

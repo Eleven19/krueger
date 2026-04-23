@@ -12,6 +12,9 @@ object QueryableTreeSpec extends ZIOSpecDefault:
     private val branchType: NodeTypeName = NodeTypeName.make("Branch").toOption.get
     private val namedType: NodeTypeName  = NodeTypeName.make("Named").toOption.get
 
+    private val nameField: FieldName = FieldName.make("name").toOption.get
+    private val bodyField: FieldName = FieldName.make("body").toOption.get
+
     private val leaf: ToyTree              = Leaf("hello")
     private val anotherLeaf: ToyTree       = Leaf("world")
     private val branch: ToyTree            = Branch(Seq(leaf, anotherLeaf))
@@ -57,9 +60,9 @@ object QueryableTreeSpec extends ZIOSpecDefault:
             test("Named exposes name and body keys") {
                 val fs = qt.fields(named)
                 assertTrue(
-                    fs.keySet == Set("name", "body"),
-                    fs("name") == Seq(leaf),
-                    fs("body") == Seq(anotherLeaf)
+                    fs.keySet == Set(nameField, bodyField),
+                    fs(nameField) == Seq(leaf),
+                    fs(bodyField) == Seq(anotherLeaf)
                 )
             },
             test("all field values appear among children") {
