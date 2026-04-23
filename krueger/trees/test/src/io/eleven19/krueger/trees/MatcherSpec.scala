@@ -101,6 +101,18 @@ object MatcherSpec extends ZIOSpecDefault:
                 val capN = ms.head.captures(nCap)
                 val capB = ms.head.captures(bCap)
                 assertTrue(ms.size == 1, capN == Leaf("a"), capB == Leaf("b"))
+            },
+            test("anchored child patterns require immediate sibling adjacency") {
+                val ms = Matcher.matches(q("(Branch (Leaf) @n . (Named) @b)"), branch).toList
+                assertTrue(
+                    ms.size == 1,
+                    ms.head.captures.get(nCap).contains(leafHi),
+                    ms.head.captures.get(bCap).contains(named)
+                )
+            },
+            test("anchored child patterns fail when only non-adjacent match exists") {
+                val ms = Matcher.matches(q("(Branch (Leaf) @n . (Leaf) @b)"), branch).toList
+                assertTrue(ms.isEmpty)
             }
         ),
         suite("predicates")(

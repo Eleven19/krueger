@@ -115,6 +115,19 @@ Feature: Tree queries
     And capture "i" of match 1 has text "42"
 
   @REQ-QRY-001 @REQ-QRY-004
+  Scenario: CST query supports anchored adjacent child patterns
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration (CstName) @n . (CstIntLiteral) @i)"
+    Then the query matches exactly 1 time
+    And capture "n" of match 1 has text "main"
+    And capture "i" of match 1 has text "42"
+
+  @REQ-QRY-001 @REQ-QRY-004
   Scenario: CST query with multiple top-level patterns
     Given the Elm source:
       """
@@ -212,6 +225,17 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstName) @n (#set! @n \"kind\")"
     Then the query fails with message containing "Unsupported directive"
+
+  @REQ-QRY-002
+  Scenario: Invalid anchor placement fails with explicit diagnostic
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "(CstValueDeclaration . (CstName) @n (CstIntLiteral) @i)"
+    Then the query fails with message containing "invalid anchor placement"
 
   @REQ-QRY-002
   Scenario: Duplicate capture names fail query parse

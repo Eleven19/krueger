@@ -20,7 +20,7 @@ final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEq
             case p :: rest =>
                 val withOwn = p.capture.fold(acc)(acc + _)
                 p match
-                    case NodePattern(_, fields, children, _) =>
+                    case NodePattern(_, fields, children, _, _) =>
                         go(fields.map(_.pattern) ::: children ::: rest, withOwn)
                     case MultiPattern(patterns) =>
                         go(patterns ::: rest, withOwn)
@@ -39,7 +39,8 @@ final case class NodePattern(
     nodeType: NodeTypeName,
     fieldPatterns: List[FieldPattern],
     childPatterns: List[Pattern],
-    capture: Option[CaptureName]
+    capture: Option[CaptureName],
+    adjacentChildAnchors: Set[Int] = Set.empty
 ) extends Pattern derives CanEqual
 
 final case class MultiPattern(patterns: List[Pattern]) extends Pattern derives CanEqual:

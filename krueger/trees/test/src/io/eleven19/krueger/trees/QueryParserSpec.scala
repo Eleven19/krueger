@@ -80,6 +80,19 @@ object QueryParserSpec extends ZIOSpecDefault:
                 )
                 assertTrue(parseOrFail("(Named name: (Leaf) @n (Leaf) @b)") == expected)
             },
+            test("node with anchored adjacent child patterns") {
+                val expected = Query(
+                    NodePattern(
+                        namedType,
+                        Nil,
+                        List(NodePattern(leafType, Nil, Nil, Some(n)), NodePattern(leafType, Nil, Nil, Some(b))),
+                        None,
+                        Set(0)
+                    ),
+                    Nil
+                )
+                assertTrue(parseOrFail("(Named (Leaf) @n . (Leaf) @b)") == expected)
+            },
             test("multiple top-level patterns in one query are accepted") {
                 val res = QueryParser.parse("(Leaf) (Named)")
                 assertTrue(res.isSuccess)
@@ -266,6 +279,16 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val res = QueryParser.parse("(Leaf) @l (#set! @l \"name\")")
                 val msg = res.toEither.left.getOrElse("")
                 assertTrue(res.isFailure, msg.toLowerCase.contains("unsupported directive"), msg.contains("#set!"))
+            },
+            test("anchor at beginning of child sequence fails with explicit diagnostic") {
+                val res = QueryParser.parse("(Named . (Leaf) @n (Leaf) @b)")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("invalid anchor placement"))
+            },
+            test("anchor at end of child sequence fails with explicit diagnostic") {
+                val res = QueryParser.parse("(Named (Leaf) @n .)")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("invalid anchor placement"))
             }
         )
     )

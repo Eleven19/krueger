@@ -49,7 +49,7 @@ object Matcher:
                     .flatMap(p => matchPattern(p, node, captures))
                     .nextOption()
 
-            case NodePattern(expectedType, fieldPatterns, childPatterns, capture) =>
+            case NodePattern(expectedType, fieldPatterns, childPatterns, capture, adjacentChildAnchors) =>
                 if qt.nodeType(node) != expectedType then None
                 else
                     val base      = bind(capture, node, captures)
@@ -67,7 +67,7 @@ object Matcher:
                         }
                     withFields.flatMap { case (acc, usedChildren) =>
                         val remainingChildren = excludeUsed(qt.children(node), usedChildren)
-                        matchOrderedChildren(childPatterns, remainingChildren, acc)
+                        matchOrderedChildren(childPatterns, remainingChildren, acc, adjacentChildAnchors)
                     }
 
     private def excludeUsed[T](children: Seq[T], used: List[T]): Seq[T] =
@@ -79,17 +79,32 @@ object Matcher:
     private def matchOrderedChildren[T](
         patterns: List[Pattern],
         children: Seq[T],
-        captures: Map[CaptureName, T]
+        captures: Map[CaptureName, T],
+        adjacentChildAnchors: Set[Int]
     )(using qt: QueryableTree[T]): Option[Map[CaptureName, T]] =
-        patterns match
-            case Nil => Some(captures)
-            case wanted :: rest =>
-                children.indices.iterator
-                    .flatMap { i =>
-                        matchPattern(wanted, children(i), captures)
-                            .flatMap(updated => matchOrderedChildren(rest, children.drop(i + 1), updated))
-                    }
-                    .nextOption()
+        def go(
+            remaining: List[Pattern],
+            nextPatternIdx: Int,
+            startChildIdx: Int,
+            lastMatchedChildIdx: Option[Int],
+            accCaptures: Map[CaptureName, T]
+        ): Option[Map[CaptureName, T]] =
+            remaining match
+                case Nil => Some(accCaptures)
+                case wanted :: rest =>
+                    (startChildIdx until children.size).iterator
+                        .flatMap { i =>
+                            val anchoredToPrev = adjacentChildAnchors.contains(nextPatternIdx - 1)
+                            val placementOk = !anchoredToPrev || lastMatchedChildIdx.contains(i - 1)
+                            if !placementOk then Iterator.empty
+                            else
+                                matchPattern(wanted, children(i), accCaptures)
+                                    .flatMap(updated => go(rest, nextPatternIdx + 1, i + 1, Some(i), updated))
+                                    .iterator
+                        }
+                        .nextOption()
+
+        go(patterns, nextPatternIdx = 0, startChildIdx = 0, lastMatchedChildIdx = None, captures)
 
     private def bind[T](
         capture: Option[CaptureName],

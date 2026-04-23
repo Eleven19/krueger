@@ -59,7 +59,7 @@ object QueryParser:
             case f: parsley.Failure[String] => f
 
     private def gatherNodeTypes(p: Pattern): Set[NodeTypeName] = p match
-        case NodePattern(nt, fields, children, _) =>
+        case NodePattern(nt, fields, children, _, _) =>
             val withFields = fields.foldLeft(Set(nt))((acc, fp) => acc ++ gatherNodeTypes(fp.pattern))
             children.foldLeft(withFields)((acc, child) => acc ++ gatherNodeTypes(child))
         case MultiPattern(patterns) =>
@@ -67,7 +67,7 @@ object QueryParser:
         case _: WildcardPattern => Set.empty
 
     private def captureNames(p: Pattern): Set[CaptureName] = p match
-        case NodePattern(_, fields, children, capture) =>
+        case NodePattern(_, fields, children, capture, _) =>
             val own        = capture.toSet
             val fromFields = fields.foldLeft(Set.empty[CaptureName])((acc, fp) => acc ++ captureNames(fp.pattern))
             val fromKids   = children.foldLeft(Set.empty[CaptureName])((acc, kid) => acc ++ captureNames(kid))
@@ -99,7 +99,7 @@ object QueryParser:
             case None       => Map.empty
 
         p match
-            case NodePattern(_, fields, children, _) =>
+            case NodePattern(_, fields, children, _, _) =>
                 val fromFields = fields.map(fp => captureNameCounts(fp.pattern))
                 val fromKids   = children.map(captureNameCounts)
                 (own :: (fromFields ::: fromKids)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
@@ -185,22 +185,55 @@ object QueryParser:
         (
             tok('(' <~ skipTrivia)
                 *> tok(nodeTypeName)
-                <~> many(fieldPatternOrChildPattern)
+                <~> many(nodeMember)
                 <~ tok(')')
                 <~> option(tok(captureTail))
-        ).map { case ((nt, members), cap) =>
-            val fields   = members.collect { case Left(f)  => f }
-            val children = members.collect { case Right(p) => p }
-            NodePattern(nt, fields, children, cap)
+        ).flatMap { case ((nt, members), cap) =>
+            buildNodePattern(nt, members, cap) match
+                case Right(p)  => Parsley.pure(p)
+                case Left(msg) => Parsley.empty.label(msg)
         }
 
-    private lazy val fieldPatternOrChildPattern: Parsley[Either[FieldPattern, Pattern]] =
-        fieldPattern.map(Left(_)) | pattern.map(Right(_))
+    private enum NodeMember derives CanEqual:
+        case Field(value: FieldPattern)
+        case Child(value: Pattern)
+        case Anchor
+
+    private lazy val nodeMember: Parsley[NodeMember] =
+        fieldPattern.map(NodeMember.Field(_)) |
+            tok(char('.')).as(NodeMember.Anchor) |
+            pattern.map(NodeMember.Child(_))
 
     private lazy val fieldPattern: Parsley[FieldPattern] =
         (atomic(tok(fieldName) <~ tok(':')) <~> pattern).map { case (name, p) =>
             FieldPattern(name, p)
         }
+
+    private def buildNodePattern(
+        nt: NodeTypeName,
+        members: List[NodeMember],
+        cap: Option[CaptureName]
+    ): Either[String, NodePattern] =
+        val invalidAnchorIndex = members.indices.find { i =>
+            members(i) == NodeMember.Anchor && (
+                i == 0 ||
+                    i == members.size - 1 ||
+                    !members(i - 1).isInstanceOf[NodeMember.Child] ||
+                    !members(i + 1).isInstanceOf[NodeMember.Child]
+            )
+        }
+
+        invalidAnchorIndex match
+            case Some(_) =>
+                Left("invalid anchor placement: '.' must appear between two unfielded child patterns")
+            case None =>
+                val fields = members.collect { case NodeMember.Field(value) => value }
+                val children = members.collect { case NodeMember.Child(value) => value }
+                val anchors = members.indices.collect {
+                    case i if members(i) == NodeMember.Anchor =>
+                        members.take(i).count(_.isInstanceOf[NodeMember.Child]) - 1
+                }.toSet
+                Right(NodePattern(nt, fields, children, cap, anchors))
 
     // --- Predicates ----------------------------------------------------------
 

@@ -44,9 +44,12 @@ AST; third parties write one for their own tree.
 | `(#match? @a "regex")`            | Predicate: captured text matches the regex             |
 | `(#not-eq? @a "literal")`         | Predicate: captured text must differ from a literal    |
 | `(#not-match? @a "regex")`        | Predicate: captured text must not match the regex      |
+| `(Parent (A) . (B))`              | Anchor: `(A)` and `(B)` must match adjacent children   |
 | `;; line comment`                 | Ignored through to end of line                         |
 
-Alternation, quantifiers, anchors, and negation are deferred to v2.
+Alternation, quantifiers, and negation are deferred to v2.
+Anchor support is currently limited to `.` between two unfielded child patterns;
+other placements fail with `invalid anchor placement`.
 Directives (for example `#set!`) are currently unsupported and fail with an
 explicit `Unsupported directive: ...` parse diagnostic.
 
