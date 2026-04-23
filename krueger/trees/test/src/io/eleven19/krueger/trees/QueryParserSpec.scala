@@ -7,6 +7,9 @@ import io.eleven19.krueger.trees.query.*
 
 object QueryParserSpec extends ZIOSpecDefault:
 
+    private val leafType: NodeTypeName  = NodeTypeName.make("Leaf").toOption.get
+    private val namedType: NodeTypeName = NodeTypeName.make("Named").toOption.get
+
     private def parseOrFail(source: String): Query =
         QueryParser.parse(source) match
             case Success(q)   => q
@@ -15,14 +18,14 @@ object QueryParserSpec extends ZIOSpecDefault:
     def spec = suite("QueryParser")(
         suite("node patterns")(
             test("bare node") {
-                assertTrue(parseOrFail("(Leaf)") == Query(NodePattern("Leaf", Nil, None), Nil))
+                assertTrue(parseOrFail("(Leaf)") == Query(NodePattern(leafType, Nil, None), Nil))
             },
             test("node with capture") {
-                assertTrue(parseOrFail("(Leaf) @l") == Query(NodePattern("Leaf", Nil, Some("l")), Nil))
+                assertTrue(parseOrFail("(Leaf) @l") == Query(NodePattern(leafType, Nil, Some("l")), Nil))
             },
             test("node with one field") {
                 val expected = Query(
-                    NodePattern("Named", List(FieldPattern("name", NodePattern("Leaf", Nil, None))), None),
+                    NodePattern(namedType, List(FieldPattern("name", NodePattern(leafType, Nil, None))), None),
                     Nil
                 )
                 assertTrue(parseOrFail("(Named name: (Leaf))") == expected)
@@ -30,10 +33,10 @@ object QueryParserSpec extends ZIOSpecDefault:
             test("node with multiple fields") {
                 val expected = Query(
                     NodePattern(
-                        "Named",
+                        namedType,
                         List(
-                            FieldPattern("name", NodePattern("Leaf", Nil, Some("n"))),
-                            FieldPattern("body", NodePattern("Leaf", Nil, Some("b")))
+                            FieldPattern("name", NodePattern(leafType, Nil, Some("n"))),
+                            FieldPattern("body", NodePattern(leafType, Nil, Some("b")))
                         ),
                         Some("outer")
                     ),
@@ -51,7 +54,7 @@ object QueryParserSpec extends ZIOSpecDefault:
             },
             test("wildcard as field sub-pattern") {
                 val expected = Query(
-                    NodePattern("Named", List(FieldPattern("body", WildcardPattern(Some("b")))), None),
+                    NodePattern(namedType, List(FieldPattern("body", WildcardPattern(Some("b")))), None),
                     Nil
                 )
                 assertTrue(parseOrFail("(Named body: _ @b)") == expected)
@@ -78,11 +81,11 @@ object QueryParserSpec extends ZIOSpecDefault:
         suite("trivia")(
             test("line comments are ignored") {
                 val q = parseOrFail(";; top level\n(Leaf) ;; trailing\n")
-                assertTrue(q == Query(NodePattern("Leaf", Nil, None), Nil))
+                assertTrue(q == Query(NodePattern(leafType, Nil, None), Nil))
             },
             test("whitespace is flexible") {
                 val q = parseOrFail("  \n  ( Leaf   )  \n  @l  ")
-                assertTrue(q == Query(NodePattern("Leaf", Nil, Some("l")), Nil))
+                assertTrue(q == Query(NodePattern(leafType, Nil, Some("l")), Nil))
             }
         ),
         suite("known-type validation")(

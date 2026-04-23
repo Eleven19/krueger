@@ -6,24 +6,27 @@ import io.eleven19.krueger.trees.query.*
 
 object QuerySpec extends ZIOSpecDefault:
 
+    private val leafType: NodeTypeName  = NodeTypeName.make("Leaf").toOption.get
+    private val namedType: NodeTypeName = NodeTypeName.make("Named").toOption.get
+
     def spec = suite("Query AST")(
         suite("Pattern")(
             test("NodePattern exposes nodeType, fields, capture") {
-                val p = NodePattern("Leaf", Nil, Some("l"))
-                assertTrue(p.nodeType == "Leaf", p.fieldPatterns == Nil, p.capture.contains("l"))
+                val p = NodePattern(leafType, Nil, Some("l"))
+                assertTrue(p.nodeType == leafType, p.fieldPatterns == Nil, p.capture.contains("l"))
             },
             test("WildcardPattern captures optional name") {
                 val p: Pattern = WildcardPattern(Some("x"))
                 assertTrue(p.capture.contains("x"))
             },
             test("FieldPattern pairs name and sub-pattern") {
-                val inner = NodePattern("Leaf", Nil, None)
+                val inner = NodePattern(leafType, Nil, None)
                 val fp    = FieldPattern("name", inner)
                 assertTrue(fp.name == "name", fp.pattern == inner)
             },
             test("patterns compare structurally") {
-                val a = NodePattern("Named", List(FieldPattern("name", WildcardPattern(None))), None)
-                val b = NodePattern("Named", List(FieldPattern("name", WildcardPattern(None))), None)
+                val a = NodePattern(namedType, List(FieldPattern("name", WildcardPattern(None))), None)
+                val b = NodePattern(namedType, List(FieldPattern("name", WildcardPattern(None))), None)
                 assertTrue(a == b)
             }
         ),
@@ -44,18 +47,18 @@ object QuerySpec extends ZIOSpecDefault:
         ),
         suite("Query")(
             test("pairs a root pattern with predicates") {
-                val q = Query(NodePattern("Leaf", Nil, Some("l")), List(MatchPredicate(CaptureRef("l"), "^hi")))
+                val q = Query(NodePattern(leafType, Nil, Some("l")), List(MatchPredicate(CaptureRef("l"), "^hi")))
                 assertTrue(
-                    q.root == NodePattern("Leaf", Nil, Some("l")),
+                    q.root == NodePattern(leafType, Nil, Some("l")),
                     q.predicates.size == 1
                 )
             },
             test("captureNames collects every bound name in patterns") {
                 val q = Query(
                     NodePattern(
-                        "Named",
+                        namedType,
                         List(
-                            FieldPattern("name", NodePattern("Leaf", Nil, Some("n"))),
+                            FieldPattern("name", NodePattern(leafType, Nil, Some("n"))),
                             FieldPattern("body", WildcardPattern(Some("b")))
                         ),
                         Some("outer")
@@ -66,7 +69,7 @@ object QuerySpec extends ZIOSpecDefault:
             },
             test("captureNames includes names only referenced by predicates when they also exist on patterns") {
                 val q = Query(
-                    NodePattern("Leaf", Nil, Some("l")),
+                    NodePattern(leafType, Nil, Some("l")),
                     List(EqPredicate(CaptureRef("l"), StringArg("x")))
                 )
                 assertTrue(q.captureNames == Set("l"))

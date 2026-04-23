@@ -8,6 +8,10 @@ object QueryableTreeSpec extends ZIOSpecDefault:
 
     private val qt: QueryableTree[ToyTree] = summon[QueryableTree[ToyTree]]
 
+    private val leafType: NodeTypeName   = NodeTypeName.make("Leaf").toOption.get
+    private val branchType: NodeTypeName = NodeTypeName.make("Branch").toOption.get
+    private val namedType: NodeTypeName  = NodeTypeName.make("Named").toOption.get
+
     private val leaf: ToyTree              = Leaf("hello")
     private val anotherLeaf: ToyTree       = Leaf("world")
     private val branch: ToyTree            = Branch(Seq(leaf, anotherLeaf))
@@ -17,13 +21,13 @@ object QueryableTreeSpec extends ZIOSpecDefault:
     def spec = suite("QueryableTree[ToyTree]")(
         suite("nodeType")(
             test("is non-empty for every variant") {
-                assertTrue(allVariants.forall(t => qt.nodeType(t).nonEmpty))
+                assertTrue(allVariants.forall(t => NodeTypeName.unwrap(qt.nodeType(t)).nonEmpty))
             },
             test("uses the simple class name") {
                 assertTrue(
-                    qt.nodeType(leaf) == "Leaf",
-                    qt.nodeType(branch) == "Branch",
-                    qt.nodeType(named) == "Named"
+                    qt.nodeType(leaf) == leafType,
+                    qt.nodeType(branch) == branchType,
+                    qt.nodeType(named) == namedType
                 )
             }
         ),

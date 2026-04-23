@@ -9,8 +9,8 @@ package io.eleven19.krueger.trees
   * epic.
   */
 trait QueryableTree[T]:
-    /** Human- and query-readable name of the node's kind. Must be non-empty. */
-    def nodeType(t: T): String
+    /** Human- and query-readable name of the node's kind. */
+    def nodeType(t: T): NodeTypeName
 
     /** Every child of `t` in a stable traversal order. */
     def children(t: T): Seq[T]

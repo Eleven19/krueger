@@ -6,6 +6,7 @@ import zio.test.*
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.CstQueryableTree.given
+import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
 
@@ -27,13 +28,15 @@ object CstQueryableTreeSpec extends ZIOSpecDefault:
     private val root: CstNode              = moduleTree
     private val qt: QueryableTree[CstNode] = summon[QueryableTree[CstNode]]
 
+    private def typeNameOf(n: CstNode): String = NodeTypeName.unwrap(qt.nodeType(n))
+
     def spec = suite("QueryableTree[CstNode]")(
         suite("nodeType")(
             test("uses simple class name for concrete variants") {
                 assertTrue(
-                    qt.nodeType(moduleTree) == "CstModule",
-                    qt.nodeType(moduleTree.moduleDecl) == "CstModuleDeclaration",
-                    qt.nodeType(moduleTree.moduleDecl.name) == "CstQualifiedName"
+                    typeNameOf(moduleTree) == "CstModule",
+                    typeNameOf(moduleTree.moduleDecl) == "CstModuleDeclaration",
+                    typeNameOf(moduleTree.moduleDecl.name) == "CstQualifiedName"
                 )
             },
             test("distinguishes value declarations from other declaration kinds") {
@@ -41,7 +44,7 @@ object CstQueryableTreeSpec extends ZIOSpecDefault:
                 assertTrue(
                     valueDecls.size == 1,
                     valueDecls.head.name.value == "main",
-                    valueDecls.forall(v => qt.nodeType(v) == "CstValueDeclaration")
+                    valueDecls.forall(v => typeNameOf(v) == "CstValueDeclaration")
                 )
             }
         ),

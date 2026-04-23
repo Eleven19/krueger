@@ -6,6 +6,7 @@ import zio.test.*
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.ast.AstQueryableTree.given
+import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
 
@@ -27,12 +28,14 @@ object AstQueryableTreeSpec extends ZIOSpecDefault:
     private val root: AstNode              = moduleTree
     private val qt: QueryableTree[AstNode] = summon[QueryableTree[AstNode]]
 
+    private def typeNameOf(n: AstNode): String = NodeTypeName.unwrap(qt.nodeType(n))
+
     def spec = suite("QueryableTree[AstNode]")(
         suite("nodeType")(
             test("uses simple class name for concrete variants") {
                 assertTrue(
-                    qt.nodeType(moduleTree) == "Module",
-                    qt.nodeType(moduleTree.name) == "QualifiedName"
+                    typeNameOf(moduleTree) == "Module",
+                    typeNameOf(moduleTree.name) == "QualifiedName"
                 )
             }
         ),

@@ -1,5 +1,6 @@
 package io.eleven19.krueger.cst
 
+import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 
 /** QueryableTree instance for the Elm CST.
@@ -13,7 +14,9 @@ object CstQueryableTree:
 
     given queryableTree: QueryableTree[CstNode] with
 
-        def nodeType(t: CstNode): String = t.getClass.getSimpleName
+        def nodeType(t: CstNode): NodeTypeName =
+            // Case-class simple names are guaranteed non-empty and non-whitespace.
+            NodeTypeName.make(t.getClass.getSimpleName).toOption.get
 
         def children(t: CstNode): Seq[CstNode] = CstVisitor.children(t)
 

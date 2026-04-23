@@ -13,12 +13,16 @@ object ToyTree:
     final case class Branch(items: Seq[ToyTree])         extends ToyTree derives CanEqual
     final case class Named(name: ToyTree, body: ToyTree) extends ToyTree derives CanEqual
 
+    private val LeafName: NodeTypeName   = NodeTypeName.make("Leaf").toOption.get
+    private val BranchName: NodeTypeName = NodeTypeName.make("Branch").toOption.get
+    private val NamedName: NodeTypeName  = NodeTypeName.make("Named").toOption.get
+
     given QueryableTree[ToyTree] with
 
-        def nodeType(t: ToyTree): String = t match
-            case _: Leaf   => "Leaf"
-            case _: Branch => "Branch"
-            case _: Named  => "Named"
+        def nodeType(t: ToyTree): NodeTypeName = t match
+            case _: Leaf   => LeafName
+            case _: Branch => BranchName
+            case _: Named  => NamedName
 
         def children(t: ToyTree): Seq[ToyTree] = t match
             case _: Leaf           => Seq.empty

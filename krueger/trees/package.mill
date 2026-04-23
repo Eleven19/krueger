@@ -9,7 +9,8 @@ trait TreesModule extends _root_.build.CommonScalaModule
     override def artifactName = "krueger-trees"
 
     def mvnDeps = Seq(
-        mvn"com.github.j-mie6::parsley::4.6.2"
+        mvn"com.github.j-mie6::parsley::4.6.2",
+        mvn"io.github.kitlangton::neotype::0.4.10"
     )
 }
 

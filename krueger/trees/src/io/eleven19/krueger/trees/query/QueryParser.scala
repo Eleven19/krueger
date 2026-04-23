@@ -7,6 +7,8 @@ import parsley.character.{char, digit, letter, satisfy, stringOfMany}
 import parsley.combinator.option
 import parsley.syntax.character.{charLift, stringLift}
 
+import io.eleven19.krueger.trees.NodeTypeName
+
 /** Parses tree-sitter-style query strings into the v1 query AST.
   *
   * Supported v1 syntax:
@@ -33,12 +35,12 @@ object QueryParser:
     def parse(source: String, knownTypes: Set[String]): Result[String, Query] =
         parse(source) match
             case parsley.Success(q) =>
-                val unknown = gatherNodeTypes(q.root).diff(knownTypes)
+                val unknown = gatherNodeTypes(q.root).map(NodeTypeName.unwrap).diff(knownTypes)
                 if unknown.isEmpty then parsley.Success(q)
                 else parsley.Failure(s"Unknown node type(s): ${unknown.toList.sorted.mkString(", ")}")
             case f: parsley.Failure[String] => f
 
-    private def gatherNodeTypes(p: Pattern): Set[String] = p match
+    private def gatherNodeTypes(p: Pattern): Set[NodeTypeName] = p match
         case NodePattern(nt, fields, _) =>
             fields.foldLeft(Set(nt))((acc, fp) => acc ++ gatherNodeTypes(fp.pattern))
         case _: WildcardPattern => Set.empty
@@ -88,7 +90,10 @@ object QueryParser:
                 <~ tok(')')
                 <~> option(tok(captureTail))
         ).map { case ((nt, fs), cap) =>
-            NodePattern(nt, fs, cap)
+            // The identifier grammar guarantees a non-empty non-whitespace string,
+            // so NodeTypeName validation cannot fail here.
+            val name = NodeTypeName.make(nt).toOption.get
+            NodePattern(name, fs, cap)
         }
 
     private lazy val fieldPattern: Parsley[FieldPattern] =

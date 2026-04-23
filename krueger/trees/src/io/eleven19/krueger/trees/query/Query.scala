@@ -2,6 +2,8 @@ package io.eleven19.krueger.trees.query
 
 import scala.annotation.tailrec
 
+import io.eleven19.krueger.trees.NodeTypeName
+
 /** Root of the query AST. A parsed query is one pattern plus zero or more predicates that constrain captured nodes. */
 final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEqual:
 
@@ -30,7 +32,7 @@ sealed trait Pattern derives CanEqual:
     def capture: Option[String]
 
 final case class NodePattern(
-    nodeType: String,
+    nodeType: NodeTypeName,
     fieldPatterns: List[FieldPattern],
     capture: Option[String]
 ) extends Pattern derives CanEqual

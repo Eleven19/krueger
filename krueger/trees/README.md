@@ -163,9 +163,17 @@ Matcher.matches(query, root, registry)
 
 ## Roadmap
 
-Follow-up work is tracked in the v2 epic:
+Delivered in v1:
 
-- `NodeTypeName` validated newtype for `nodeType` (non-empty, non-blank).
+- String-based `QueryableTree[T]` typeclass.
+- Parsley-backed S-expression parser and matcher.
+- Given instances for `CstNode` and `AstNode`.
+- `QuerySteps` BDD step pack.
+- `NodeTypeName` validated newtype (non-empty, non-blank) as the return
+  type of `nodeType` — implemented with [neotype](https://github.com/kitlangton/neotype).
+
+Follow-up in the v2 epic:
+
 - `NodeTypes` type member on `QueryableTree[T]`.
 - Mirror/Hearth-backed derived instances.
 - Match-type `NodeByName[Name, T]` for typed captures.

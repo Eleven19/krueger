@@ -1,5 +1,6 @@
 package io.eleven19.krueger.itest
 
+import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.Match
 
@@ -16,9 +17,9 @@ object MatchView:
 
     def from[T](m: Match[T])(using qt: QueryableTree[T]): MatchView =
         def view(node: T): CapturedNode =
-            CapturedNode(qt.nodeType(node), qt.text(node), qt.children(node).size)
+            CapturedNode(NodeTypeName.unwrap(qt.nodeType(node)), qt.text(node), qt.children(node).size)
         MatchView(
-            rootNodeType = qt.nodeType(m.root),
+            rootNodeType = NodeTypeName.unwrap(qt.nodeType(m.root)),
             rootText = qt.text(m.root),
             captures = m.captures.map((name, node) => name -> view(node))
         )

@@ -1,5 +1,6 @@
 package io.eleven19.krueger.ast
 
+import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 
 /** QueryableTree instance for the Elm AST.
@@ -13,7 +14,9 @@ object AstQueryableTree:
 
     given queryableTree: QueryableTree[AstNode] with
 
-        def nodeType(t: AstNode): String = t.getClass.getSimpleName
+        def nodeType(t: AstNode): NodeTypeName =
+            // Case-class simple names are guaranteed non-empty and non-whitespace.
+            NodeTypeName.make(t.getClass.getSimpleName).toOption.get
 
         def children(t: AstNode): Seq[AstNode] = AstVisitor.children(t)
 
