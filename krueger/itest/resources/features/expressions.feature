@@ -1,5 +1,6 @@
 Feature: Expressions
   Krueger parses Elm expressions appearing as declaration bodies.
+  Assertions use the generic query DSL instead of hand-rolled step verbs.
 
   Scenario: Integer literal body
     Given the Elm source:
@@ -8,9 +9,8 @@ Feature: Expressions
 
       x = 42
       """
-    When the source is parsed
-    Then declaration 1 is a value named "x"
-    And value "x" has an integer body 42
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n body: (CstIntLiteral) @b) (#eq? @n \"x\") (#eq? @b \"42\")"
+    Then the query matches exactly 1 time
 
   Scenario: Float literal body
     Given the Elm source:
@@ -19,9 +19,8 @@ Feature: Expressions
 
       pi = 3.14
       """
-    When the source is parsed
-    Then declaration 1 is a value named "pi"
-    And value "pi" has a float body
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n body: (CstFloatLiteral) @b) (#eq? @n \"pi\")"
+    Then the query matches exactly 1 time
 
   Scenario: Unit literal body
     Given the Elm source:
@@ -30,9 +29,8 @@ Feature: Expressions
 
       u = ()
       """
-    When the source is parsed
-    Then declaration 1 is a value named "u"
-    And value "u" has a unit body
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n body: (CstUnitLiteral) @b) (#eq? @n \"u\")"
+    Then the query matches exactly 1 time
 
   Scenario: List literal body
     Given the Elm source:
@@ -41,9 +39,9 @@ Feature: Expressions
 
       xs = [1, 2, 3]
       """
-    When the source is parsed
-    Then declaration 1 is a value named "xs"
-    And value "xs" has a list body of 3 elements
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n body: (CstListLiteral) @b) (#eq? @n \"xs\")"
+    Then the query matches exactly 1 time
+    And capture "b" of match 1 has 3 direct children
 
   Scenario: Record literal body
     Given the Elm source:
@@ -52,6 +50,6 @@ Feature: Expressions
 
       rec = { x = 1, y = 2 }
       """
-    When the source is parsed
-    Then declaration 1 is a value named "rec"
-    And value "rec" has a record body with 2 fields
+    When the CST is queried with "(CstValueDeclaration name: (CstName) @n body: (CstRecordLiteral) @b) (#eq? @n \"rec\")"
+    Then the query matches exactly 1 time
+    And capture "b" of match 1 has 2 direct children

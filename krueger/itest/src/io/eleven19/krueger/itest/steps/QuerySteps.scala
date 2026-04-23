@@ -63,3 +63,18 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
                 s"expected capture [$captureName] of match $oneBasedIndex to have text [$expectedText], got [$actual]"
             )
     }
+
+    Then("capture {string} of match {int} has {int} direct child(ren)") {
+        (captureName: String, oneBasedIndex: Int, expectedCount: Int) =>
+            val m = driver.lastMatches(oneBasedIndex - 1)
+            val cap = m.captures.getOrElse(
+                captureName,
+                throw new AssertionError(
+                    s"no capture named [$captureName] in match $oneBasedIndex; available: ${m.captures.keySet.mkString(", ")}"
+                )
+            )
+            assert(
+                cap.childCount == expectedCount,
+                s"expected capture [$captureName] of match $oneBasedIndex to have $expectedCount direct child(ren), got ${cap.childCount}"
+            )
+    }

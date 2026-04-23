@@ -15,11 +15,15 @@ final case class MatchView(
 object MatchView:
 
     def from[T](m: Match[T])(using qt: QueryableTree[T]): MatchView =
+        def view(node: T): CapturedNode =
+            CapturedNode(qt.nodeType(node), qt.text(node), qt.children(node).size)
         MatchView(
             rootNodeType = qt.nodeType(m.root),
             rootText = qt.text(m.root),
-            captures = m.captures.map((name, node) => name -> CapturedNode(qt.nodeType(node), qt.text(node)))
+            captures = m.captures.map((name, node) => name -> view(node))
         )
 
-/** A captured node reduced to its nodeType plus optional text. Enough to write all v1 capture assertions. */
-final case class CapturedNode(nodeType: String, text: Option[String])
+/** A captured node reduced to its nodeType, optional text, and direct child count. Enough to write all v1 capture
+  * assertions without exposing the tree-specific type.
+  */
+final case class CapturedNode(nodeType: String, text: Option[String], childCount: Int)
