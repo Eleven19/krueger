@@ -27,13 +27,16 @@ trait CoreTestModule extends _root_.build.CommonScalaTestModule
 }
 
 object jvm extends CoreModule {
+    override def moduleDeps = Seq(build.krueger.trees.jvm)
     object test extends ScalaTests with CoreTestModule
 }
 
 object js extends CoreModule with _root_.build.CommonScalaJSModule {
+    override def moduleDeps = Seq(build.krueger.trees.js)
     object test extends ScalaJSTests with CoreTestModule
 }
 
 object native extends CoreModule with _root_.build.CommonScalaNativeModule {
+    override def moduleDeps = Seq(build.krueger.trees.native)
     object test extends ScalaNativeTests with CoreTestModule
 }
