@@ -140,6 +140,19 @@ Feature: Tree queries
     And capture "n" of match 1 has text "main"
 
   @REQ-QRY-001 @REQ-QRY-004
+  Scenario: Alternation query matches either branch deterministically
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "[(CstName) @n (CstIntLiteral) @i]"
+    Then capture "n" of match 1 has text "M"
+    And capture "n" of match 2 has text "main"
+    And capture "i" of match 3 has text "42"
+
+  @REQ-QRY-001 @REQ-QRY-004
   Scenario: CST query with multiple top-level patterns
     Given the Elm source:
       """
@@ -259,6 +272,17 @@ Feature: Tree queries
       """
     When the CST is queried with "(CstValueDeclaration !name name: (CstName) @n)"
     Then the query fails with message containing "conflicting field constraints"
+
+  @REQ-QRY-002
+  Scenario: Empty alternation fails with explicit diagnostic
+    Given the Elm source:
+      """
+      module M exposing (..)
+
+      main = 42
+      """
+    When the CST is queried with "[]"
+    Then the query fails with message containing "alternation requires at least one branch"
 
   @REQ-QRY-002
   Scenario: Duplicate capture names fail query parse

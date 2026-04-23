@@ -54,6 +54,16 @@ object MatcherSpec extends ZIOSpecDefault:
                 val grouped = ms.take(splitAt).forall(_.captures.contains(nCap)) &&
                     ms.drop(splitAt).forall(_.captures.contains(lCap))
                 assertTrue(firstIsNamed, namedCount == 1, leafCount == 4, grouped)
+            },
+            test("alternation matches either branch deterministically") {
+                val ms = Matcher.matches(q("[(Named) @n (Leaf) @l]"), branch).toList
+                val namedCount = ms.count(_.captures.contains(nCap))
+                val leafCount  = ms.count(_.captures.contains(lCap))
+                assertTrue(ms.size == 5, namedCount == 1, leafCount == 4)
+            },
+            test("alternation favors first matching branch for same node") {
+                val ms = Matcher.matches(q("[_ @n (Leaf) @l]"), leafHi).toList
+                assertTrue(ms.size == 1, ms.head.captures.contains(nCap), !ms.head.captures.contains(lCap))
             }
         ),
         suite("fields")(

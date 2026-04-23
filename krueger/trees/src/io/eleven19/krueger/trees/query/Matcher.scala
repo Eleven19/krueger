@@ -49,6 +49,12 @@ object Matcher:
                     .flatMap(p => matchPattern(p, node, captures))
                     .nextOption()
 
+            case AlternationPattern(patterns, capture) =>
+                patterns.iterator
+                    .flatMap(p => matchPattern(p, node, captures))
+                    .map(updated => bind(capture, node, updated))
+                    .nextOption()
+
             case NodePattern(expectedType, fieldPatterns, childPatterns, capture, adjacentChildAnchors, negatedFields) =>
                 if qt.nodeType(node) != expectedType then None
                 else if !negatedFields.forall(fn => qt.fields(node).getOrElse(fn, Seq.empty).isEmpty) then None

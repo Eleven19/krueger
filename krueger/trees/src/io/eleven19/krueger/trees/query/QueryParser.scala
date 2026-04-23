@@ -23,7 +23,7 @@ import io.eleven19.krueger.trees.NodeTypeName
   *   - Line comments: `;; ...` to end of line
   *   - Flexible whitespace between tokens
   *
-  * Alternation, quantifiers, anchors, and negation are deferred to the v2 epic.
+  * Quantifiers are deferred to the v2 epic.
   */
 object QueryParser:
 
@@ -64,6 +64,8 @@ object QueryParser:
             children.foldLeft(withFields)((acc, child) => acc ++ gatherNodeTypes(child))
         case MultiPattern(patterns) =>
             patterns.foldLeft(Set.empty[NodeTypeName])((acc, child) => acc ++ gatherNodeTypes(child))
+        case AlternationPattern(patterns, _) =>
+            patterns.foldLeft(Set.empty[NodeTypeName])((acc, child) => acc ++ gatherNodeTypes(child))
         case _: WildcardPattern => Set.empty
 
     private def captureNames(p: Pattern): Set[CaptureName] = p match
@@ -74,6 +76,8 @@ object QueryParser:
             own ++ fromFields ++ fromKids
         case MultiPattern(patterns) =>
             patterns.foldLeft(Set.empty[CaptureName])((acc, pattern) => acc ++ captureNames(pattern))
+        case AlternationPattern(patterns, capture) =>
+            capture.toSet ++ patterns.foldLeft(Set.empty[CaptureName])((acc, pattern) => acc ++ captureNames(pattern))
         case WildcardPattern(capture) =>
             capture.toSet
 
@@ -108,6 +112,12 @@ object QueryParser:
                     }
                 }
             case MultiPattern(patterns) =>
+                (own :: patterns.map(captureNameCounts)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
+                    m.foldLeft(acc) { case (acc2, (name, count)) =>
+                        acc2.updated(name, acc2.getOrElse(name, 0) + count)
+                    }
+                }
+            case AlternationPattern(patterns, _) =>
                 (own :: patterns.map(captureNameCounts)).foldLeft(Map.empty[CaptureName, Int]) { (acc, m) =>
                     m.foldLeft(acc) { case (acc2, (name, count)) =>
                         acc2.updated(name, acc2.getOrElse(name, 0) + count)
@@ -174,12 +184,23 @@ object QueryParser:
 
     // Lazy forward reference so nested patterns work.
     private lazy val pattern: Parsley[Pattern] =
-        wildcardPattern | nodePattern
+        alternationPattern | wildcardPattern | nodePattern
 
     private lazy val wildcardPattern: Parsley[Pattern] =
         val parenthesised = atomic(tok('(' <~ skipTrivia) *> tok(char('_')) <* tok(')'))
         val bare          = tok(char('_'))
         (parenthesised | bare) *> option(tok(captureTail)).map(WildcardPattern(_))
+
+    private lazy val alternationPattern: Parsley[Pattern] =
+        (
+            tok('[' <~ skipTrivia)
+                *> many(pattern)
+                <~ tok(']')
+                <~> option(tok(captureTail))
+        ).flatMap { case (branches, cap) =>
+            if branches.isEmpty then Parsley.empty.label("alternation requires at least one branch")
+            else Parsley.pure(AlternationPattern(branches, cap))
+        }
 
     private lazy val nodePattern: Parsley[Pattern] =
         (

@@ -100,6 +100,39 @@ object QueryParserSpec extends ZIOSpecDefault:
                 )
                 assertTrue(parseOrFail("(Named !name)") == expected)
             },
+            test("alternation pattern parses with capture") {
+                val expected = Query(
+                    AlternationPattern(
+                        List(
+                            NodePattern(leafType, Nil, Nil, Some(n)),
+                            NodePattern(namedType, Nil, Nil, Some(b))
+                        ),
+                        Some(x)
+                    ),
+                    Nil
+                )
+                assertTrue(parseOrFail("[(Leaf) @n (Named) @b] @x") == expected)
+            },
+            test("field can contain alternation sub-pattern") {
+                val expected = Query(
+                    NodePattern(
+                        namedType,
+                        List(
+                            FieldPattern(
+                                nameField,
+                                AlternationPattern(
+                                    List(NodePattern(leafType, Nil, Nil, None), WildcardPattern(None)),
+                                    None
+                                )
+                            )
+                        ),
+                        Nil,
+                        None
+                    ),
+                    Nil
+                )
+                assertTrue(parseOrFail("(Named name: [(Leaf) _])") == expected)
+            },
             test("multiple top-level patterns in one query are accepted") {
                 val res = QueryParser.parse("(Leaf) (Named)")
                 assertTrue(res.isSuccess)
@@ -301,6 +334,11 @@ object QueryParserSpec extends ZIOSpecDefault:
                 val res = QueryParser.parse("(Named !name name: (Leaf) @n)")
                 val msg = res.toEither.left.getOrElse("")
                 assertTrue(res.isFailure, msg.toLowerCase.contains("conflicting field constraints"), msg.contains("name"))
+            },
+            test("empty alternation fails with actionable parse diagnostic") {
+                val res = QueryParser.parse("[]")
+                val msg = res.toEither.left.getOrElse("")
+                assertTrue(res.isFailure, msg.toLowerCase.contains("alternation requires at least one branch"))
             }
         )
     )

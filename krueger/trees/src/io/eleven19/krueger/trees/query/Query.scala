@@ -24,6 +24,8 @@ final case class Query(root: Pattern, predicates: List[Predicate]) derives CanEq
                         go(fields.map(_.pattern) ::: children ::: rest, withOwn)
                     case MultiPattern(patterns) =>
                         go(patterns ::: rest, withOwn)
+                    case AlternationPattern(patterns, _) =>
+                        go(patterns ::: rest, withOwn)
                     case _: WildcardPattern =>
                         go(rest, withOwn)
         go(List(root), Set.empty)
@@ -46,6 +48,8 @@ final case class NodePattern(
 
 final case class MultiPattern(patterns: List[Pattern]) extends Pattern derives CanEqual:
     val capture: Option[CaptureName] = None
+
+final case class AlternationPattern(patterns: List[Pattern], capture: Option[CaptureName]) extends Pattern derives CanEqual
 
 final case class WildcardPattern(capture: Option[CaptureName]) extends Pattern derives CanEqual
 
