@@ -1,0 +1,76 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'krueger/core/**'
+      - 'krueger/trees/**'
+      - 'mill-build/**'
+      - 'build.mill.yaml'
+      - 'VERSION'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Cache Coursier
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/coursier
+          key: ${{ runner.os }}-coursier-${{ hashFiles('build.mill.yaml', 'krueger/**/package.mill', 'krueger/**/package.mill.yaml', 'docs/package.mill', 'mill-build/**') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
+
+      - name: Cache Mill out
+        uses: actions/cache@v4
+        with:
+          path: out
+          key: ${{ runner.os }}-mill-docs-${{ hashFiles('build.mill.yaml', 'krueger/**/package.mill', 'krueger/**/package.mill.yaml', 'docs/package.mill', 'mill-build/**', 'VERSION') }}
+          restore-keys: |
+            ${{ runner.os }}-mill-docs-
+
+      - name: Build site (Scaladoc + Astro)
+        run: ./mill docs.site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
