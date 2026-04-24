@@ -1,0 +1,26 @@
+package build.krueger.webapp
+
+import mill.*, scalalib.*, scalajslib.*
+
+object `package` extends _root_.build.CommonScalaModule with _root_.build.CommonScalaJSModule {
+
+    override def moduleDeps = Seq(build.krueger.`compiler-api`.js)
+
+    override def moduleKind: T[mill.scalajslib.api.ModuleKind] =
+        Task { mill.scalajslib.api.ModuleKind.ESModule }
+
+    def mvnDeps = Seq(
+        mvn"com.raquo::laminar::17.2.0",
+        mvn"org.scala-js::scalajs-dom::2.8.0"
+    )
+
+    object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with TestModule.ZioTest {
+        override def sources = Task.Sources(
+            moduleDir / os.up / "test" / "src"
+        )
+        def mvnDeps = Seq(
+            mvn"dev.zio::zio-test::2.1.24",
+            mvn"dev.zio::zio-test-sbt::2.1.24"
+        )
+    }
+}
