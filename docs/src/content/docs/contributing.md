@@ -30,39 +30,53 @@ mill krueger.itest
 
 ## Docs site
 
+### One-shot: build the full site
+
 The full site (docs + Scaladoc for JVM, Scala.js, Scala Native) builds in one
-command:
+command from either toolchain:
 
 ```sh
-./mill docs.site        # generates Scaladoc, runs `npm ci` + `npm run build`
-```
-
-Or, from `docs/` using the Node toolchain only:
-
-```sh
-cd docs
-npm run build:full      # same as ./mill docs.site, but npm-driven
+./mill docs.site                # Mill-driven
+cd docs && npm run build:full   # npm-driven (shells out to Mill)
 ```
 
 Both produce the final publishable artifact at `docs/dist/` — which is what
 the `Deploy Docs` workflow uploads to GitHub Pages.
 
-### Iteration shortcuts
+### Under the hood
 
-When you only need part of the build:
+The Starlight site under `docs/` is built by **two** tools in sequence, and
+`docs.site` / `build:full` just run them together:
 
-```sh
-./mill docs.writeToDocsPublic   # Scaladoc only (JVM + JS + Native)
-./mill docs.apiJvm              # JVM tree only
-./mill docs.apiJs               # Scala.js tree only
-./mill docs.apiNative           # Scala Native tree only
+1. **Mill** generates Scaladoc HTML for each platform and mirrors it into
+   `docs/public/api/{jvm,js,native}/` plus a landing page at
+   `docs/public/api/index.html`:
 
-cd docs && npm run dev          # hot-reload preview at http://localhost:4321/krueger/
-cd docs && npm run build        # Astro only, assumes Scaladoc already present
-cd docs && npm run preview      # serve the built docs/dist/ locally
-```
+   ```sh
+   # Build all three Scaladoc trees + landing page.
+   ./mill docs.writeToDocsPublic
 
-The output under `docs/public/api/` is gitignored — always regenerated.
+   # Individual trees (for iteration):
+   ./mill docs.apiJvm
+   ./mill docs.apiJs
+   ./mill docs.apiNative
+   ```
+
+   The output under `docs/public/api/` is gitignored — always regenerated.
+
+2. **Astro / Starlight** bundles the Markdown content and copies
+   `docs/public/` verbatim into `docs/dist/`:
+
+   ```sh
+   cd docs
+   npm ci
+   npm run build   # -> docs/dist/
+   npm run dev     # local preview at http://localhost:4321/krueger/
+   npm run preview # serve the built docs/dist/ locally
+   ```
+
+For a combined local preview, run the Mill task first, then `npm run dev` (or
+`npm run build && npm run preview`).
 
 ## Workflow
 
