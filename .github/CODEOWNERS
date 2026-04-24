@@ -1,2 +1,2 @@
-# Global codeowner — all files require review from @DamianReeves
-* @DamianReeves
+# Global codeowners — all files require review from org or repo maintainers
+* @Eleven19/maintainers @Eleven19/krueger-maintainers
