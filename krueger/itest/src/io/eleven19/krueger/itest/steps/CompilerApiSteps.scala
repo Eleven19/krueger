@@ -2,10 +2,9 @@ package io.eleven19.krueger.itest.steps
 
 import io.cucumber.scala.{EN, ScalaDsl}
 
-import io.eleven19.krueger.compiler.abi.InvokeCompiler
 import io.eleven19.krueger.compiler.abi.InvokeJson
 import io.eleven19.krueger.compiler.abi.InvokeResponse
-import io.eleven19.krueger.itest.ChicorySupportedCompilerHarness
+import io.eleven19.krueger.itest.TestDriver
 
 class CompilerApiSteps extends ScalaDsl with EN:
 
@@ -19,13 +18,10 @@ class CompilerApiSteps extends ScalaDsl with EN:
 
     Given("the compiler backend {string}") { (name: String) =>
         val normalized = name.trim.toLowerCase
-        normalized match
-            case "jvm" | "chicory" =>
-                backend = Some(normalized)
-                responses = Vector.empty
-                decoded = None
-            case other =>
-                throw new AssertionError(s"unsupported compiler backend [$other]; expected jvm or chicory")
+        TestDriver.requireSupportedBackend(normalized)
+        backend = Some(normalized)
+        responses = Vector.empty
+        decoded = None
     }
 
     Given("the compiler input:") { (json: String) =>
@@ -92,10 +88,11 @@ class CompilerApiSteps extends ScalaDsl with EN:
 
     private def invoke(op: String): String =
         val json = inputJson.getOrElse(throw new AssertionError("compiler input not set - missing Given step?"))
-        backend.getOrElse(throw new AssertionError("compiler backend not set - missing Given step?")) match
-            case "jvm"     => InvokeCompiler.invoke(op, json)
-            case "chicory" => ChicorySupportedCompilerHarness.invoke(op, json)
-            case other     => throw new AssertionError(s"unsupported compiler backend [$other]")
+        TestDriver.invoke(
+            backend = backend.getOrElse(throw new AssertionError("compiler backend not set - missing Given step?")),
+            op = op,
+            inputJson = json
+        )
 
     private def currentResponse(): InvokeResponse =
         decoded.getOrElse(throw new AssertionError("compiler response not set - missing When step?"))

@@ -1,5 +1,9 @@
 package io.eleven19.krueger.itest
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+
 import parsley.{Failure, Result, Success}
 
 import scala.io.Source
@@ -8,11 +12,110 @@ import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.ast.AstNode
 import io.eleven19.krueger.ast.AstQueryableTree.given
 import io.eleven19.krueger.ast.Module
+import io.eleven19.krueger.compiler.abi.InvokeCompiler
 import io.eleven19.krueger.cst.CstModule
 import io.eleven19.krueger.cst.CstNode
 import io.eleven19.krueger.cst.CstQueryableTree.given
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
+
+object TestDriver:
+
+    private val scalaJsNodeBackend = "scalajs-node"
+    private val supportedBackends  = Set("jvm", "chicory", scalaJsNodeBackend)
+
+    def requireSupportedBackend(backend: String): Unit =
+        if !supportedBackends.contains(backend) then
+            throw AssertionError(
+                s"unsupported compiler backend [$backend]; expected ${supportedBackends.toVector.sorted.mkString(", ")}"
+            )
+
+    def invoke(backend: String, op: String, inputJson: String): String =
+        requireSupportedBackend(backend)
+        backend match
+            case "jvm"               => InvokeCompiler.invoke(op, inputJson)
+            case "chicory"           => ChicorySupportedCompilerHarness.invoke(op, inputJson)
+            case `scalaJsNodeBackend` => invokeScalaJsNode(op, inputJson)
+
+    private def invokeScalaJsNode(op: String, inputJson: String): String =
+        val artifactDir = Path.of(
+            Option(System.getProperty("krueger.webapp-wasm.facade.dir")).getOrElse(
+                throw AssertionError(
+                    "missing system property krueger.webapp-wasm.facade.dir; run this suite through Mill so it can inject the linked Scala.js facade path"
+                )
+            )
+        )
+        val entrypoint = artifactDir.resolve("main.js")
+        if !Files.isRegularFile(entrypoint) then
+            throw AssertionError(s"missing Scala.js facade entrypoint: $entrypoint")
+
+        val script = Files.createTempFile("krueger-scalajs-node-driver-", ".mjs")
+        try
+            Files.writeString(script, scalaJsNodeScript, StandardCharsets.UTF_8)
+            val process = ProcessBuilder(
+                "node",
+                script.toString,
+                entrypoint.toString,
+                op,
+                inputJson
+            ).redirectErrorStream(true).start()
+            val output = String(process.getInputStream.readAllBytes(), StandardCharsets.UTF_8)
+            val exit   = process.waitFor()
+            if exit != 0 then
+                throw AssertionError(s"Scala.js Node compiler backend failed with exit $exit:\n$output")
+            output.trim
+        finally
+            val _ = Files.deleteIfExists(script)
+
+    private val scalaJsNodeScript =
+        """
+          |import { pathToFileURL } from "node:url";
+          |
+          |const [, , entrypoint, op, inputJson] = process.argv;
+          |const mod = await import(pathToFileURL(entrypoint).href);
+          |const krueger = mod.Krueger ?? globalThis.Krueger;
+          |
+          |function errorEnvelope(phase, message) {
+          |  return JSON.stringify({ ok: false, logs: [], errors: [{ phase, message }] });
+          |}
+          |
+          |function normalizeErrors(errors) {
+          |  return Array.from(errors ?? []).map((error) => ({
+          |    phase: String(error.phase ?? "internal"),
+          |    message: String(error.message ?? error),
+          |    ...(error.span === undefined ? {} : { span: error.span }),
+          |  }));
+          |}
+          |
+          |function toInvokeResponse(env) {
+          |  const ok = Boolean(env.ok);
+          |  return JSON.stringify({
+          |    ok,
+          |    ...(ok && env.value != null ? { value: String(env.value) } : {}),
+          |    logs: Array.from(env.logs ?? []).map(String),
+          |    errors: normalizeErrors(env.errors),
+          |  });
+          |}
+          |
+          |if (!krueger) {
+          |  console.log(errorEnvelope("internal", "Scala.js Krueger facade was not exported"));
+          |  process.exit(0);
+          |}
+          |
+          |try {
+          |  switch (op) {
+          |    case "parseCst": {
+          |      const request = JSON.parse(inputJson);
+          |      console.log(toInvokeResponse(krueger.parseCst(String(request.source ?? ""))));
+          |      break;
+          |    }
+          |    default:
+          |      console.log(errorEnvelope("internal", `unknown operation: ${op}`));
+          |  }
+          |} catch (error) {
+          |  console.log(errorEnvelope("internal", error?.stack ?? String(error)));
+          |}
+          |""".stripMargin
 
 /** Scenario-scoped mutable state shared across step-definition classes via the cucumber-scala DI container. */
 final class TestDriver:

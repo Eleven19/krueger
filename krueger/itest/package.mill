@@ -12,7 +12,8 @@ object `package` extends _root_.build.CommonScalaModule
 
     override def forkArgs = Task {
         super.forkArgs() ++ Seq(
-            s"-Dkrueger.compiler-api.wasm.dir=${build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path}"
+            s"-Dkrueger.compiler-api.wasm.dir=${build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path}",
+            s"-Dkrueger.webapp-wasm.facade.dir=${build.krueger.`webapp-wasm`.fullLinkJS().dest.path}"
         )
     }
 

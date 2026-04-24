@@ -6,7 +6,7 @@ Feature: Compiler API backends
   # - REQ-CAPI-001 (When): When a supported backend receives a valid compiler request, the system shall return a successful compiler response.
   # - REQ-CAPI-002 (If): If a supported backend receives malformed Elm source, then the system shall return structured compiler errors.
   # - REQ-CAPI-003 (Where): Where a compiler request is repeated on the same backend, the system shall return deterministic JSON responses.
-  # - REQ-CAPI-004 (Where): Where the canonical compiler API is invoked through JVM or Chicory, the system shall preserve equivalent response semantics.
+  # - REQ-CAPI-004 (Where): Where the canonical compiler API is invoked through JVM, Chicory, or Scala.js-on-Node, the system shall preserve equivalent response semantics.
 
   @REQ-CAPI-001 @REQ-CAPI-004
   Scenario Outline: Supported compiler backends parse valid Elm source
@@ -21,8 +21,9 @@ Feature: Compiler API backends
 
     Examples:
       | backend |
-      | jvm     |
-      | chicory |
+      | jvm           |
+      | chicory       |
+      | scalajs-node  |
 
   @REQ-CAPI-002 @REQ-CAPI-004
   Scenario Outline: Supported compiler backends return structured parse errors
@@ -39,8 +40,9 @@ Feature: Compiler API backends
 
     Examples:
       | backend |
-      | jvm     |
-      | chicory |
+      | jvm           |
+      | chicory       |
+      | scalajs-node  |
 
   @REQ-CAPI-003 @REQ-CAPI-004
   Scenario Outline: Supported compiler backends are deterministic for repeated requests
@@ -55,5 +57,6 @@ Feature: Compiler API backends
 
     Examples:
       | backend |
-      | jvm     |
-      | chicory |
+      | jvm           |
+      | chicory       |
+      | scalajs-node  |
