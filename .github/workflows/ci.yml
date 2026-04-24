@@ -5,8 +5,12 @@ on:
     branches: [main]
     tags-ignore:
       - "v*"
+    paths-ignore:
+      - ".github/CODEOWNERS"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - ".github/CODEOWNERS"
 
 # Cancel in-progress runs for the same branch/PR
 concurrency:

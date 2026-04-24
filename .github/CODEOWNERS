@@ -1,2 +1,8 @@
-# Global codeowners — review required from org/repo maintainers or contributors
-* @Eleven19/maintainers @Eleven19/krueger-maintainers @Eleven19/contributors @Eleven19/krueger-contributors
+# Global — any contributor (covers all teams via hierarchy)
+* @Eleven19/contributors
+
+# GitHub Actions and CODEOWNERS require maintainer approval
+# (@Eleven19/maintainers covers @Eleven19/krueger-maintainers via hierarchy)
+.github/workflows/ @Eleven19/maintainers
+.github/actions/ @Eleven19/maintainers
+.github/CODEOWNERS @Eleven19/maintainers
