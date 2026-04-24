@@ -25,6 +25,12 @@ final class ChicoryCompilerWasmCompatibilityTest:
         assertTrue(Files.isRegularFile(dir.resolve("main.wasm")), dir.resolve("main.wasm").toString)
 
     @Test
+    def `writeToWasmSite copies supported compiler Wasm artifacts`(): Unit =
+        val target = repoRoot().resolve("sites/try-wasm/static/wasm")
+        assertTrue(Files.isRegularFile(target.resolve("facade/main.js")), target.resolve("facade/main.js").toString)
+        assertTrue(Files.isRegularFile(target.resolve("webgc/main.wasm")), target.resolve("webgc/main.wasm").toString)
+
+    @Test
     def `compiler-api wasm artifact exposes Scala js host imports and zero raw exports`(): Unit =
         val module = parseModule()
         val imports = module.importSection().stream().iterator().asScala
@@ -61,3 +67,10 @@ final class ChicoryCompilerWasmCompatibilityTest:
                 fail(
                     s"missing system property $artifactDirProperty; run this suite through Mill so it can inject the linked compiler-api.wasm artifact path"
                 )
+
+    private def repoRoot(): Path =
+        val start = Path.of("").toAbsolutePath
+        Iterator.iterate(start)(_.getParent)
+            .takeWhile(_ != null)
+            .find(path => Files.isDirectory(path.resolve("sites/try-wasm")))
+            .getOrElse(fail(s"could not locate repo root from $start"))

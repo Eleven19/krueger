@@ -8,7 +8,6 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 import io.eleven19.krueger.compiler.CapturedNode
 import io.eleven19.krueger.compiler.CompileError
 import io.eleven19.krueger.compiler.CompilerComponent
-import io.eleven19.krueger.compiler.Krueger
 import io.eleven19.krueger.compiler.MatchView
 import io.eleven19.krueger.compiler.Span
 import io.eleven19.krueger.cst.CstModule
@@ -40,21 +39,18 @@ import io.eleven19.krueger.trees.query.Query
 object KruegerJs:
 
     import CompilerComponent.CompileResult
-    import io.eleven19.krueger.cst.CstQueryableTree.given
-
-    private val compiler: CompilerComponent[Unit] = Krueger.compiler[Unit]
 
     @JSExport
     def parseCst(src: String): js.Object =
-        envelopeWithOpaqueValue(CompilerComponent.runUnit(compiler.parseCst(src)))
+        envelopeWithOpaqueValue(BackendLoader.current().parseCst(src))
 
     @JSExport
     def parseAst(src: String): js.Object =
-        envelopeWithOpaqueValue(CompilerComponent.runUnit(compiler.parseAst(src)))
+        envelopeWithOpaqueValue(BackendLoader.current().parseAst(src))
 
     @JSExport
     def parseQuery(q: String): js.Object =
-        envelopeWithOpaqueValue(CompilerComponent.runUnit(compiler.parseQuery(q)))
+        envelopeWithOpaqueValue(BackendLoader.current().parseQuery(q))
 
     /** Execute a previously-parsed [[Query]] against a previously-parsed
       * [[CstModule]]. Both handles must come from earlier `parseQuery` /
@@ -65,12 +61,12 @@ object KruegerJs:
     def runQuery(q: js.Any, root: js.Any): js.Object =
         val qScala    = q.asInstanceOf[Query]
         val rootScala = root.asInstanceOf[CstNode]
-        val result    = CompilerComponent.runUnit(compiler.runQuery[CstNode](qScala, rootScala))
+        val result    = BackendLoader.current().runQuery(qScala, rootScala)
         envelopeWithMatches(result)
 
     /** Canonical echo of a parsed query. Pure — no envelope. */
     @JSExport
-    def prettyQuery(q: js.Any): String = compiler.prettyQuery(q.asInstanceOf[Query])
+    def prettyQuery(q: js.Any): String = BackendLoader.current().prettyQuery(q.asInstanceOf[Query])
 
     // ------------------------------------------------------------------
     // Envelope helpers

@@ -143,6 +143,31 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 )
             }
         ),
+        suite("supported WebGC backend routing")(
+            test("parseCst preserves the public envelope shape through the supported WebGC backend") {
+                val backend = BackendLoader.current()
+                val env     = KruegerJs.parseCst(validSource)
+                val d       = dyn(env)
+                assertTrue(
+                    backend.id == "webgc",
+                    d.hasOwnProperty("ok").asInstanceOf[Boolean],
+                    d.hasOwnProperty("value").asInstanceOf[Boolean],
+                    d.hasOwnProperty("logs").asInstanceOf[Boolean],
+                    d.hasOwnProperty("errors").asInstanceOf[Boolean]
+                )
+            },
+            test("runQuery returns results through the supported WebGC backend") {
+                val backend = BackendLoader.current()
+                val cstEnv  = dyn(KruegerJs.parseCst(validSource))
+                val qEnv    = dyn(KruegerJs.parseQuery(validQuery))
+                val env     = dyn(KruegerJs.runQuery(qEnv.value, cstEnv.value))
+                assertTrue(
+                    backend.id == "webgc",
+                    env.ok.asInstanceOf[Boolean],
+                    js.Array.isArray(env.value)
+                )
+            }
+        ),
         suite("determinism (REQ-webappwasm-001 tail)")(
             test("repeated parseCst calls return envelopes with the same ok flag and error count") {
                 val a = dyn(KruegerJs.parseCst(validSource))

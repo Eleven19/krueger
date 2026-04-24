@@ -29,9 +29,9 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
     /** Repo root; `moduleDir` here is `<repo>/krueger/webapp-wasm`. */
     private def repoRoot: os.Path = moduleDir / os.up / os.up
 
-    /** Copy the Scala.js-WASM link output (`main.wasm` + ES-module loader +
-      * source map) into `sites/try-wasm/static/wasm/` so the SvelteKit static
-      * adapter picks them up at `/krueger/try-wasm/wasm/`.
+    /** Copy the supported compiler artifacts into
+      * `sites/try-wasm/static/wasm/` so the SvelteKit static adapter picks
+      * them up at `/krueger/try-wasm/wasm/`.
       *
       * Deterministically wipes the target on every run so stale artifacts
       * from a previous link never leak into a fresh build. Creates parent
@@ -40,21 +40,30 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
       * the task is expected to be forward-compatible.
       */
     def writeToWasmSite(): Command[PathRef] = Task.Command {
-        val report  = fullLinkJS()
-        val linkDir = report.dest.path
-        val target  = repoRoot / "sites" / "try-wasm" / "static" / "wasm"
+        val facadeDir = fullLinkJS().dest.path
+        val webgcDir  = build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path
+        val target    = repoRoot / "sites" / "try-wasm" / "static" / "wasm"
 
         if (os.exists(target)) os.remove.all(target)
-        os.makeDir.all(target)
+        os.makeDir.all(target / "facade")
+        os.makeDir.all(target / "webgc")
 
-        var copied = 0
-        for (child <- os.list(linkDir)) {
-            os.copy.into(child, target, replaceExisting = true)
-            copied += 1
-        }
-        Task.log.info(s"webapp-wasm.writeToWasmSite: copied $copied files from $linkDir -> $target")
+        val facadeCount = copyChildren(facadeDir, target / "facade")
+        val webgcCount  = copyChildren(webgcDir, target / "webgc")
+
+        Task.log.info(
+            s"webapp-wasm.writeToWasmSite: copied facade=$facadeCount from $facadeDir and webgc=$webgcCount from $webgcDir -> $target"
+        )
         PathRef(target)
     }
+
+    private def copyChildren(from: os.Path, to: os.Path): Int =
+        var copied = 0
+        for (child <- os.list(from)) {
+            os.copy.into(child, to, replaceExisting = true)
+            copied += 1
+        }
+        copied
 
     object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with TestModule.ZioTest {
         override def sources = Task.Sources(

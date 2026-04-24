@@ -78,7 +78,7 @@
 - Create: `krueger/compiler-api/src/io/eleven19/krueger/compiler/abi/InvokeCompiler.scala`
 - Test: `krueger/compiler-api/test/src/io/eleven19/krueger/compiler/abi/InvokeCompilerSpec.scala`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```scala
 package io.eleven19.krueger.compiler.abi
@@ -211,7 +211,7 @@ git commit -m "Add canonical invoke contract for compiler-api"
 - Create: `krueger/compiler-api-abi/jvm/src/io/eleven19/krueger/compiler/abi/AbiEntryPoint.scala`
 - Test: `krueger/compiler-api-abi/jvm/test/src/io/eleven19/krueger/compiler/abi/AbiEntryPointSpec.scala`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```scala
 package io.eleven19.krueger.compiler.abi
@@ -409,7 +409,9 @@ Add supported-backend contract coverage:
 
 ```scala
 test("parseCst preserves the public envelope shape through the supported WebGC backend") {
+    val backend = BackendLoader.current()
     val env = dyn(KruegerJs.parseCst(validSource))
+    assertTrue(backend.id == "webgc")
     assertTrue(env.hasOwnProperty("ok"))
     assertTrue(env.hasOwnProperty("value"))
     assertTrue(env.hasOwnProperty("logs"))
@@ -417,34 +419,35 @@ test("parseCst preserves the public envelope shape through the supported WebGC b
 }
 
 test("runQuery returns results through the supported WebGC backend") {
+    val backend = BackendLoader.current()
     val cstEnv = dyn(KruegerJs.parseCst(validSource))
     val qEnv   = dyn(KruegerJs.parseQuery(validQuery))
     val env    = dyn(KruegerJs.runQuery(qEnv.value, cstEnv.value))
+    assertTrue(backend.id == "webgc")
     assertTrue(env.ok.asInstanceOf[Boolean])
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./mill --no-server krueger.webapp-wasm.test.testOnly io.eleven19.krueger.webappwasm.KruegerJsSpec`
 
 Expected: FAIL after the new spec references supported-backend code that does not exist yet.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
-Create a backend abstraction:
+Create a synchronous backend abstraction. The earlier `Future[String]` sketch does not preserve the current synchronous `Krueger.*` JS facade, so this step keeps the public API shape intact while still routing through a supported backend loader:
 
 ```scala
 package io.eleven19.krueger.webappwasm
 
-import scala.concurrent.Future
-
 trait CompilerBackend:
-    def parseCst(src: String): Future[String]
-    def parseAst(src: String): Future[String]
-    def parseQuery(src: String): Future[String]
-    def runQuery(queryJson: String, rootJson: String): Future[String]
-    def prettyQuery(queryJson: String): Future[String]
+    def id: String
+    def parseCst(src: String): CompilerComponent.CompileResult[Unit, CstModule]
+    def parseAst(src: String): CompilerComponent.CompileResult[Unit, Module]
+    def parseQuery(src: String): CompilerComponent.CompileResult[Unit, Query]
+    def runQuery(query: Query, root: CstNode): CompilerComponent.CompileResult[Unit, List[MatchView]]
+    def prettyQuery(query: Query): String
 ```
 
 Add the loader for supported compiler Wasm backends:
@@ -461,9 +464,9 @@ object BackendLoader:
         }
 ```
 
-Refactor `KruegerJs` so its exported methods delegate to `BackendLoader.current()` and then decode the canonical JSON envelope back into the existing JS object shape.
+Refactor `KruegerJs` so its exported methods delegate to `BackendLoader.current()` and preserve the existing JS object shape.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -496,12 +499,12 @@ Extend the copy coverage for supported artifacts:
 ```scala
 @Test
 def `writeToWasmSite copies supported compiler Wasm artifacts`(): Unit =
-    val target = Path.of("sites/try-wasm/static/wasm")
+    val target = repoRoot().resolve("sites/try-wasm/static/wasm")
     assertTrue(Files.isRegularFile(target.resolve("facade/main.js")))
     assertTrue(Files.isRegularFile(target.resolve("webgc/main.wasm")))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -512,7 +515,7 @@ Run:
 
 Expected: FAIL if any supported compiler Wasm artifact is missing from the copied site output.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Copy supported artifact families explicitly:
 
@@ -535,7 +538,7 @@ def writeToWasmSite(): Command[PathRef] = Task.Command {
 
 Then keep `ChicoryCompilerWasmBackendTest` asserting full compiler behavior through the JVM-only Chicory dependency for supported Wasm backends. Keep `ChicoryCompilerWasmCompatibilityTest` only for the current WebGC import-shape compatibility gate.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
