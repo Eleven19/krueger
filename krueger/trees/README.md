@@ -46,13 +46,67 @@ AST; third parties write one for their own tree.
 | `(#not-match? @a "regex")`        | Predicate: captured text must not match the regex      |
 | `(Parent (A) . (B))`              | Anchor: `(A)` and `(B)` must match adjacent children   |
 | `(Parent !field)`                 | Negated field: named field must be absent or empty     |
+| `[(A) (B)]`                       | Alternation: match first branch that succeeds          |
+| `(Parent (A)? (B)* (C)+)`         | Child quantifiers: optional / zero-or-more / one-or-more |
 | `;; line comment`                 | Ignored through to end of line                         |
 
-Alternation and quantifiers are deferred to v2.
 Anchor support is currently limited to `.` between two unfielded child patterns;
 other placements fail with `invalid anchor placement`.
 Directives (for example `#set!`) are currently unsupported and fail with an
 explicit `Unsupported directive: ...` parse diagnostic.
+
+## Canonical query rendering
+
+Use `QueryPretty.render(query)` to emit a deterministic canonical query string
+from a parsed `Query` AST.
+
+- Top-level root patterns and predicates render one clause per line.
+- Node patterns use stable token spacing (`(Node field: (...) !field (Child) @c)`).
+- Negated fields are sorted by field name for deterministic output.
+- Child quantifiers (`?`, `*`, `+`) are preserved on the child they qualify.
+- Roundtrip is intended to be semantic: `parse -> render -> parse` preserves
+  query meaning, and whitespace/trivia differences are normalized away.
+
+## Query visitor and cursor
+
+The query module now exposes visitor and zipper-style traversal utilities:
+
+- `QueryVisitor` provides typed dispatch for `Query`, `Pattern`,
+  `FieldPattern`, `Predicate`, and `PredicateArg`.
+- `QueryVisitor.children` is the canonical node expansion used by:
+  - `foldLeft` / `count`
+  - `collect` / `collectPostOrder`
+  - `traverse` (effectful pre-order walk)
+- `QueryCursor` provides navigation over `QueryNode`:
+  - `firstChild`, `lastChild`, `nextSibling`, `previousSibling`, `parent`
+  - `depth`, `isRoot`, `isLeaf`, `root`
+  - `preOrder` for deterministic cursor traversal
+
+## PureLogic-backed query effect
+
+`QueryLogic` defines a PureLogic-backed alias and helpers for query analysis and
+execution workflows:
+
+- `QueryEffect[Ctx, Log, Err, A]` is backed by PureLogic capabilities.
+- Context threading is provided by stateful `readContext` / `setContext` /
+  `updateContext`.
+- Log accumulation uses `log`.
+- Error gathering uses `error` (accumulate) and `failFast` (abort).
+- `run(initialContext)` returns context, logs, gathered errors, and final value.
+
+## Staged query execution pipeline
+
+`QueryExecutionPipeline` structures query execution into explicit phases:
+
+1. `normalize`
+2. `analyze`
+3. `validate`
+4. `lower`
+5. `execute`
+
+Each stage emits deterministic logs and returns typed intermediate values
+(`Analysis`, `Plan`, `Lowered`), so future planner/optimizer work can insert new
+phases without changing caller entry points.
 
 ## CST example
 

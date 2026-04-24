@@ -20,12 +20,38 @@ final class TestDriver:
     private var cstResult: Option[Result[String, CstModule]] = None
     private var astResult: Option[Result[String, Module]]    = None
     private var lastMatchesBuf: Vector[MatchView]            = Vector.empty
+    private var querySource: Option[String]                  = None
+    private var canonicalQueryText: Option[String]           = None
 
     def setSource(raw: String): Unit =
         source = raw
         cstResult = None
         astResult = None
         lastMatchesBuf = Vector.empty
+        querySource = None
+        canonicalQueryText = None
+
+    def setQuerySource(queryText: String): Unit =
+        querySource = Some(queryText)
+        canonicalQueryText = None
+
+    def canonicalizeQuerySource(): Unit =
+        val raw = querySource.getOrElse(throw new AssertionError("query source not set — missing Given step?"))
+        val query = QueryParser.parse(raw) match
+            case Success(q) => q
+            case Failure(msg) =>
+                throw new AssertionError(s"query parse failed: $msg\nQuery: $raw")
+        canonicalQueryText = Some(QueryPretty.render(query))
+
+    def canonicalQuery: String =
+        canonicalQueryText.getOrElse(throw new AssertionError("canonical query not set — missing When step?"))
+
+    def canonicalQueryReparses: Unit =
+        val canonical = canonicalQuery
+        QueryParser.parse(canonical) match
+            case Success(_) => ()
+            case Failure(msg) =>
+                throw new AssertionError(s"canonical query failed to parse: $msg\nQuery:\n$canonical")
 
     def setSourceFromResource(resourcePath: String): Unit =
         val stream = Option(getClass.getClassLoader.getResourceAsStream(resourcePath)) match
