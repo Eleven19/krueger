@@ -7,8 +7,26 @@ import io.eleven19.krueger.cst.CstQueryableTree.given
 
 object CompilerComponentSpec extends ZIOSpecDefault:
 
+    private final case class Snapshot[A](
+        logs: Vector[String],
+        errors: Vector[CompileError],
+        value: Either[Vector[CompileError], A]
+    ) derives CanEqual
+
     private def run[A](eff: CompilerComponent.CompileEff[Unit, A]): CompilerComponent.CompileResult[Unit, A] =
         CompilerComponent.runUnit(eff)
+
+    private def snapshot[A](r: CompilerComponent.CompileResult[Unit, A]): Snapshot[A] =
+        Snapshot(
+            logs = r.logs,
+            errors = r.errors,
+            value = r.value
+        )
+
+    private def requireRight[A](either: Either[?, A], clue: String): A =
+        either match
+            case Right(value) => value
+            case Left(_)      => throw new AssertionError(clue)
 
     private val compiler: CompilerComponent[Unit] = Krueger.compiler[Unit]
 
@@ -22,8 +40,129 @@ object CompilerComponentSpec extends ZIOSpecDefault:
 
     private val simpleQuery    = "(CstValueDeclaration) @v"
     private val malformedQuery = "(unbalanced"
+    private val zeroMatchQuery = "(nonexistent_node_type) @x"
+
+    private val expectedMalformedSourceMessage =
+        List(
+            "(line 3, column 4):",
+            "  unexpected end of input",
+            "  expected \"\"\", \"'\", \"+\", \"-\", -, ., \\, case, digit, identifier, if, let, open brace, open parenthesis, or open square bracket",
+            "  >",
+            "  >x =",
+            "      ^"
+        ).mkString("\n")
+
+    private val expectedEmptySourceMessage =
+        List(
+            "(line 1, column 1):",
+            "  unexpected end of input",
+            "  expected effect, module, or port",
+            "  >",
+            "   ^"
+        ).mkString("\n")
+
+    private val expectedEmptyQueryMessage =
+        List(
+            "Query parse failed: (line 1, column 1):",
+            "  unexpected end of input",
+            "  expected \"(\", \";;\", \"[\", \"_\", or at least one query pattern",
+            "  >",
+            "   ^"
+        ).mkString("\n")
 
     def spec = suite("CompilerComponent")(
+        suite("cross-platform fixture snapshots")(
+            test("happy path: valid source and query produce the expected MatchView list") {
+                val cst   = requireRight(run(compiler.parseCst(simpleSource)).value, "expected parseCst(simpleSource) to succeed")
+                val query = requireRight(run(compiler.parseQuery(simpleQuery)).value, "expected parseQuery(simpleQuery) to succeed")
+                val actual =
+                    snapshot(run(compiler.runQuery[CstNode](query, cst)))
+
+                val expected = Snapshot(
+                    logs = Vector.empty,
+                    errors = Vector.empty,
+                    value = Right(
+                        List(
+                            MatchView(
+                                rootNodeType = "CstValueDeclaration",
+                                rootText = None,
+                                captures = Map(
+                                    "v" -> CapturedNode(
+                                        nodeType = "CstValueDeclaration",
+                                        text = None,
+                                        childCount = 2
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+
+                assertTrue(actual == expected)
+            },
+            test("negative path: malformed source produces the expected ParseError envelope") {
+                val actual = snapshot(run(compiler.parseCst(malformedSource)))
+                val expectedError = CompileError.ParseError(
+                    phase = "cst",
+                    message = expectedMalformedSourceMessage
+                )
+                val expected = Snapshot(
+                    logs = Vector.empty,
+                    errors = Vector(expectedError),
+                    value = Left(Vector(expectedError))
+                )
+
+                assertTrue(actual == expected)
+            },
+            test("edge path: zero-match query returns an empty match list with no errors") {
+                val cst   = requireRight(run(compiler.parseCst(simpleSource)).value, "expected parseCst(simpleSource) to succeed")
+                val query = requireRight(run(compiler.parseQuery(zeroMatchQuery)).value, "expected parseQuery(zeroMatchQuery) to succeed")
+                val actual =
+                    snapshot(run(compiler.runQuery[CstNode](query, cst)))
+                val expected = Snapshot(
+                    logs = Vector.empty,
+                    errors = Vector.empty,
+                    value = Right(List.empty[MatchView])
+                )
+
+                assertTrue(actual == expected)
+            },
+            test("edge path: empty source returns the expected ParseError envelope") {
+                val actual = snapshot(run(compiler.parseCst("")))
+                val expectedError = CompileError.ParseError(
+                    phase = "cst",
+                    message = expectedEmptySourceMessage
+                )
+                val expected = Snapshot(
+                    logs = Vector.empty,
+                    errors = Vector(expectedError),
+                    value = Left(Vector(expectedError))
+                )
+
+                assertTrue(actual == expected)
+            },
+            test("edge path: empty query returns the expected QueryError envelope") {
+                val actual = snapshot(run(compiler.parseQuery("")))
+                val expectedError = CompileError.QueryError(
+                    message = expectedEmptyQueryMessage
+                )
+                val expected = Snapshot(
+                    logs = Vector.empty,
+                    errors = Vector(expectedError),
+                    value = Left(Vector(expectedError))
+                )
+
+                assertTrue(actual == expected)
+            },
+            test("determinism: repeated runQuery calls produce identical snapshots") {
+                val cst   = requireRight(run(compiler.parseCst(simpleSource)).value, "expected parseCst(simpleSource) to succeed")
+                val query = requireRight(run(compiler.parseQuery(simpleQuery)).value, "expected parseQuery(simpleQuery) to succeed")
+                val first = snapshot(run(compiler.runQuery[CstNode](query, cst)))
+                val second = snapshot(run(compiler.runQuery[CstNode](query, cst)))
+
+                assertTrue(first == second)
+            }
+        ),
         suite("parseCst")(
             test("happy path: valid source produces a CST with no errors") {
                 val r = run(compiler.parseCst(simpleSource))
@@ -110,7 +249,7 @@ object CompilerComponentSpec extends ZIOSpecDefault:
             },
             test("edge: query that matches no nodes returns empty list, no errors") {
                 val cstResult   = run(compiler.parseCst(simpleSource))
-                val queryResult = run(compiler.parseQuery("(nonexistent_node_type) @x"))
+                val queryResult = run(compiler.parseQuery(zeroMatchQuery))
                 (cstResult.value, queryResult.value) match
                     case (Right(cst), Right(q)) =>
                         val r = run(compiler.runQuery[CstNode](q, cst))

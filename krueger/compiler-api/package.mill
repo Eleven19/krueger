@@ -22,6 +22,14 @@ trait CompilerApiTestModule extends _root_.build.CommonScalaTestModule
     )
 }
 
+def test(): Command[Unit] = Task.Command {
+    jvm.test.testForked()
+    js.test.testForked()
+    native.test.testForked()
+    wasm.test.testForked()
+    ()
+}
+
 object jvm extends CompilerApiModule {
     override def moduleDeps = Seq(
         build.krueger.core.jvm,
@@ -57,4 +65,5 @@ object wasm extends CompilerApiModule with _root_.build.CommonScalaJSWasmModule 
     override def sources = Task.Sources(
         moduleDir / "src"
     )
+    object test extends ScalaJSTests with CompilerApiTestModule
 }
