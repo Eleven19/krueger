@@ -1,0 +1,243 @@
+package build.docs
+
+import mill.*, scalalib.*, scalajslib.*, scalanativelib.*
+
+/**
+ * Build module for the Starlight docs site.
+ *
+ * Produces three combined Scaladoc trees (JVM, Scala.js, Scala Native) covering
+ * `krueger.core` + `krueger.trees` per platform, and mirrors them into
+ * `docs/public/api/{jvm,js,native}/` so Astro's static passthrough serves them
+ * at `/krueger/api/{jvm,js,native}/`.
+ *
+ * Usage:
+ *   ./mill docs.apiJvm                 # build combined JVM Scaladoc
+ *   ./mill docs.apiJs                  # build combined Scala.js Scaladoc
+ *   ./mill docs.apiNative              # build combined Scala Native Scaladoc
+ *   ./mill docs.writeToDocsPublic      # build all three and copy into docs/public/api/
+ */
+object `package` extends Module {
+
+  /** Repo root — `moduleDir` here is `<repo>/docs`. */
+  private def repoRoot: os.Path = moduleDir / os.up
+
+  private def projectVersion: Task[String] = Task.Input {
+    val versionFile = repoRoot / "VERSION"
+    os.read(versionFile).trim
+  }
+
+  /**
+   * Extra scaladoc CLI flags applied to every aggregator module. Includes the
+   * project branding, source links, social links, external mappings for the
+   * deps that appear in public signatures (Parsley, Neotype), and disables
+   * snippet compilation per the project decisions.
+   *
+   * Note: we intentionally strip `-Werror` from the inherited scalac options
+   * because scaladoc emits benign "Couldn't resolve a member" warnings on
+   * cross-linked types that would otherwise fail the build.
+   */
+  private def extraScalaDocOptions(version: String): Seq[String] = Seq(
+    "-project", "Krueger",
+    "-project-version", version,
+    "-source-links:github://Eleven19/krueger",
+    "-revision", "main",
+    "-social-links:github::https://github.com/Eleven19/krueger",
+    "-snippet-compiler:nocompile",
+    "-external-mappings:" +
+      ".*parsley.*::scaladoc3::https://javadoc.io/doc/com.github.j-mie6/parsley_3/latest/," +
+      ".*neotype.*::scaladoc3::https://javadoc.io/doc/io.github.kitlangton/neotype_3/latest/"
+  )
+
+  /** Strip `-Werror` so scaladoc cross-link warnings don't fail the build. */
+  private def sanitize(opts: Seq[String]): Seq[String] =
+    opts.filterNot(_ == "-Werror")
+
+  /**
+   * Aggregator module for JVM Scaladoc. Combines `krueger.core.jvm` and
+   * `krueger.trees.jvm` into a single Scaladoc tree.
+   */
+  object apiJvmModule extends _root_.build.CommonScalaModule {
+    override def moduleDeps = Seq(
+      build.krueger.core.jvm,
+      build.krueger.trees.jvm
+    )
+
+    // Empty own sources; docSources is supplied via allSources override below.
+    override def sources = Task.Sources()
+
+    override def allSources = Task {
+      build.krueger.core.jvm.allSources() ++ build.krueger.trees.jvm.allSources()
+    }
+
+    override def scalaDocOptions = Task {
+      sanitize(super.scalaDocOptions()) ++ extraScalaDocOptions(projectVersion())
+    }
+  }
+
+  /**
+   * Aggregator module for Scala.js Scaladoc. Combines `krueger.core.js` and
+   * `krueger.trees.js` into a single Scaladoc tree.
+   */
+  object apiJsModule extends _root_.build.CommonScalaModule with _root_.build.CommonScalaJSModule {
+    override def moduleDeps = Seq(
+      build.krueger.core.js,
+      build.krueger.trees.js
+    )
+
+    override def sources = Task.Sources()
+
+    override def allSources = Task {
+      build.krueger.core.js.allSources() ++ build.krueger.trees.js.allSources()
+    }
+
+    override def scalaDocOptions = Task {
+      sanitize(super.scalaDocOptions()) ++ extraScalaDocOptions(projectVersion())
+    }
+  }
+
+  /**
+   * Aggregator module for Scala Native Scaladoc. Combines `krueger.core.native`
+   * and `krueger.trees.native` into a single Scaladoc tree.
+   */
+  object apiNativeModule extends _root_.build.CommonScalaModule with _root_.build.CommonScalaNativeModule {
+    override def moduleDeps = Seq(
+      build.krueger.core.native,
+      build.krueger.trees.native
+    )
+
+    override def sources = Task.Sources()
+
+    override def allSources = Task {
+      build.krueger.core.native.allSources() ++ build.krueger.trees.native.allSources()
+    }
+
+    override def scalaDocOptions = Task {
+      sanitize(super.scalaDocOptions()) ++ extraScalaDocOptions(projectVersion())
+    }
+  }
+
+  /** Built JVM Scaladoc tree (PathRef pointing at the `javadoc/` directory). */
+  def apiJvm: T[PathRef] = Task { apiJvmModule.scalaDocGenerated() }
+
+  /** Built Scala.js Scaladoc tree. */
+  def apiJs: T[PathRef] = Task { apiJsModule.scalaDocGenerated() }
+
+  /** Built Scala Native Scaladoc tree. */
+  def apiNative: T[PathRef] = Task { apiNativeModule.scalaDocGenerated() }
+
+  /**
+   * Build all three Scaladoc trees and copy them into
+   * `docs/public/api/{jvm,js,native}/`. Existing contents at those paths are
+   * wiped first so stale pages don't linger.
+   *
+   * Run BEFORE `npm run build` in `docs/` — Astro copies `public/` verbatim
+   * into `dist/` during the static build, so the scaladoc trees will end up
+   * at `docs/dist/api/{jvm,js,native}/` and be served under
+   * `/krueger/api/{jvm,js,native}/`.
+   */
+  def writeToDocsPublic(): Command[Unit] = Task.Command {
+    val jvmDir    = apiJvm().path
+    val jsDir     = apiJs().path
+    val nativeDir = apiNative().path
+
+    val targetRoot = repoRoot / "docs" / "public" / "api"
+    val platforms = Seq(
+      "jvm"    -> jvmDir,
+      "js"     -> jsDir,
+      "native" -> nativeDir
+    )
+
+    // Ensure the parent `api/` directory exists. We wipe per-platform dirs
+    // below, but we deliberately do NOT wipe `api/` itself because a user
+    // might stash unrelated artifacts there; we only own the three platform
+    // subtrees and `index.html`.
+    os.makeDir.all(targetRoot)
+
+    for ((name, src) <- platforms) {
+      val dst = targetRoot / name
+      if (os.exists(dst)) os.remove.all(dst)
+      os.makeDir.all(dst)
+      // Copy each child of src into dst so dst IS the scaladoc tree root.
+      for (child <- os.list(src)) {
+        os.copy.into(child, dst, replaceExisting = true)
+      }
+      // Tag every generated HTML file so Pagefind skips it — the scaladoc
+      // output is static and would otherwise flood the search index. Adding
+      // `data-pagefind-ignore="true"` to the root `<html>` element is the
+      // documented convention: https://pagefind.app/docs/indexing/#excluding-pages-from-the-index
+      var tagged = 0
+      for (html <- os.walk(dst) if html.last.endsWith(".html")) {
+        val original = os.read(html)
+        if (!original.contains("data-pagefind-ignore")) {
+          // Rewrite the opening `<html` tag — be tolerant of attributes
+          // scaladoc already sets (e.g. `data-pathToRoot`).
+          val rewritten = original.replaceFirst(
+            "<html(\\s|>)",
+            "<html data-pagefind-ignore=\"true\"$1"
+          )
+          os.write.over(html, rewritten)
+          tagged += 1
+        }
+      }
+      Task.log.info(s"Wrote scaladoc for $name -> $dst (tagged $tagged HTML files with data-pagefind-ignore)")
+    }
+
+    // Emit a small static landing page at /krueger/api/index.html that links
+    // to the three per-platform trees. Tagged with `data-pagefind-ignore`
+    // for consistency with the trees themselves.
+    val landing = targetRoot / "index.html"
+    val version = projectVersion()
+    os.write.over(
+      landing,
+      s"""<!DOCTYPE html>
+         |<html lang="en" data-pagefind-ignore="true">
+         |<head>
+         |  <meta charset="utf-8">
+         |  <meta name="viewport" content="width=device-width, initial-scale=1">
+         |  <title>Krueger Scaladoc</title>
+         |  <style>
+         |    :root { color-scheme: light dark; }
+         |    body {
+         |      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         |      max-width: 48rem;
+         |      margin: 3rem auto;
+         |      padding: 0 1.5rem;
+         |      line-height: 1.6;
+         |    }
+         |    h1 { margin-bottom: 0.25rem; }
+         |    .subtitle { color: #667; margin-top: 0; }
+         |    ul.cards { list-style: none; padding: 0; display: grid; gap: 1rem; grid-template-columns: 1fr; }
+         |    @media (min-width: 40rem) { ul.cards { grid-template-columns: repeat(3, 1fr); } }
+         |    ul.cards a {
+         |      display: block;
+         |      padding: 1rem 1.25rem;
+         |      border: 1px solid #ccd;
+         |      border-radius: 0.5rem;
+         |      text-decoration: none;
+         |      color: inherit;
+         |    }
+         |    ul.cards a:hover { border-color: #447; background: rgba(68,68,119,0.05); }
+         |    ul.cards strong { display: block; font-size: 1.1rem; }
+         |    ul.cards span { color: #667; font-size: 0.9rem; }
+         |    footer { margin-top: 3rem; font-size: 0.85rem; color: #889; }
+         |    footer a { color: inherit; }
+         |  </style>
+         |</head>
+         |<body>
+         |  <h1>Krueger Scaladoc</h1>
+         |  <p class="subtitle">Generated API reference for Krueger ${version}. Pick a platform.</p>
+         |  <ul class="cards">
+         |    <li><a href="jvm/"><strong>JVM</strong><span>krueger-core &amp; krueger-trees, JVM build</span></a></li>
+         |    <li><a href="js/"><strong>Scala.js</strong><span>krueger-core &amp; krueger-trees, Scala.js build</span></a></li>
+         |    <li><a href="native/"><strong>Scala Native</strong><span>krueger-core &amp; krueger-trees, Scala Native build</span></a></li>
+         |  </ul>
+         |  <footer>
+         |    <a href="../">&larr; Back to the Krueger docs</a>
+         |  </footer>
+         |</body>
+         |</html>
+         |""".stripMargin
+    )
+    Task.log.info(s"Wrote landing page -> $landing")
+  }
+}

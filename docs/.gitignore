@@ -4,3 +4,7 @@ dist/
 .env
 .env.production
 .DS_Store
+
+# Generated Scaladoc trees and landing page written by `./mill docs.writeToDocsPublic`.
+# Astro copies `public/` verbatim into `dist/`, so these are regenerated on every build.
+/public/api/

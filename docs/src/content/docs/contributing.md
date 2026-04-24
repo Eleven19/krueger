@@ -28,6 +28,39 @@ mill krueger.core.native.test
 mill krueger.itest
 ```
 
+## Docs site
+
+The Starlight site under `docs/` is built by **two** tools in sequence:
+
+1. **Mill** generates Scaladoc HTML for each platform and mirrors it into
+   `docs/public/api/{jvm,js,native}/` plus a landing page at
+   `docs/public/api/index.html`:
+
+   ```sh
+   # Build all three Scaladoc trees + landing page.
+   ./mill docs.writeToDocsPublic
+
+   # Individual trees (for iteration):
+   ./mill docs.apiJvm
+   ./mill docs.apiJs
+   ./mill docs.apiNative
+   ```
+
+   The output under `docs/public/api/` is gitignored — always regenerated.
+
+2. **Astro / Starlight** bundles the Markdown content and copies
+   `docs/public/` verbatim into `docs/dist/`:
+
+   ```sh
+   cd docs
+   npm ci
+   npm run build   # -> docs/dist/
+   npm run dev     # local preview at http://localhost:4321/krueger/
+   ```
+
+For a combined local preview, run the Mill task first, then `npm run dev` (or
+`npm run build && npm run preview`).
+
 ## Workflow
 
 Krueger follows strict Red-Green-Refactor TDD. Open an issue (or a `bd`

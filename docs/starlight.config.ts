@@ -19,13 +19,26 @@ const config: StarlightUserConfig = {
     baseUrl: 'https://github.com/Eleven19/krueger/edit/main/docs/',
   },
   customCss: ['./src/styles/custom.css'],
+  // Note: the generated Scaladoc trees under `docs/public/api/{jvm,js,native}/`
+  // are excluded from the Pagefind search index by stamping each emitted
+  // HTML file with `data-pagefind-ignore="true"` during the Mill task
+  // `docs.writeToDocsPublic`. Pagefind's own `excludeSelectors` is scoped to
+  // DOM elements within indexed pages, not whole routes, so per-page opt-out
+  // via the HTML attribute is the documented mechanism for whole-page exclusion.
   sidebar: [
     { label: 'Introduction', link: '/introduction/' },
     { label: 'Installation', link: '/installation/' },
     { label: 'Usage', link: '/usage/' },
     {
       label: 'API Reference',
-      autogenerate: { directory: 'reference' },
+      items: [
+        { label: 'Overview', link: '/reference/api/' },
+        {
+          label: 'Full Scaladoc',
+          link: '/api/',
+          attrs: { target: '_blank', rel: 'noopener' },
+        },
+      ],
     },
     { label: 'Examples', link: '/examples/' },
     { label: 'Contributing', link: '/contributing/' },
