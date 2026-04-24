@@ -5,8 +5,8 @@ import io.cucumber.scala.{EN, ScalaDsl}
 import io.eleven19.krueger.itest.TestDriver
 
 class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
-    private var lastQueryFailure: Option[AssertionError] = None
-    private var rememberedMatchCounts: Map[String, Int]  = Map.empty
+    private var lastQueryFailure: Option[AssertionError]       = None
+    private var rememberedMatchCounts: Map[String, Int]        = Map.empty
     private var rememberedFailureMessages: Map[String, String] = Map.empty
 
     private def runAndCaptureFailure(run: => Unit): Unit =
@@ -18,12 +18,17 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
                 lastQueryFailure = Some(ae)
 
     private def assertNoQueryFailure(): Unit =
-        assert(lastQueryFailure.isEmpty, s"query failed unexpectedly: ${lastQueryFailure.map(_.getMessage).getOrElse("")}")
+        assert(
+            lastQueryFailure.isEmpty,
+            s"query failed unexpectedly: ${lastQueryFailure.map(_.getMessage).getOrElse("")}"
+        )
 
     private def currentFailureMessage(): String =
-        lastQueryFailure.map(_.getMessage).getOrElse(
-            throw new AssertionError("expected query to fail, but it succeeded")
-        )
+        lastQueryFailure
+            .map(_.getMessage)
+            .getOrElse(
+                throw new AssertionError("expected query to fail, but it succeeded")
+            )
 
     When("the CST is queried with {string}") { (queryText: String) =>
         runAndCaptureFailure(driver.queryCst(queryText))
@@ -39,6 +44,28 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
 
     When("the AST is queried with:") { (queryText: String) =>
         runAndCaptureFailure(driver.queryAst(queryText))
+    }
+
+    Given("the query source:") { (queryText: String) =>
+        driver.setQuerySource(queryText)
+    }
+
+    When("the query is canonicalized") { () =>
+        runAndCaptureFailure(driver.canonicalizeQuerySource())
+    }
+
+    Then("the canonical query text is:") { (expected: String) =>
+        assertNoQueryFailure()
+        assert(
+            driver.canonicalQuery == expected,
+            s"expected canonical query:\n$expected\nactual:\n${driver.canonicalQuery}"
+        )
+    }
+
+    Then("the canonical query reparses successfully") { () =>
+        assertNoQueryFailure()
+        runAndCaptureFailure(driver.canonicalQueryReparses)
+        assertNoQueryFailure()
     }
 
     Then("the query matches exactly {int} time(s)") { (count: Int) =>
@@ -111,7 +138,10 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
             throw new AssertionError(s"no remembered query failure named [$name]")
         )
         val actual = currentFailureMessage()
-        assert(actual == expected, s"expected remembered failure [$name] to equal current failure.\nExpected: $expected\nActual:   $actual")
+        assert(
+            actual == expected,
+            s"expected remembered failure [$name] to equal current failure.\nExpected: $expected\nActual:   $actual"
+        )
     }
 
     Then("the query failure message contains remembered {string}") { (name: String) =>
@@ -130,15 +160,19 @@ class QuerySteps(driver: TestDriver) extends ScalaDsl with EN:
         assertNoQueryFailure()
         val expected = expectedRows.linesIterator.map(_.trim).filter(_.nonEmpty).toVector
         val actual = driver.lastMatches.zipWithIndex.map { (m, idx) =>
-            m.captures.get(captureName).getOrElse(
-                throw new AssertionError(
-                    s"no capture named [$captureName] in match ${idx + 1}; available: ${m.captures.keySet.mkString(", ")}"
+            m.captures
+                .get(captureName)
+                .getOrElse(
+                    throw new AssertionError(
+                        s"no capture named [$captureName] in match ${idx + 1}; available: ${m.captures.keySet.mkString(", ")}"
+                    )
                 )
-            ).text.getOrElse(
-                throw new AssertionError(
-                    s"capture [$captureName] in match ${idx + 1} has no text (node type ${m.captures(captureName).nodeType})"
+                .text
+                .getOrElse(
+                    throw new AssertionError(
+                        s"capture [$captureName] in match ${idx + 1} has no text (node type ${m.captures(captureName).nodeType})"
+                    )
                 )
-            )
         }.toVector
         assert(actual == expected, s"expected capture [$captureName] texts in order $expected, got $actual")
     }
