@@ -14,6 +14,35 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
         mvn"org.scala-js::scalajs-dom::2.8.0"
     )
 
+    /** Repo root; `moduleDir` here is `<repo>/krueger/webapp`. */
+    private def repoRoot: os.Path = moduleDir / os.up / os.up
+
+    /** Copy the Scala.js ESModule link output (main.js + main.js.map) into
+      * `docs/public/try/app/` so Astro serves it under `/krueger/try/app/`.
+      *
+      * Mirrors the `docs.writeToDocsPublic` pattern: deterministically
+      * overwrites the target directory on every run so stale artifacts from a
+      * previous link never leak into a fresh build. Runs `fullLinkJS` (production
+      * optimization) rather than `fastLinkJS` — this task is meant for
+      * deployable artifacts; use `./mill -w krueger.webapp.fastLinkJS` for dev.
+      */
+    def writeToDocsPublic(): Command[PathRef] = Task.Command {
+        val report  = fullLinkJS()
+        val linkDir = report.dest.path
+        val target  = repoRoot / "docs" / "public" / "try" / "app"
+
+        if (os.exists(target)) os.remove.all(target)
+        os.makeDir.all(target)
+
+        var copied = 0
+        for (child <- os.list(linkDir)) {
+            os.copy.into(child, target, replaceExisting = true)
+            copied += 1
+        }
+        Task.log.info(s"webapp.writeToDocsPublic: copied $copied files from $linkDir -> $target")
+        PathRef(target)
+    }
+
     object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with TestModule.ZioTest {
         override def sources = Task.Sources(
             moduleDir / os.up / "test" / "src"
