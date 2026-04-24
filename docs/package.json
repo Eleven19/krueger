@@ -12,6 +12,7 @@
     "build:full": "npm run build:api && npm run build:webapp && npm run build",
     "test:nav": "node scripts/check-nav.mjs",
     "test:try-page": "node scripts/check-try-page.mjs",
+    "test:webapp-wasm-browser": "node scripts/check-webapp-wasm-browser.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -20,5 +21,8 @@
     "astro": "^6.0.0",
     "monaco-editor": "^0.52.0",
     "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
   }
 }
