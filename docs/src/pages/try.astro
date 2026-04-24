@@ -1,0 +1,188 @@
+---
+/**
+ * Full-bleed /try/ playground page.
+ *
+ * Lives in `src/pages/` (not `src/content/docs/`) so Starlight's
+ * sidebar/TOC chrome is bypassed entirely, per REQ-docs-trypage-003.
+ *
+ * The page cannot reuse the Starlight Header override directly because
+ * Starlight's sub-components (SiteTitle/Search/ThemeSelect/LanguageSelect)
+ * read `Astro.locals.starlightRoute`, which is only populated on
+ * Starlight-content routes. Instead, we inline a minimal header that
+ * shares the primary nav via the [NavLinks](../components/NavLinks.astro)
+ * component and includes a direct GitHub link — that is sufficient to
+ * satisfy the shared-nav assertion in scripts/check-try-page.mjs while
+ * keeping the page free of Starlight routing dependencies.
+ */
+
+import NavLinks from '../components/NavLinks.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const repoUrl = 'https://github.com/Eleven19/krueger';
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="generator" content={Astro.generator} />
+        <title>Try Krueger (Laminar) — Krueger</title>
+        <meta
+            name="description"
+            content="Interactive Krueger playground — paste Elm source, write a query, and inspect matches, CST, AST, and the canonical query echo."
+        />
+        <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+    </head>
+    <body>
+        <header class="try-header">
+            <a class="try-brand" href={`${base}/`}>Krueger</a>
+            <NavLinks />
+            <div class="try-header-spacer" aria-hidden="true"></div>
+            <a
+                class="try-github"
+                href={repoUrl}
+                rel="noopener"
+                aria-label="Krueger on GitHub"
+                >GitHub</a
+            >
+        </header>
+
+        <main class="try-main">
+            <div id="try-krueger-root" class="try-root" aria-label="Krueger playground"></div>
+            <noscript>
+                <div class="try-noscript">
+                    <h1>JavaScript is required</h1>
+                    <p>
+                        The Krueger playground is a live Scala.js application and cannot run
+                        without JavaScript. Please enable it, or browse the
+                        <a href={`${base}/introduction/`}>documentation</a> instead.
+                    </p>
+                </div>
+            </noscript>
+        </main>
+
+        <script>
+            // Vite picks this up and bundles `bootstrap.ts` — which in turn
+            // transitively bundles `monaco-editor` and the Scala.js-emitted
+            // webapp under `src/playground/generated/`. The resulting hashed
+            // script is emitted into `dist/_astro/` and referenced from the
+            // rendered HTML, satisfying REQ-docs-trypage-001.
+            import '../playground/bootstrap.ts';
+        </script>
+
+        <style is:global>
+            :root {
+                /* Header height — mirrors Starlight's default --sl-nav-height
+                   so chrome stays pixel-aligned between /introduction/ and
+                   /try/. */
+                --try-header-h: 3.75rem;
+
+                --try-bg: #17191e;
+                --try-bg-elev: #1c1e24;
+                --try-fg: #f7f7f7;
+                --try-fg-muted: #a4acbd;
+                --try-border: #2a2d35;
+
+                /* Expose the same --sl-color-* tokens that NavLinks.astro
+                   reads so its fallback-coloured defaults in light/dark look
+                   coherent with Starlight pages. */
+                --sl-color-white: var(--try-fg);
+                --sl-color-gray-1: #e7ebf0;
+                --sl-color-gray-2: var(--try-fg-muted);
+                --sl-color-gray-3: #8a94a7;
+                --sl-color-gray-5: var(--try-border);
+                --sl-color-gray-6: #23262d;
+                --sl-color-bg-nav: var(--try-bg-elev);
+                --sl-text-sm: 0.875rem;
+            }
+
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                background: var(--try-bg);
+                color: var(--try-fg);
+                font-family:
+                    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+                    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+            }
+
+            .try-header {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                height: var(--try-header-h);
+                padding: 0 1rem;
+                background: var(--try-bg-elev);
+                border-bottom: 1px solid var(--try-border);
+                display: flex;
+                align-items: center;
+                gap: 1.5rem;
+            }
+
+            .try-brand {
+                color: var(--try-fg);
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 1.05rem;
+            }
+
+            .try-header-spacer {
+                flex: 1;
+            }
+
+            .try-github {
+                color: var(--try-fg-muted);
+                text-decoration: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+            }
+            .try-github:hover {
+                color: var(--try-fg);
+                background: var(--sl-color-gray-6);
+            }
+
+            .try-main {
+                flex: 1;
+                min-height: calc(100vh - var(--try-header-h));
+                position: relative;
+            }
+
+            .try-root {
+                position: absolute;
+                inset: 0;
+                display: block;
+            }
+
+            .try-noscript {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 2rem;
+                text-align: center;
+                color: var(--try-fg-muted);
+            }
+
+            .try-noscript h1 {
+                margin: 0 0 0.5rem;
+                font-size: 1.5rem;
+                color: var(--try-fg);
+            }
+
+            .try-noscript a {
+                color: inherit;
+            }
+        </style>
+    </body>
+</html>

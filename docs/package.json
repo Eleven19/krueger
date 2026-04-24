@@ -8,14 +8,17 @@
     "start": "astro dev",
     "build": "astro build",
     "build:api": "cd .. && ./mill docs.writeToDocsPublic",
-    "build:full": "npm run build:api && npm run build",
+    "build:webapp": "cd .. && ./mill krueger.webapp.writeToDocsSrc",
+    "build:full": "npm run build:api && npm run build:webapp && npm run build",
     "test:nav": "node scripts/check-nav.mjs",
+    "test:try-page": "node scripts/check-try-page.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.0",
     "astro": "^6.0.0",
+    "monaco-editor": "^0.52.0",
     "sharp": "^0.33.5"
   }
 }

@@ -5,24 +5,17 @@
  * Reuses Starlight's built-in sub-components (SiteTitle, Search, SocialIcons,
  * ThemeSelect, LanguageSelect) via `virtual:starlight/components/*` so the
  * default ergonomics (search shortcut, theme toggle, GitHub link) keep
- * working, and inserts a middle nav group that adds links to the Try Krueger
- * playgrounds:
+ * working, and inserts a middle nav group via the shared
+ * [NavLinks](./NavLinks.astro) component that adds links to the Try Krueger
+ * playgrounds (Docs / Try ▾ / API).
  *
- *   - Docs    → the existing introduction page
- *   - Try ▾   → native <details>/<summary> dropdown with two entries:
- *                 • Laminar → /try/
- *                 • WASM    → /try-wasm/
- *   - API     → the generated Scaladoc index
- *
- * Active-route highlighting is derived from `Astro.url.pathname`:
- *   - Any path starting with `${BASE}/try` activates the Try root.
- *   - The Laminar and WASM sub-items are each highlighted on their own
- *     exact path so the dropdown state is unambiguous.
- *
- * The <details> element is used instead of a JS-driven dropdown because it is
- * keyboard-accessible out of the box, respects user motion preferences, and
- * works even if client-side JS is disabled. Hover and focus-within also open
- * it (see the CSS below).
+ * The middle nav is factored into its own component because the
+ * `/try/` playground page (src/pages/try.astro) is a plain Astro page
+ * that does not flow through Starlight's layout pipeline, and therefore
+ * cannot render SiteTitle/Search/ThemeSelect/LanguageSelect (those read
+ * `Astro.locals.starlightRoute`, which is only populated on Starlight
+ * routes). The shared nav links themselves are framework-inert and used
+ * in both places.
  */
 
 import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
@@ -32,17 +25,7 @@ import SocialIcons from 'virtual:starlight/components/SocialIcons';
 import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
 import config from 'virtual:starlight/user-config';
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-
-/** Normalize a pathname so `/krueger/try` and `/krueger/try/` compare equal. */
-function norm(p: string): string {
-  return p.replace(/\/+$/, '') || '/';
-}
-
-const pathname = norm(Astro.url.pathname);
-const inTry = pathname === norm(`${base}/try`) || pathname.startsWith(norm(`${base}/try/`));
-const inTryWasm = pathname === norm(`${base}/try-wasm`) || pathname.startsWith(norm(`${base}/try-wasm/`));
-const inAnyTry = inTry || inTryWasm;
+import NavLinks from './NavLinks.astro';
 
 const shouldRenderSearch =
   config.pagefind ||
@@ -54,44 +37,7 @@ const shouldRenderSearch =
     <SiteTitle />
   </div>
 
-  <nav class="primary-nav" aria-label="Primary">
-    <a
-      class="nav-link"
-      data-active={pathname === norm(`${base}/introduction`) ? 'true' : undefined}
-      href={`${base}/introduction/`}>Docs</a
-    >
-
-    <details class="try-dropdown" data-active={inAnyTry ? 'true' : undefined}>
-      <summary>
-        Try
-        <span class="caret" aria-hidden="true">▾</span>
-      </summary>
-      <ul class="try-menu" role="menu">
-        <li role="none">
-          <a
-            role="menuitem"
-            href={`${base}/try/`}
-            data-active={inTry && !inTryWasm ? 'true' : undefined}
-            >Laminar <span class="subtle">Scala.js</span></a
-          >
-        </li>
-        <li role="none">
-          <a
-            role="menuitem"
-            href={`${base}/try-wasm/`}
-            data-active={inTryWasm ? 'true' : undefined}
-            >WASM <span class="subtle">SvelteKit</span></a
-          >
-        </li>
-      </ul>
-    </details>
-
-    <a
-      class="nav-link"
-      data-active={pathname.startsWith(norm(`${base}/api`)) ? 'true' : undefined}
-      href={`${base}/api/`}>API</a
-    >
-  </nav>
+  <NavLinks />
 
   <div class="sl-flex print:hidden search-wrapper">
     {shouldRenderSearch && <Search />}
@@ -121,97 +67,6 @@ const shouldRenderSearch =
       padding: 0.25rem;
       margin: -0.25rem;
       min-width: 0;
-    }
-
-    .primary-nav {
-      display: none;
-      align-items: center;
-      gap: 1.25rem;
-      font-size: var(--sl-text-sm);
-    }
-    @media (min-width: 60rem) {
-      .primary-nav {
-        display: flex;
-      }
-    }
-
-    .nav-link,
-    .try-dropdown > summary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35em;
-      padding: 0.25rem 0.5rem;
-      color: var(--sl-color-gray-2);
-      text-decoration: none;
-      border-radius: 0.25rem;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .nav-link:hover,
-    .try-dropdown > summary:hover,
-    .try-dropdown[open] > summary {
-      color: var(--sl-color-white);
-      background: var(--sl-color-gray-6);
-    }
-    .nav-link[data-active='true'],
-    .try-dropdown[data-active='true'] > summary {
-      color: var(--sl-color-white);
-      font-weight: 600;
-    }
-
-    .try-dropdown {
-      position: relative;
-    }
-    .try-dropdown > summary {
-      list-style: none;
-    }
-    .try-dropdown > summary::-webkit-details-marker {
-      display: none;
-    }
-    .caret {
-      font-size: 0.7em;
-      transition: transform 150ms ease;
-    }
-    .try-dropdown[open] .caret {
-      transform: rotate(180deg);
-    }
-
-    .try-menu {
-      position: absolute;
-      top: calc(100% + 0.25rem);
-      left: 0;
-      min-width: 12rem;
-      margin: 0;
-      padding: 0.25rem;
-      list-style: none;
-      background: var(--sl-color-bg-nav);
-      border: 1px solid var(--sl-color-gray-5);
-      border-radius: 0.375rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      z-index: 10;
-    }
-    .try-menu a {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.4rem 0.6rem;
-      color: var(--sl-color-gray-1);
-      text-decoration: none;
-      border-radius: 0.25rem;
-      white-space: nowrap;
-    }
-    .try-menu a:hover,
-    .try-menu a:focus-visible {
-      background: var(--sl-color-gray-6);
-      color: var(--sl-color-white);
-    }
-    .try-menu a[data-active='true'] {
-      color: var(--sl-color-white);
-      font-weight: 600;
-    }
-    .try-menu .subtle {
-      color: var(--sl-color-gray-3);
-      font-size: 0.85em;
     }
 
     .right-group,

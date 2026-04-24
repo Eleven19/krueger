@@ -9,6 +9,8 @@ dist/
 # Astro copies `public/` verbatim into `dist/`, so these are regenerated on every build.
 /public/api/
 
-# Laminar playground Scala.js bundle written by `./mill krueger.webapp.writeToDocsPublic`.
-# Astro copies `public/` verbatim into `dist/`, so this is regenerated on every build.
-/public/try/app/
+# Laminar playground Scala.js bundle written by `./mill krueger.webapp.writeToDocsSrc`.
+# Lives under `src/` (not `public/`) so Vite can bundle its `monaco-editor`
+# import against `docs/node_modules/monaco-editor/` during `astro build`.
+# Regenerated on every run; never hand-edited.
+/src/playground/generated/

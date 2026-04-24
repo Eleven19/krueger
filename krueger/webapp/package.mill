@@ -18,18 +18,24 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
     private def repoRoot: os.Path = moduleDir / os.up / os.up
 
     /** Copy the Scala.js ESModule link output (main.js + main.js.map) into
-      * `docs/public/try/app/` so Astro serves it under `/krueger/try/app/`.
+      * `docs/src/playground/generated/app/` so Vite sees it during the Astro
+      * build and can bundle its `import "monaco-editor"` reference against
+      * `docs/node_modules/monaco-editor/`.
       *
-      * Mirrors the `docs.writeToDocsPublic` pattern: deterministically
-      * overwrites the target directory on every run so stale artifacts from a
-      * previous link never leak into a fresh build. Runs `fullLinkJS` (production
-      * optimization) rather than `fastLinkJS` — this task is meant for
-      * deployable artifacts; use `./mill -w krueger.webapp.fastLinkJS` for dev.
+      * The bundle is written under `src/` rather than `public/` because Astro
+      * serves `public/` verbatim — a file there keeps its bare-specifier
+      * imports that no browser can resolve. `src/playground/generated/` is
+      * still gitignored so the checked-in tree is not polluted by linker
+      * output; the generated folder is recreated on every run.
+      *
+      * Runs `fullLinkJS` (production optimization) rather than `fastLinkJS` —
+      * this task is meant for deployable artifacts; use
+      * `./mill -w krueger.webapp.fastLinkJS` for dev.
       */
-    def writeToDocsPublic(): Command[PathRef] = Task.Command {
+    def writeToDocsSrc(): Command[PathRef] = Task.Command {
         val report  = fullLinkJS()
         val linkDir = report.dest.path
-        val target  = repoRoot / "docs" / "public" / "try" / "app"
+        val target  = repoRoot / "docs" / "src" / "playground" / "generated" / "app"
 
         if (os.exists(target)) os.remove.all(target)
         os.makeDir.all(target)
@@ -39,7 +45,7 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
             os.copy.into(child, target, replaceExisting = true)
             copied += 1
         }
-        Task.log.info(s"webapp.writeToDocsPublic: copied $copied files from $linkDir -> $target")
+        Task.log.info(s"webapp.writeToDocsSrc: copied $copied files from $linkDir -> $target")
         PathRef(target)
     }
 
