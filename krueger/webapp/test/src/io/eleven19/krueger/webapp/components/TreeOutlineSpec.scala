@@ -35,9 +35,8 @@ object TreeOutlineSpec extends ZIOSpecDefault:
             )
         },
         test("edge: a leaf-like node with no children yields TreeOutline.children empty") {
-            val out  = TreeOutline.from[CstNode](cstRoot)
-            val leaf = out
-                .flatten
+            val out = TreeOutline.from[CstNode](cstRoot)
+            val leaf = out.flatten
                 .find(n => n.children.isEmpty && n.text.isDefined)
             assertTrue(leaf.isDefined)
         },

@@ -16,7 +16,7 @@ object PrettyQueryView:
             cls := "krueger-pretty-query",
             child <-- state.queryResult.map { r =>
                 ResultsPanel.viewOutcome(r) match
-                    case ViewOutcome.Ok(q)       => pre(cls := "krueger-pretty-body", compiler.prettyQuery(q))
+                    case ViewOutcome.Ok(q) => pre(cls := "krueger-pretty-body", compiler.prettyQuery(q))
                     case ViewOutcome.Error(msgs) =>
                         div(
                             cls := "krueger-pretty-error",

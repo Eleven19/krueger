@@ -40,8 +40,8 @@ object TreeView:
             cls := "krueger-tree-view",
             child <-- signal.map { r =>
                 ResultsPanel.viewOutcome(r) match
-                    case ViewOutcome.Ok(a)        => renderOutline(TreeOutline.from[T](toRoot(a)), collapsedVar)
-                    case ViewOutcome.Error(msgs)  => errorBanner(msgs)
+                    case ViewOutcome.Ok(a)       => renderOutline(TreeOutline.from[T](toRoot(a)), collapsedVar)
+                    case ViewOutcome.Error(msgs) => errorBanner(msgs)
             }
         )
 
@@ -70,17 +70,16 @@ object TreeView:
                         cls := "krueger-tree-toggle",
                         tpe := "button",
                         child.text <-- collapsed.signal.map(s => if s.contains(path) then "\u25b8" else "\u25be"),
-                        onClick --> (_ =>
-                            collapsed.update(s => if s.contains(path) then s - path else s + path)
-                        )
-                    ),
+                        onClick --> (_ => collapsed.update(s => if s.contains(path) then s - path else s + path))
+                    )
+                ,
                 span(cls := "krueger-tree-type", node.nodeType),
                 node.text.map(t => span(cls := "krueger-tree-text", s" \u201c$t\u201d"))
             ),
             if isLeaf then emptyNode
             else
                 ul(
-                    cls    := "krueger-tree-children",
+                    cls := "krueger-tree-children",
                     hidden <-- collapsed.signal.map(_.contains(path)),
                     node.children.zipWithIndex.map { (child, idx) =>
                         renderNode(child, path :+ idx, collapsed)

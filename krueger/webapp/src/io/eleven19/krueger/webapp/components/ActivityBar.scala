@@ -11,18 +11,18 @@ object ActivityBar:
 
     def apply(selectedPanel: Var[Panel]): HtmlElement =
         navTag(
-            cls := "krueger-activity-bar",
+            cls  := "krueger-activity-bar",
             role := "tablist",
             Panel.all.map(panelButton(_, selectedPanel))
         )
 
     private def panelButton(panel: Panel, selectedPanel: Var[Panel]): HtmlElement =
         button(
-            tpe := "button",
+            tpe  := "button",
             role := "tab",
-            cls := "krueger-activity-button",
+            cls  := "krueger-activity-button",
             cls("is-active") <-- selectedPanel.signal.map(_ == panel),
-            title := Panel.label(panel),
+            title      := Panel.label(panel),
             aria.label := Panel.label(panel),
             span(cls := "krueger-activity-icon", Panel.icon(panel)),
             onClick --> (_ => selectedPanel.set(panel))

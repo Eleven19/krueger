@@ -33,3 +33,10 @@ target/
 docs/node_modules/
 docs/dist/
 docs/.astro/
+
+# Root-level node_modules is not used for actual installs — only for test-time
+# stubs that the Scala.js test runtime needs to resolve (see
+# node_modules/monaco-editor/README for why). Ignore anything else that lands
+# here, but keep the committed stub.
+/node_modules/*
+!/node_modules/monaco-editor/

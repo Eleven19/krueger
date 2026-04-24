@@ -6,15 +6,16 @@ import org.scalajs.dom
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 import io.eleven19.krueger.webapp.components.ActivityBar
+import io.eleven19.krueger.webapp.components.MonacoEditor
 import io.eleven19.krueger.webapp.components.ResultsPanel
+import io.eleven19.krueger.webapp.monaco.ElmLanguage
 import io.eleven19.krueger.webapp.state.AppState
 
 /** Browser entrypoint for the Try Krueger Laminar playground.
   *
-  * Exposed as an ES-module top-level export so the Astro `/try/` page can import and call `mount` against a
-  * mount-point selector after the page loads. The Monaco editor bootstrap lives in the Astro page itself (Vite has to
-  * be the one resolving `monaco-editor`) and writes into [[AppState.sourceVar]] / [[AppState.queryVar]] via the
-  * globals this module exposes for now — the Monaco-in-Laminar integration lands with its own issue.
+  * Exposed as an ES-module top-level export so the Astro `/try/` page can import and call `mount` against a mount-point
+  * selector after the page loads. Vite resolves `monaco-editor`; we only touch it once the page is live, via
+  * [[ElmLanguage.register]] and the [[MonacoEditor]] components below.
   */
 object Main:
 
@@ -22,6 +23,7 @@ object Main:
     def mount(selector: String): Unit =
         val container = dom.document.querySelector(selector)
         if container != null then
+            ElmLanguage.register()
             val state = new AppState()
             val _     = render(container, app(state))
 
@@ -34,27 +36,15 @@ object Main:
                 ActivityBar(state.selectedPanel),
                 div(
                     cls := "krueger-editor-group",
-                    label(
+                    div(
                         cls := "krueger-editor-field",
                         span(cls := "krueger-editor-label", "Elm source"),
-                        textArea(
-                            cls := "krueger-editor-area",
-                            controlled(
-                                value <-- state.sourceVar.signal,
-                                onInput.mapToValue --> state.sourceVar
-                            )
-                        )
+                        MonacoEditor(state.sourceVar, ElmLanguage.id)
                     ),
-                    label(
+                    div(
                         cls := "krueger-editor-field",
                         span(cls := "krueger-editor-label", "Query"),
-                        textArea(
-                            cls := "krueger-editor-area",
-                            controlled(
-                                value <-- state.queryVar.signal,
-                                onInput.mapToValue --> state.queryVar
-                            )
-                        )
+                        MonacoEditor(state.queryVar, "plaintext")
                     )
                 ),
                 ResultsPanel(state)

@@ -26,6 +26,7 @@ object MonacoFacade:
 
     @js.native
     trait MonacoEditorNs extends js.Object:
+
         def create(container: dom.Element, options: js.UndefOr[EditorOptions] = js.undefined): IStandaloneCodeEditor =
             js.native
 
@@ -38,18 +39,18 @@ object MonacoFacade:
 
     @js.native
     trait MonacoLanguages extends js.Object:
-        def register(definition: LanguageExtensionPoint): Unit            = js.native
-        def getLanguages(): js.Array[LanguageExtensionPoint]              = js.native
-        def setMonarchTokensProvider(id: String, rules: js.Object): Unit  = js.native
+        def register(definition: LanguageExtensionPoint): Unit           = js.native
+        def getLanguages(): js.Array[LanguageExtensionPoint]             = js.native
+        def setMonarchTokensProvider(id: String, rules: js.Object): Unit = js.native
 
     /** Options object passed to `editor.create`. Every field is optional; the playground fills in what it needs. */
     trait EditorOptions extends js.Object:
-        var value: js.UndefOr[String]                   = js.undefined
-        var language: js.UndefOr[String]                = js.undefined
-        var theme: js.UndefOr[String]                   = js.undefined
-        var automaticLayout: js.UndefOr[Boolean]        = js.undefined
-        var minimap: js.UndefOr[MinimapOptions]         = js.undefined
-        var fontSize: js.UndefOr[Int]                   = js.undefined
+        var value: js.UndefOr[String]            = js.undefined
+        var language: js.UndefOr[String]         = js.undefined
+        var theme: js.UndefOr[String]            = js.undefined
+        var automaticLayout: js.UndefOr[Boolean] = js.undefined
+        var minimap: js.UndefOr[MinimapOptions]  = js.undefined
+        var fontSize: js.UndefOr[Int]            = js.undefined
 
     trait MinimapOptions extends js.Object:
         var enabled: js.UndefOr[Boolean] = js.undefined
