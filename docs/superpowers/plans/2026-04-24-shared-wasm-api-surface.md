@@ -109,13 +109,13 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
         )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./mill --no-server krueger.compiler-api.jvm.testOnly io.eleven19.krueger.compiler.abi.InvokeCompilerSpec`
 
 Expected: FAIL with missing `InvokeCompiler` / missing JSON codec types.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Add `jsoniter-scala` 2.38.9 to `krueger/compiler-api/package.mill`:
 
@@ -182,7 +182,7 @@ object InvokeCompiler:
 
 Keep the first implementation minimal. Only add `parseAst`, `parseQuery`, `prettyQuery`, and `runQuery` once each has a failing test.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -193,7 +193,7 @@ Run:
 
 Expected: PASS for the new spec and existing compiler-api suites.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add krueger/compiler-api/package.mill \
@@ -234,13 +234,13 @@ object AbiEntryPointSpec extends ZIOSpecDefault:
         )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./mill --no-server krueger.compiler-api-abi.jvm.test.testOnly io.eleven19.krueger.compiler.abi.AbiEntryPointSpec`
 
 Expected: FAIL because the new module and `AbiEntryPoint` do not exist.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create the module build:
 
@@ -260,7 +260,7 @@ object AbiEntryPoint:
 
 The explicit linear-memory ABI surface is deferred pending a non-Scala-Native host artifact design.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run:
 
@@ -271,7 +271,7 @@ Run:
 Expected:
 - unit test PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add krueger/compiler-api-abi/package.mill \
@@ -385,7 +385,7 @@ Run:
 
 Expected: PASS with full JVM Chicory execution coverage over the supported test-driver backend and compatibility coverage over the current WebGC artifact.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add krueger/itest/package.mill \
@@ -403,7 +403,7 @@ git commit -m "Add Chicory execution tests for supported compiler Wasm backends"
 - Create: `krueger/webapp-wasm/src/io/eleven19/krueger/webappwasm/BackendLoader.scala`
 - Test: `krueger/webapp-wasm/test/src/io/eleven19/krueger/webappwasm/KruegerJsSpec.scala`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add supported-backend contract coverage:
 
@@ -476,7 +476,7 @@ Run:
 
 Expected: PASS with the same public `Krueger.*` contract still intact.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add krueger/webapp-wasm/package.mill \
@@ -492,7 +492,7 @@ git commit -m "Route webapp-wasm through supported compiler backend"
 - Modify: `krueger/itest/src/io/eleven19/krueger/itest/ChicoryCompilerWasmBackendTest.scala`
 - Modify: `krueger/itest/src/io/eleven19/krueger/itest/ChicoryCompilerWasmCompatibilityTest.scala`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Extend the copy coverage for supported artifacts:
 
@@ -553,7 +553,7 @@ Run:
 
 Expected: PASS for compiler-api, compiler-api-abi JVM contract, full Chicory JVM supported-backend execution tests, WebGC compatibility gate, JS facade contract, and copy-task verification.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add krueger/webapp-wasm/package.mill \
