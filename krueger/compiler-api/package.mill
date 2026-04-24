@@ -55,6 +55,6 @@ object wasm extends CompilerApiModule with _root_.build.CommonScalaJSWasmModule 
         build.krueger.trees.js
     )
     override def sources = Task.Sources(
-        moduleDir / os.up / "src"
+        moduleDir / "src"
     )
 }

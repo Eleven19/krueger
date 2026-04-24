@@ -1,0 +1,69 @@
+package build.krueger.`webapp-wasm`
+
+import mill.*, scalalib.*, scalajslib.*
+
+/** Scala.js façade for the Krueger compiler component, intended for the
+  * SvelteKit `sites/try-wasm/` playground.
+  *
+  * Emits a plain Scala.js ES module (not a WebAssembly binary) because the
+  * WASM backend silently ignores `@JSExport` / `@JSExportTopLevel` — the
+  * whole point of this module is to publish a stable, POJO-based FFI
+  * surface (`Krueger.parseCst`, `Krueger.runQuery`, …) that a framework-
+  * agnostic front-end can call without depending on Scala.js runtime
+  * details, so exported entry points are non-negotiable.
+  *
+  * The `-wasm` suffix on the module and target site is historical: a
+  * future iteration can compose a WASM-backed compiler core behind this
+  * same JS facade (the JS module loads `main.wasm` internally and
+  * delegates). For MVP the façade is pure JS and the SvelteKit site
+  * loads `main.js` instead of `main.wasm`. The envelope shape contracted
+  * by REQ-webappwasm-001..003 does not change between backends.
+  */
+object `package` extends _root_.build.CommonScalaModule with _root_.build.CommonScalaJSModule {
+
+    override def moduleDeps = Seq(build.krueger.`compiler-api`.js)
+
+    override def moduleKind: T[mill.scalajslib.api.ModuleKind] =
+        Task { mill.scalajslib.api.ModuleKind.ESModule }
+
+    /** Repo root; `moduleDir` here is `<repo>/krueger/webapp-wasm`. */
+    private def repoRoot: os.Path = moduleDir / os.up / os.up
+
+    /** Copy the Scala.js-WASM link output (`main.wasm` + ES-module loader +
+      * source map) into `sites/try-wasm/static/wasm/` so the SvelteKit static
+      * adapter picks them up at `/krueger/try-wasm/wasm/`.
+      *
+      * Deterministically wipes the target on every run so stale artifacts
+      * from a previous link never leak into a fresh build. Creates parent
+      * directories if the SvelteKit site has not been scaffolded yet —
+      * earlier slices may land this module before `sites/try-wasm/` exists;
+      * the task is expected to be forward-compatible.
+      */
+    def writeToWasmSite(): Command[PathRef] = Task.Command {
+        val report  = fullLinkJS()
+        val linkDir = report.dest.path
+        val target  = repoRoot / "sites" / "try-wasm" / "static" / "wasm"
+
+        if (os.exists(target)) os.remove.all(target)
+        os.makeDir.all(target)
+
+        var copied = 0
+        for (child <- os.list(linkDir)) {
+            os.copy.into(child, target, replaceExisting = true)
+            copied += 1
+        }
+        Task.log.info(s"webapp-wasm.writeToWasmSite: copied $copied files from $linkDir -> $target")
+        PathRef(target)
+    }
+
+    object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with TestModule.ZioTest {
+        override def sources = Task.Sources(
+            moduleDir / os.up / "test" / "src"
+        )
+
+        def mvnDeps = Seq(
+            mvn"dev.zio::zio-test::2.1.24",
+            mvn"dev.zio::zio-test-sbt::2.1.24"
+        )
+    }
+}

@@ -1,0 +1,157 @@
+package io.eleven19.krueger.webappwasm
+
+import scala.scalajs.js
+
+import zio.test.*
+
+/** Contract spec for the `@JSExportTopLevel("Krueger")` facade.
+  *
+  * The spec intentionally pins the plain-JS envelope shape that SvelteKit
+  * consumers depend on per REQ-webappwasm-001..003:
+  *
+  *   `{ ok: boolean, value: any | null, logs: string[], errors: ErrorPojo[] }`
+  *
+  * All assertions are made through `js.Dynamic` so the facade is exercised
+  * exactly as JavaScript callers would see it. No access to Scala-typed
+  * internals is allowed in the assertions — that is the whole point of
+  * the envelope.
+  */
+object KruegerJsSpec extends ZIOSpecDefault:
+
+    private val validSource =
+        """module M exposing (..)
+          |
+          |x = 1
+          |""".stripMargin
+
+    private val malformedSource = "module M exposing (..)\n\nx ="
+
+    private val validQuery = "(CstValueDeclaration) @v"
+
+    private def dyn(o: js.Object): js.Dynamic = o.asInstanceOf[js.Dynamic]
+
+    private def arrayLen(arr: js.Any): Int = arr.asInstanceOf[js.Array[js.Any]].length
+
+    private def hasEnvelopeShape(env: js.Object): Boolean =
+        val d = dyn(env)
+        val hasOk     = js.typeOf(d.ok) == "boolean"
+        val hasLogs   = d.logs.asInstanceOf[js.Any] match
+            case arr if js.Array.isArray(arr) => true
+            case _                            => false
+        val hasErrors = d.errors.asInstanceOf[js.Any] match
+            case arr if js.Array.isArray(arr) => true
+            case _                            => false
+        // `value` may be absent, null, or any value — we only require the
+        // OTHER three fields to be present with the right types.
+        hasOk && hasLogs && hasErrors
+
+    def spec = suite("KruegerJs (WASM FFI facade)")(
+        suite("envelope shape (REQ-webappwasm-001)")(
+            test("parseCst returns { ok, value?, logs, errors } with ok=true on valid source") {
+                val env = KruegerJs.parseCst(validSource)
+                val d   = dyn(env)
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == true,
+                    arrayLen(d.errors) == 0,
+                    // value must be defined (truthy) on success — we don't
+                    // inspect its internals because parseCst's value is an
+                    // opaque handle.
+                    !js.isUndefined(d.value) && d.value != null
+                )
+            },
+            test("parseQuery returns an envelope with ok=true on valid query") {
+                val env = KruegerJs.parseQuery(validQuery)
+                val d   = dyn(env)
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == true,
+                    arrayLen(d.errors) == 0
+                )
+            },
+            test("prettyQuery returns a non-empty canonical string for a parsed query") {
+                val parseEnv = KruegerJs.parseQuery(validQuery)
+                val q        = dyn(parseEnv).value.asInstanceOf[js.Any]
+                val pretty   = KruegerJs.prettyQuery(q)
+                assertTrue(pretty.nonEmpty)
+            }
+        ),
+        suite("error envelope (REQ-webappwasm-002)")(
+            test("parseCst on malformed source returns ok=false with errors; value is null") {
+                val env = KruegerJs.parseCst(malformedSource)
+                val d   = dyn(env)
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == false,
+                    arrayLen(d.errors) >= 1,
+                    d.value == null
+                )
+            },
+            test("each serialized error carries a non-empty message field") {
+                val env    = KruegerJs.parseCst(malformedSource)
+                val errs   = dyn(env).errors.asInstanceOf[js.Array[js.Dynamic]]
+                val hasMsg = (0 until errs.length).forall { i =>
+                    val msg = errs(i).message
+                    js.typeOf(msg) == "string" && msg.asInstanceOf[String].nonEmpty
+                }
+                assertTrue(hasMsg)
+            },
+            test("parseQuery on malformed query returns ok=false with at least one error") {
+                val env = KruegerJs.parseQuery("(unbalanced")
+                val d   = dyn(env)
+                assertTrue(
+                    d.ok.asInstanceOf[Boolean] == false,
+                    arrayLen(d.errors) >= 1,
+                    d.value == null
+                )
+            }
+        ),
+        suite("edge cases")(
+            test("empty source still produces a well-formed envelope (shape is uniform)") {
+                val env = KruegerJs.parseCst("")
+                assertTrue(hasEnvelopeShape(env))
+            },
+            test("empty query still produces a well-formed envelope (shape is uniform)") {
+                val env = KruegerJs.parseQuery("")
+                assertTrue(hasEnvelopeShape(env))
+            }
+        ),
+        suite("runQuery over parsed CST + query (REQ-webappwasm-001)")(
+            test("valid source + valid query returns ok=true and value is a JS array") {
+                val cstEnv = dyn(KruegerJs.parseCst(validSource))
+                val qEnv   = dyn(KruegerJs.parseQuery(validQuery))
+                val env    = KruegerJs.runQuery(qEnv.value, cstEnv.value)
+                val d      = dyn(env)
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == true,
+                    js.Array.isArray(d.value),
+                    // the simple source defines `x = 1`, so at least one
+                    // CstValueDeclaration match is expected.
+                    arrayLen(d.value) >= 1
+                )
+            },
+            test("query that matches zero nodes returns an empty array, ok=true") {
+                val cstEnv = dyn(KruegerJs.parseCst(validSource))
+                val qEnv   = dyn(KruegerJs.parseQuery("(nonexistent_node) @x"))
+                val env    = KruegerJs.runQuery(qEnv.value, cstEnv.value)
+                val d      = dyn(env)
+                assertTrue(
+                    d.ok.asInstanceOf[Boolean] == true,
+                    js.Array.isArray(d.value),
+                    arrayLen(d.value) == 0
+                )
+            }
+        ),
+        suite("determinism (REQ-webappwasm-001 tail)")(
+            test("repeated parseCst calls return envelopes with the same ok flag and error count") {
+                val a = dyn(KruegerJs.parseCst(validSource))
+                val b = dyn(KruegerJs.parseCst(validSource))
+                assertTrue(
+                    a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean],
+                    arrayLen(a.errors) == arrayLen(b.errors),
+                    arrayLen(a.logs) == arrayLen(b.logs)
+                )
+            }
+        )
+    )
