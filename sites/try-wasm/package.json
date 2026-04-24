@@ -1,0 +1,24 @@
+{
+  "name": "@eleven19/krueger-try-wasm",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "svelte-kit sync && vite build",
+    "build:wasm": "cd ../.. && ./mill krueger.webapp-wasm.writeToWasmSite",
+    "build:full": "npm run build:wasm && npm run build",
+    "preview": "vite preview",
+    "test:build-output": "node scripts/check-build-output.mjs",
+    "test:skeleton": "node scripts/check-skeleton.mjs"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.9",
+    "@sveltejs/kit": "^2.49.1",
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@types/node": "^25.6.0",
+    "svelte": "^5.45.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7"
+  }
+}

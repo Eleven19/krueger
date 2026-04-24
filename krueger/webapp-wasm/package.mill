@@ -47,6 +47,7 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
         if (os.exists(target)) os.remove.all(target)
         os.makeDir.all(target / "facade")
         os.makeDir.all(target / "webgc")
+        os.write.over(target / ".gitkeep", "")
 
         val facadeCount = copyChildren(facadeDir, target / "facade")
         val webgcCount  = copyChildren(webgcDir, target / "webgc")

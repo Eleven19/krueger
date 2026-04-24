@@ -35,7 +35,12 @@ docs/dist/
 docs/.astro/
 
 # SvelteKit WASM playground artifacts written by `./mill krueger.webapp-wasm.writeToWasmSite`.
-sites/try-wasm/static/wasm/
+sites/try-wasm/static/wasm/*
+!sites/try-wasm/static/wasm/.gitkeep
+sites/try-wasm/.omc/
+sites/try-wasm/.svelte-kit/
+sites/try-wasm/build/
+sites/try-wasm/node_modules/
 
 # Root-level node_modules is not used for actual installs — only for test-time
 # stubs that the Scala.js test runtime needs to resolve (see
