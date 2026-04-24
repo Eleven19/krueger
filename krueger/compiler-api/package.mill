@@ -10,8 +10,8 @@ trait CompilerApiModule extends _root_.build.CommonScalaModule
 
     override def mvnDeps = Task {
         super.mvnDeps() ++ Seq(
-            mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:2.38.9",
-            mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:2.38.9"
+            mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core::2.38.9",
+            mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros::2.38.9"
         )
     }
 }

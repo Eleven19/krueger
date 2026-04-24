@@ -14,7 +14,7 @@ import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.wasm.Parser
 import com.dylibso.chicory.wasm.UnlinkableException
 
-final class ChicoryCompilerApiProbeTest:
+final class ChicoryCompilerWasmCompatibilityTest:
     private val artifactDirProperty = "krueger.compiler-api.wasm.dir"
     private val chicoryRuntimeVersion = "1.7.5"
 
@@ -25,7 +25,7 @@ final class ChicoryCompilerApiProbeTest:
         assertTrue(Files.isRegularFile(dir.resolve("main.wasm")), dir.resolve("main.wasm").toString)
 
     @Test
-    def `compiler-api wasm artifact exposes Scala.js host imports and zero raw exports`(): Unit =
+    def `compiler-api wasm artifact exposes Scala js host imports and zero raw exports`(): Unit =
         val module = parseModule()
         val imports = module.importSection().stream().iterator().asScala
             .map(i => s"${i.module()}:${i.name()}")
@@ -37,7 +37,7 @@ final class ChicoryCompilerApiProbeTest:
         assertEquals(0, module.exportSection().exportCount(), context)
 
     @Test
-    def `Chicory reports the missing Scala.js host import when instantiation is attempted`(): Unit =
+    def `Chicory reports the missing Scala js host import when instantiation is attempted`(): Unit =
         val error =
             org.junit.jupiter.api.Assertions.assertThrows(classOf[UnlinkableException], () =>
                 val _ = Instance.builder(parseModule()).build()
