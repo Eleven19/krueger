@@ -2,5 +2,6 @@
 * @Eleven19/maintainers @Eleven19/krueger-maintainers @Eleven19/contributors @Eleven19/krueger-contributors
 
 # GitHub Actions workflows and actions require maintainer approval only
-.github/workflows/ @Eleven19/maintainers @Eleven19/krueger-maintainers
-.github/actions/ @Eleven19/maintainers @Eleven19/krueger-maintainers
+# @Eleven19/maintainers includes @Eleven19/krueger-maintainers via team hierarchy
+.github/workflows/ @Eleven19/maintainers
+.github/actions/ @Eleven19/maintainers
