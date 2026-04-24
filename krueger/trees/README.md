@@ -39,16 +39,20 @@ AST; third parties write one for their own tree.
 | `(NodeType field: (Child))`       | Match a node, and a named sub-tree within it           |
 | `@name`                           | Capture the matched node as `name`                     |
 | `_` or `(_)`                      | Wildcard — match any node                              |
+| `[(A) (B)]`                       | Alternation — match either `(A)` or `(B)`              |
+| `(Parent (A)?)`                   | Optional child — match zero or one occurrence          |
+| `(Parent (A)*)`                   | Zero-or-more children                                  |
+| `(Parent (A)+)`                   | One-or-more children                                   |
+| `(Parent (A) . (B))`              | Anchor: `(A)` and `(B)` must match adjacent children   |
+| `(Parent !field)`                 | Negated field: named field must be absent or empty     |
+| `(NodeType) (NodeType2)`          | Multi-pattern: two independent patterns in one query   |
 | `(#eq? @a @b)`                    | Predicate: captured texts must be equal                |
 | `(#eq? @a "literal")`             | Predicate: captured text equals a literal              |
 | `(#match? @a "regex")`            | Predicate: captured text matches the regex             |
 | `(#not-eq? @a "literal")`         | Predicate: captured text must differ from a literal    |
 | `(#not-match? @a "regex")`        | Predicate: captured text must not match the regex      |
-| `(Parent (A) . (B))`              | Anchor: `(A)` and `(B)` must match adjacent children   |
-| `(Parent !field)`                 | Negated field: named field must be absent or empty     |
 | `;; line comment`                 | Ignored through to end of line                         |
 
-Alternation and quantifiers are deferred to v2.
 Anchor support is currently limited to `.` between two unfielded child patterns;
 other placements fail with `invalid anchor placement`.
 Directives (for example `#set!`) are currently unsupported and fail with an
@@ -162,14 +166,29 @@ without touching the matcher:
 
 ```scala
 val registry = PredicateRegistry.default.withPredicate(
-    "#my-pred",
+    PredicateName.make("#my-pred?").toOption.get,
     new PredicateImpl:
-        def evaluate[T](args: List[PredicateArg], captures: Map[String, T])(using
+        def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using
             qt: QueryableTree[T]
         ): Boolean = ???
 )
 Matcher.matches(query, root, registry)
 ```
+
+## Serializing queries
+
+`QueryPrinter` converts a parsed `Query` back to a canonical S-expression string:
+
+```scala
+import io.eleven19.krueger.trees.query.QueryPrinter
+
+val canonical: String = QueryPrinter.print(query)
+// "(ValueDeclaration) @v (#eq? @v \"main\")"
+```
+
+The output is guaranteed to round-trip through `QueryParser.parse`. This is
+useful for tests that assert a stable canonical query form or verify that a
+query is self-consistent.
 
 ## Roadmap
 
@@ -179,13 +198,18 @@ Delivered in v1:
   `NodeTypeName`, `FieldName`, `CaptureName`, `PredicateName` newtypes
   (via [neotype](https://github.com/kitlangton/neotype)) and a validated
   `RegexPattern` that pre-compiles at construction.
-- Parsley-backed S-expression parser and matcher.
+- Parsley-backed S-expression parser and matcher with full predicate support
+  (`#eq?`, `#not-eq?`, `#match?`, `#not-match?`).
+- Alternation (`[(A) (B)]`), quantifiers (`?`, `*`, `+`), anchors (`.`),
+  negated fields (`!field`), and multi-pattern queries.
+- `QueryPrinter` for round-trip canonicalization.
 - Given instances for `CstNode` and `AstNode`.
-- `QuerySteps` BDD step pack.
+- `QuerySteps` BDD step pack with canonicalization verbs.
 
 Follow-up in the v2 epic:
 
 - `NodeTypes` type member on `QueryableTree[T]`.
 - Mirror/Hearth-backed derived instances.
 - Match-type `NodeByName[Name, T]` for typed captures.
-- Alternation, quantifiers, anchors, negation.
+- Trailing-anchor support (`.` at the end of a child sequence).
+- Custom predicate syntax in query text.

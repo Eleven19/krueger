@@ -199,37 +199,60 @@ object Matcher:
                     .get(PredicateName.NotMatch)
                     .exists(_.evaluate(PredicateArgs.NotMatch(arg, regex), captures))
 
-/** Typed argument bundle handed to a [[PredicateImpl]]. Each built-in predicate has a dedicated variant that preserves
-  * arity and type information — no `List[PredicateArg]` / arity checking at runtime.
+/** Typed argument bundle handed to a [[PredicateImpl]].
+  *
+  * Each built-in predicate has a dedicated variant that encodes its arity and argument kinds in the type — no
+  * `List[PredicateArg]` to check at runtime. A [[PredicateArgs.Custom]] variant is provided for out-of-band extension
+  * by callers that register named predicates through [[PredicateRegistry.withPredicate]].
   */
 sealed trait PredicateArgs derives CanEqual
 
 object PredicateArgs:
-    final case class Eq(left: PredicateArg, right: PredicateArg)           extends PredicateArgs derives CanEqual
-    final case class Match(arg: PredicateArg, regex: RegexPattern)         extends PredicateArgs derives CanEqual
-    final case class NotEq(left: PredicateArg, right: PredicateArg)        extends PredicateArgs derives CanEqual
-    final case class NotMatch(arg: PredicateArg, regex: RegexPattern)      extends PredicateArgs derives CanEqual
+    /** Arguments for `#eq?`: compare the text of `left` and `right`. */
+    final case class Eq(left: PredicateArg, right: PredicateArg) extends PredicateArgs derives CanEqual
+
+    /** Arguments for `#match?`: test whether the text of `arg` matches `regex`. */
+    final case class Match(arg: PredicateArg, regex: RegexPattern) extends PredicateArgs derives CanEqual
+
+    /** Arguments for `#not-eq?`: require the text of `left` and `right` to differ. */
+    final case class NotEq(left: PredicateArg, right: PredicateArg) extends PredicateArgs derives CanEqual
+
+    /** Arguments for `#not-match?`: require the text of `arg` not to match `regex`. */
+    final case class NotMatch(arg: PredicateArg, regex: RegexPattern) extends PredicateArgs derives CanEqual
+
+    /** Arguments for a user-defined predicate: the predicate name and its raw argument list.
+      *
+      * This variant is not produced by the built-in query syntax; it is intended for extension predicates registered
+      * via [[PredicateRegistry.withPredicate]] that parse their own argument conventions.
+      */
     final case class Custom(name: PredicateName, args: List[PredicateArg]) extends PredicateArgs derives CanEqual
 
-/** Pluggable implementation of a named predicate. */
+/** Pluggable implementation of a named predicate.
+  *
+  * Implement this trait and register the result with [[PredicateRegistry.withPredicate]] to add custom predicates to
+  * the matcher without modifying the query language.
+  */
 trait PredicateImpl:
     def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean
 
-/** A lookup table of predicate names to implementations. */
+/** An immutable lookup table mapping [[PredicateName]]s to their [[PredicateImpl]] implementations.
+  *
+  * Obtain the built-in registry via [[PredicateRegistry.default]] and extend it with [[withPredicate]].
+  */
 final case class PredicateRegistry(predicates: Map[PredicateName, PredicateImpl]):
 
-    /** Register or override a predicate under `name`. */
+    /** Return a new registry with `impl` registered (or replaced) under `name`. */
     def withPredicate(name: PredicateName, impl: PredicateImpl): PredicateRegistry =
         PredicateRegistry(predicates.updated(name, impl))
 
 object PredicateRegistry:
 
-    /** Default registry with `#eq?` and `#match?` for text-based comparison. */
+    /** The default registry: `#eq?`, `#not-eq?`, `#match?`, and `#not-match?` backed by `QueryableTree[T].text`. */
     val default: PredicateRegistry = PredicateRegistry(
         Map(
-            PredicateName.Eq    -> EqImpl,
-            PredicateName.Match -> MatchImpl,
-            PredicateName.NotEq -> NotEqImpl,
+            PredicateName.Eq       -> EqImpl,
+            PredicateName.Match    -> MatchImpl,
+            PredicateName.NotEq    -> NotEqImpl,
             PredicateName.NotMatch -> NotMatchImpl
         )
     )
@@ -239,18 +262,10 @@ private object EqImpl extends PredicateImpl:
     def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean =
         args match
             case PredicateArgs.Eq(l, r) =>
-                (resolveText(l, captures), resolveText(r, captures)) match
+                (PredicateUtils.resolveText(l, captures), PredicateUtils.resolveText(r, captures)) match
                     case (Some(a), Some(b)) => a == b
                     case _                  => false
             case _ => false
-
-    private def resolveText[T](
-        arg: PredicateArg,
-        captures: Map[CaptureName, T]
-    )(using qt: QueryableTree[T]): Option[String] =
-        arg match
-            case CaptureRef(name) => captures.get(name).flatMap(qt.text)
-            case StringArg(v)     => Some(v)
 
 private object MatchImpl extends PredicateImpl:
 
@@ -265,18 +280,10 @@ private object NotEqImpl extends PredicateImpl:
     def evaluate[T](args: PredicateArgs, captures: Map[CaptureName, T])(using qt: QueryableTree[T]): Boolean =
         args match
             case PredicateArgs.NotEq(l, r) =>
-                (resolveText(l, captures), resolveText(r, captures)) match
+                (PredicateUtils.resolveText(l, captures), PredicateUtils.resolveText(r, captures)) match
                     case (Some(a), Some(b)) => a != b
                     case _                  => false
             case _ => false
-
-    private def resolveText[T](
-        arg: PredicateArg,
-        captures: Map[CaptureName, T]
-    )(using qt: QueryableTree[T]): Option[String] =
-        arg match
-            case CaptureRef(name) => captures.get(name).flatMap(qt.text)
-            case StringArg(v)     => Some(v)
 
 private object NotMatchImpl extends PredicateImpl:
 
@@ -288,3 +295,19 @@ private object NotMatchImpl extends PredicateImpl:
                     .flatMap(qt.text)
                     .exists(text => regex.compiled.findFirstIn(text).isEmpty)
             case _ => false
+
+/** Shared utilities for built-in predicate implementations. */
+private object PredicateUtils:
+
+    /** Resolve a [[PredicateArg]] to its text value.
+      *
+      * For a [[CaptureRef]], the text is retrieved via `QueryableTree[T].text`. For a [[StringArg]], the literal value
+      * is returned directly.
+      */
+    def resolveText[T](
+        arg: PredicateArg,
+        captures: Map[CaptureName, T]
+    )(using qt: QueryableTree[T]): Option[String] =
+        arg match
+            case CaptureRef(name) => captures.get(name).flatMap(qt.text)
+            case StringArg(v)     => Some(v)

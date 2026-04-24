@@ -20,6 +20,8 @@ final class TestDriver:
     private var cstResult: Option[Result[String, CstModule]] = None
     private var astResult: Option[Result[String, Module]]    = None
     private var lastMatchesBuf: Vector[MatchView]            = Vector.empty
+    private var querySourceBuf: String                       = ""
+    private var canonicalQueryBuf: Option[String]            = None
 
     def setSource(raw: String): Unit =
         source = raw
@@ -60,6 +62,39 @@ final class TestDriver:
 
     /** Matches collected by the most recent `queryCst` / `queryAst`. */
     def lastMatches: Vector[MatchView] = lastMatchesBuf
+
+    /** Store a raw query string for later canonicalization via [[canonicalizeQuerySource]]. */
+    def setQuerySource(queryText: String): Unit =
+        querySourceBuf = queryText
+        canonicalQueryBuf = None
+
+    /** Parse the stored query source and compute its canonical S-expression form.
+      *
+      * Throws an `AssertionError` if the query fails to parse. The canonical text is then available via
+      * [[canonicalQuery]].
+      */
+    def canonicalizeQuerySource(): Unit =
+        val q = QueryParser.parse(querySourceBuf) match
+            case Success(q)   => q
+            case Failure(msg) =>
+                throw new AssertionError(s"query parse failed: $msg\nQuery: $querySourceBuf")
+        canonicalQueryBuf = Some(QueryPrinter.print(q))
+
+    /** The canonical S-expression text produced by the most recent [[canonicalizeQuerySource]] call. */
+    def canonicalQuery: String = canonicalQueryBuf.getOrElse(
+        throw new AssertionError("no canonical query — call 'When the query is canonicalized' first")
+    )
+
+    /** Assert that [[canonicalQuery]] can itself be parsed successfully.
+      *
+      * Throws an `AssertionError` if the canonical form does not round-trip.
+      */
+    def canonicalQueryReparses: Unit =
+        val q = canonicalQuery
+        QueryParser.parse(q) match
+            case Success(_)   => ()
+            case Failure(msg) =>
+                throw new AssertionError(s"canonical query failed to reparse: $msg\nQuery: $q")
 
     private def runQuery[T](queryText: String, root: T)(using qt: QueryableTree[T]): Vector[MatchView] =
         val query = QueryParser.parse(queryText) match
