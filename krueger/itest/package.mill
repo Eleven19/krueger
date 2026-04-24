@@ -7,8 +7,15 @@ object `package` extends _root_.build.CommonScalaModule
 
     def moduleDeps = Seq(build.krueger.core.jvm)
 
+    override def forkArgs = Task {
+        super.forkArgs() ++ Seq(
+            s"-Dkrueger.compiler-api.wasm.dir=${build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path}"
+        )
+    }
+
     def mvnDeps = Seq(
         mvn"org.scalameta::munit::1.0.4",
+        mvn"com.dylibso.chicory:runtime:1.7.5",
         mvn"io.cucumber::cucumber-scala::8.39.1",
         mvn"io.cucumber:cucumber-picocontainer:7.20.1",
         mvn"io.cucumber:cucumber-junit-platform-engine:7.20.1",
