@@ -78,7 +78,7 @@ final class TestDriver:
     def canonicalizeQuerySource(): Unit =
         val raw = querySource.getOrElse(throw new AssertionError("query source not set — missing Given step?"))
         val query = QueryParser.parse(raw) match
-            case Success(q)   => q
+            case Success(q) => q
             case Failure(msg) =>
                 throw new AssertionError(s"query parse failed: $msg\nQuery: $raw")
         canonicalQueryText = Some(QueryPretty.render(query))
@@ -94,7 +94,7 @@ final class TestDriver:
     def canonicalQueryReparses: Unit =
         val canonical = canonicalQuery
         QueryParser.parse(canonical) match
-            case Success(_)   => ()
+            case Success(_) => ()
             case Failure(msg) =>
                 throw new AssertionError(s"canonical query failed to parse: $msg\nQuery:\n$canonical")
 
