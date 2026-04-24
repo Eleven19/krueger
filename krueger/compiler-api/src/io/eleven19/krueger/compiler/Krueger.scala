@@ -16,6 +16,8 @@ import io.eleven19.krueger.trees.query.QueryPretty
   */
 object Krueger:
 
+    lazy val defaultCompiler: CompilerComponent[Unit] = compiler[Unit]
+
     /** A [[CompilerComponent]] for any caller-chosen context. The default implementation does not read or write the
       * context itself — it is threaded through for composition with the caller's own stateful effects.
       */
