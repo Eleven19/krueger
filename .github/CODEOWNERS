@@ -1,2 +1,2 @@
-# Global codeowners — all files require review from org or repo maintainers
-* @Eleven19/maintainers @Eleven19/krueger-maintainers
+# Global codeowners — review required from org/repo maintainers or contributors
+* @Eleven19/maintainers @Eleven19/krueger-maintainers @Eleven19/contributors @Eleven19/krueger-contributors
