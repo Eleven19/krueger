@@ -168,6 +168,40 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 )
             }
         ),
+        suite("Scala.js compiler API acceptance parity")(
+            test("valid parseCst source matches the JVM and Chicory acceptance scenario") {
+                val env = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
+                assertTrue(
+                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
+                    env.ok.asInstanceOf[Boolean],
+                    !js.isUndefined(env.value) && env.value != null,
+                    jsString(env.value).contains(CompilerApiAcceptanceCases.validParseCst.expectedValueFragment)
+                )
+            },
+            test("malformed parseCst source matches the JVM and Chicory error scenario") {
+                val env    = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.malformedParseCst.source))
+                val errors = env.errors.asInstanceOf[js.Array[js.Dynamic]]
+                assertTrue(
+                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
+                    !env.ok.asInstanceOf[Boolean],
+                    errors.length >= 1,
+                    errors(0).phase.asInstanceOf[String] == CompilerApiAcceptanceCases.malformedParseCst.expectedPhase,
+                    errors(0).message.asInstanceOf[String].contains(
+                        CompilerApiAcceptanceCases.malformedParseCst.expectedMessageFragment
+                    )
+                )
+            },
+            test("repeated parseCst source matches the JVM and Chicory determinism scenario") {
+                val a = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
+                val b = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
+                assertTrue(
+                    a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean],
+                    arrayLen(a.errors) == arrayLen(b.errors),
+                    arrayLen(a.logs) == arrayLen(b.logs),
+                    jsString(a.value) == jsString(b.value)
+                )
+            }
+        ),
         suite("determinism (REQ-webappwasm-001 tail)")(
             test("repeated parseCst calls return envelopes with the same ok flag and error count") {
                 val a = dyn(KruegerJs.parseCst(validSource))
@@ -180,3 +214,6 @@ object KruegerJsSpec extends ZIOSpecDefault:
             }
         )
     )
+
+    private def jsString(value: js.Any): String =
+        js.Dynamic.global.String(value).asInstanceOf[String]
