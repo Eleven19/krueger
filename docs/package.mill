@@ -261,8 +261,9 @@ object `package` extends Module {
 
   /**
    * Full-site orchestrator. Generates Scaladoc for all three platforms,
-   * mirrors them into `docs/public/api/{jvm,js,native}/`, then runs
-   * `npm ci` and `npm run build` inside `docs/` to produce `docs/dist/`.
+   * mirrors compiler web artifacts into their static-site locations, then
+   * runs `npm ci` and `npm run build` inside `docs/` to produce
+   * `docs/dist/`.
    *
    * Returns a PathRef to `docs/dist/` so `./mill show docs.site` prints the
    * final artifact directory (what GitHub Pages ingests).
@@ -278,6 +279,12 @@ object `package` extends Module {
       nativeDir = apiNative().path,
       version   = projectVersion()
     )
+
+    Task.log.info("docs.site: writing Laminar playground bundle")
+    build.krueger.webapp.writeToDocsSrc()
+
+    Task.log.info("docs.site: writing webapp-wasm compiler artifacts")
+    build.krueger.`webapp-wasm`.writeToWasmSite()
 
     val docsDir = repoRoot / "docs"
     Task.log.info(s"docs.site: running `npm ci` in $docsDir")
