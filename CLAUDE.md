@@ -2,6 +2,95 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
+## TDD Red-Green-Refactor (Mandatory)
+
+- Use strict **Red-Green-Refactor** for all functional changes.
+- **Red:** author or update tests first; run them and verify failure for the intended reason.
+- **Green:** implement the smallest production change that makes the new tests pass.
+- **Refactor:** improve structure/readability only after green, with full test suite still passing.
+- Do not write production code before tests unless the user explicitly requests a non-TDD approach.
+- If this order is violated, reset the premature code changes and restart from Red.
+
+## Testing Coverage and Edge Cases (Mandatory)
+
+- A single happy-path test is insufficient for non-trivial features.
+- For each behavior change, author tests for:
+  - nominal success behavior,
+  - validation/error behavior,
+  - edge/boundary behavior,
+  - regression scenarios tied to known issues.
+- When behavior is externally visible, include both unit tests and higher-level integration/BDD scenarios.
+- If ordering or determinism matters, assert order explicitly in tests.
+- Do not mark work complete until acceptance criteria and key edge cases are covered by tests.
+
+## Acceptance Criteria Clarity (Mandatory)
+
+- Express acceptance criteria in EARS-style requirements whenever practical:
+  - `When <trigger>, the system shall <response>.`
+  - `If <precondition>, then the system shall <response>.`
+  - `While <state>, the system shall <response>.`
+  - `Where <variant>, the system shall <response>.`
+- Require at least one success, one negative/failure, and one edge/boundary requirement for non-trivial work.
+- Ensure tests and feature scenarios can be traced back to those requirements.
+
+## Issue Authoring Template (Mandatory)
+
+- Use the following reusable template for all new issues (gap work and retrofit work):
+
+```text
+Context:
+- <what gap/behavior/problem is being addressed and why>
+
+EARS requirements:
+- REQ-<slug>-001 (When): When <trigger>, the system shall <response>.
+- REQ-<slug>-002 (If): If <precondition>, then the system shall <response>.
+- REQ-<slug>-003 (Where/While): Where/While <variant/state>, the system shall <response>.
+
+Acceptance:
+1) Implementation expectations:
+   - <parser/matcher/runtime/docs changes expected>
+2) Test matrix (mandatory):
+   - happy-path coverage
+   - negative/failure coverage
+   - edge/boundary coverage
+   - regression coverage
+3) User-visible behavior:
+   - if user-visible, require both unit + BDD/integration assertions
+4) Determinism and diagnostics:
+   - assert ordering determinism where observable
+   - assert stable, actionable diagnostics for failures
+```
+
+- Apply this template to:
+  - new feature/gap issues,
+  - retrofit/backfill issues,
+  - process/docs issues that change expected engineering workflow.
+
+## BDD Step Language Expansion (Mandatory)
+
+- Expand Gherkin step language when existing steps are insufficient to clearly express new behavior.
+- Any new or modified step phrase must be validated by:
+  - a positive scenario,
+  - a negative scenario,
+  - an edge/boundary scenario where relevant.
+- Prefer composable generic steps and avoid one-off specialized steps unless clarity requires them.
+
+## Fixture Rigor and Dogfooding (Mandatory)
+
+- Use more than minimal toy fixtures when validating behavior with meaningful interactions.
+- Prefer a layered fixture approach:
+  - toy fixtures for narrow unit invariants,
+  - richer synthetic syntax-tree fixtures for semantics interactions,
+  - real Elm CST/AST fixtures for integration behavior,
+  - dogfooded query-AST fixtures when validating query language internals.
+- For cross-tree behavior, verify both CST and AST paths.
+
+## Retroactive Coverage Upgrades (Mandatory)
+
+- Apply this testing rigor to existing implemented features, not only new gaps.
+- Track retrofit coverage as explicit issues and complete them through standard RGR cycles.
+- Preserve existing green happy-path coverage while adding negative, edge, and regression tests.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 

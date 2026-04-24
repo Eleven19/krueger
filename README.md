@@ -13,6 +13,7 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 - Concrete Syntax Tree (CST) with cursor-based traversal and visitor pattern
 - Abstract Syntax Tree (AST) with cursor-based traversal and visitor pattern
 - CST-to-AST lowering
+- Tree-sitter-inspired query DSL over a generic `QueryableTree[T]` typeclass (see [krueger.trees](krueger/trees/README.md))
 - Cross-platform support (JVM, Scala.js, and Scala Native)
 
 ## Getting Started
@@ -111,6 +112,34 @@ mill krueger.itest
 To add new scenarios, drop a `.feature` file into `resources/features/` and
 add or extend a step-definition class in `steps/`.
 
+## Querying trees
+
+Krueger ships a tree-sitter-inspired query DSL via the `krueger.trees`
+module. A compact S-expression syntax selects nodes from either the CST
+or the AST (or any other tree with a `QueryableTree[T]` instance):
+
+```scala
+import io.eleven19.krueger.Krueger
+import io.eleven19.krueger.cst.CstName
+import io.eleven19.krueger.cst.CstQueryableTree.given
+import io.eleven19.krueger.trees.query.*
+import parsley.Success
+
+val Success(module) = Krueger.parseCst(source): @unchecked
+val Success(query)  = QueryParser.parse(
+    "(CstValueDeclaration name: (CstName) @n)"
+): @unchecked
+
+val names = Matcher
+    .matches(query, module)
+    .flatMap(_.captures.get("n"))
+    .collect { case n: CstName => n.value }
+    .toList
+```
+
+Full documentation, query-language reference, and BDD examples live in
+[krueger/trees/README.md](krueger/trees/README.md).
+
 ## Project Structure
 
 ```
@@ -122,6 +151,9 @@ krueger/
       lexer/         # Elm lexer
       parser/        # Module, expression, declaration, and pattern parsers
     test/            # ZIO Test suite
+  trees/             # Generic tree-query DSL (JVM + JS + Native)
+    src/             # QueryableTree typeclass, Query AST, Parsley parser, Matcher
+    test/            # Typeclass + parser + matcher unit tests
 ```
 
 ## License

@@ -79,5 +79,37 @@ object KruegerSpec extends ZIOSpecDefault:
             Krueger.parseCst("module !!!") match
                 case Failure(_) => assertCompletes
                 case Success(_) => throw new AssertionError("expected failure, got success")
+        },
+        test("parseCst preserves every top-level value declaration") {
+            val src =
+                """module M exposing (..)
+                  |
+                  |x = 1
+                  |
+                  |y = 2
+                  |
+                  |z = 3
+                  |""".stripMargin
+            val m = parseCstOrFail(src)
+            val names = m.declarations.collect { case v: io.eleven19.krueger.cst.CstValueDeclaration =>
+                v.name.value
+            }
+            assertTrue(names == IndexedSeq("x", "y", "z"))
+        },
+        test("parseAst preserves every top-level value declaration") {
+            val src =
+                """module M exposing (..)
+                  |
+                  |x = 1
+                  |
+                  |y = 2
+                  |
+                  |z = 3
+                  |""".stripMargin
+            val m = parseAstOrFail(src)
+            val names = m.declarations.collect { case v: io.eleven19.krueger.ast.ValueDeclaration =>
+                v.name
+            }
+            assertTrue(names == IndexedSeq("x", "y", "z"))
         }
     )

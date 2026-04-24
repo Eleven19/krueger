@@ -1,9 +1,9 @@
 package io.eleven19.krueger.parser
 
 import parsley.Parsley
-import parsley.Parsley.{atomic, many, some}
+import parsley.Parsley.{atomic, lookAhead, many, some}
 import parsley.combinator.option
-import parsley.position.offset
+import parsley.position.{offset, pos}
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.*
@@ -18,6 +18,13 @@ object ExpressionParser:
 
     private def mkSpan(start: Int, end: Int): Span =
         Span(start, end - start)
+
+    /** Guard a parser so it only fires when the next token is on the same line as `start` or indented past `start`'s
+      * column. Used to prevent expression continuation from swallowing the first token of a later top-level
+      * declaration.
+      */
+    private def sameLineOrIndentedPast[A](start: (Int, Int))(p: Parsley[A]): Parsley[A] =
+        lookAhead(pos.filter { case (line, col) => line == start._1 || col > start._2 }) *> p
 
     // -----------------------------------------------------------------------
     // Atoms
@@ -173,9 +180,11 @@ object ExpressionParser:
     /** A non-operator expression: atom with optional function application and field access. */
     private val appExpr: Parsley[CstExpression] =
         val base = ifThenElse | letIn | caseOf | lambda | negate | postfixAtom
-        (offset <~> base <~> many(postfixAtom) <~> offset).map { case (((s, fn), args), e) =>
-            if args.isEmpty then fn
-            else CstFunctionApplication(fn, args)(mkSpan(s, e))
+        ((offset <~> pos) <~> base).flatMap { case ((so, sp), fn) =>
+            (many(sameLineOrIndentedPast(sp)(postfixAtom)) <~> offset).map { case (args, eo) =>
+                if args.isEmpty then fn
+                else CstFunctionApplication(fn, args)(mkSpan(so, eo))
+            }
         }
 
     /** Parse a binary operator name. */
@@ -186,8 +195,10 @@ object ExpressionParser:
 
     /** A full expression including binary operators (flat, to be re-associated later). */
     lazy val expression: Parsley[CstExpression] =
-        (offset <~> appExpr <~> many(binOp <~> appExpr) <~> offset).map { case (((s, first), ops), e) =>
-            ops.foldLeft(first) { case (left, (op, right)) =>
-                CstBinaryOp(left, op, right)(mkSpan(s, e))
+        ((offset <~> pos) <~> appExpr).flatMap { case ((so, sp), first) =>
+            (many(sameLineOrIndentedPast(sp)(binOp <~> appExpr)) <~> offset).map { case (ops, eo) =>
+                ops.foldLeft(first) { case (left, (op, right)) =>
+                    CstBinaryOp(left, op, right)(mkSpan(so, eo))
+                }
             }
         }

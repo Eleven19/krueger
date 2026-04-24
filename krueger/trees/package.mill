@@ -1,0 +1,42 @@
+package build.krueger.trees
+
+import mill.*, scalalib.*, scalajslib.*, scalanativelib.*
+
+trait TreesModule extends _root_.build.CommonScalaModule
+    with PlatformScalaModule
+    with _root_.build.PublishSupport {
+
+    override def artifactName = "krueger-trees"
+
+    def mvnDeps = Seq(
+        mvn"com.github.j-mie6::parsley::4.6.2",
+        mvn"io.github.kitlangton::neotype::0.4.10",
+        mvn"com.kubuszok::kindlings-fast-show-pretty::0.1.0",
+        mvn"com.github.ghostdogpr::purelogic::0.1.0"
+    )
+}
+
+trait TreesTestModule extends _root_.build.CommonScalaTestModule
+    with TestModule.ZioTest {
+
+    override def sources = Task.Sources(
+        moduleDir / os.up / "test" / "src"
+    )
+
+    def mvnDeps = Seq(
+        mvn"dev.zio::zio-test::2.1.24",
+        mvn"dev.zio::zio-test-sbt::2.1.24"
+    )
+}
+
+object jvm extends TreesModule {
+    object test extends ScalaTests with TreesTestModule
+}
+
+object js extends TreesModule with _root_.build.CommonScalaJSModule {
+    object test extends ScalaJSTests with TreesTestModule
+}
+
+object native extends TreesModule with _root_.build.CommonScalaNativeModule {
+    object test extends ScalaNativeTests with TreesTestModule
+}
