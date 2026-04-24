@@ -1,0 +1,32 @@
+---
+title: Krueger
+description: An Elm dialect parser and compiler toolchain for Scala.
+template: splash
+hero:
+  tagline: Parse and analyze Elm source code from Scala — JVM, Scala.js, and Scala Native.
+  actions:
+    - text: Get started
+      link: /krueger/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/Eleven19/krueger
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="CST + AST" icon="document">
+    Parse Elm source into both a Concrete Syntax Tree and a lowered Abstract Syntax Tree.
+  </Card>
+  <Card title="Query DSL" icon="magnifier">
+    A tree-sitter-inspired S-expression query language over a generic `QueryableTree[T]` typeclass.
+  </Card>
+  <Card title="Cross-platform" icon="setting">
+    Ships artifacts for JVM, Scala.js, and Scala Native from a single Mill build.
+  </Card>
+  <Card title="Testable by design" icon="approve-check">
+    ZIO Test unit suites plus cucumber-scala BDD integration tests.
+  </Card>
+</CardGrid>

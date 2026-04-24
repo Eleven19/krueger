@@ -28,10 +28,12 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 
 Add the dependency to your build:
 
-**Mill**
+**Mill** (1.1.5+ — add inside a `package.mill` module's `mvnDeps`)
 
 ```scala
-ivy"io.eleven19.krueger::krueger-core:VERSION"
+def mvnDeps = Seq(
+  mvn"io.eleven19.krueger::krueger-core:VERSION"
+)
 ```
 
 **sbt**

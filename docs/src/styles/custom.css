@@ -1,0 +1,4 @@
+/* Light tweaks on top of the Starlight defaults. Leave empty unless needed. */
+:root {
+  --sl-font: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}

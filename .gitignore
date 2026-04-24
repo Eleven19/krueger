@@ -28,3 +28,8 @@ target/
 .dolt/
 *.db
 .beads-credential-key
+
+# Astro + Starlight docs site (docs/)
+docs/node_modules/
+docs/dist/
+docs/.astro/
