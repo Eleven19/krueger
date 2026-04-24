@@ -1,3 +1,19 @@
+<script lang="ts">
+  import { browser } from "$app/environment";
+  import {
+    shouldLoadWasmCompiler,
+    supportsWasmGc,
+    wasmGcRequirementsText
+  } from "$lib/wasm-gc";
+
+  let wasmGcSupported = $state<boolean | null>(null);
+  const canInitializeCompiler = $derived(shouldLoadWasmCompiler(wasmGcSupported));
+
+  if (browser) {
+    wasmGcSupported = supportsWasmGc();
+  }
+</script>
+
 <svelte:head>
   <title>Try Krueger WASM</title>
   <meta
@@ -7,6 +23,17 @@
 </svelte:head>
 
 <main class="shell">
+  {#if wasmGcSupported === false && !canInitializeCompiler}
+    <aside class="fallback" role="status" aria-live="polite">
+      <strong>This browser does not support WebAssembly GC.</strong>
+      <span>
+        Try Krueger WASM needs {wasmGcRequirementsText}. You can still use the
+        Scala.js playground instead.
+      </span>
+      <a href="/try/">Open Try Krueger</a>
+    </aside>
+  {/if}
+
   <p class="eyebrow">Try Krueger</p>
   <h1>WASM playground</h1>
   <p>
@@ -34,6 +61,26 @@
     max-width: 48rem;
     margin: 0 auto;
     padding: 2rem;
+  }
+
+  .fallback {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    color: #111827;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 0.75rem;
+  }
+
+  .fallback span {
+    color: #374151;
+    line-height: 1.5;
+  }
+
+  .fallback a {
+    color: #1d4ed8;
+    font-weight: 700;
   }
 
   .eyebrow {
