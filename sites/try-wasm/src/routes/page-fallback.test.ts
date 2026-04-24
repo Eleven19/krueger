@@ -6,6 +6,19 @@ import { describe, expect, it, vi } from 'vitest';
 import Page from './+page.svelte';
 import { supportsWasmGc } from '$lib/wasm-gc';
 
+vi.mock('$lib/krueger', async () => {
+  const ok = (value: unknown) => ({ ok: true, value, logs: [], errors: [] });
+  return {
+    createKruegerClient: vi.fn(async () => ({
+      parseCst: () => ok('CstModule(...)'),
+      parseAst: () => ok('Module(...)'),
+      parseQuery: () => ok({}),
+      runQuery: () => ok([]),
+      prettyQuery: () => '(CstValueDeclaration) @decl'
+    }))
+  };
+});
+
 vi.mock('$lib/wasm-gc', async () => {
   const actual = await vi.importActual<typeof import('$lib/wasm-gc')>('$lib/wasm-gc');
   return {
@@ -23,7 +36,8 @@ describe('/try-wasm Wasm GC fallback banner', () => {
     render(Page);
 
     expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.getByText(/Interactive editor components land/i)).not.toBeNull();
+    expect(screen.getByRole('tablist', { name: 'Try Krueger results' })).not.toBeNull();
+    expect(screen.getByRole('tabpanel', { name: 'Matches' })).not.toBeNull();
   });
 
   it('renders an accessible fallback banner with a Laminar playground link when unsupported', () => {
