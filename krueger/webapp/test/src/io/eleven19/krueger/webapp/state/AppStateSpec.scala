@@ -121,5 +121,25 @@ object AppStateSpec extends ZIOSpecDefault:
                 val m2 = latest(s.matchResult)
                 assertTrue(m1 == m2)
             }
+        },
+        test("selectedPanel defaults to Matches so the first paint shows user-primary output") {
+            withOwner {
+                val s        = new AppState()
+                val selected = latest(s.selectedPanel.signal)
+                assertTrue(selected == Panel.Matches)
+            }
+        },
+        test("selectedPanel round-trips synchronously when the activity bar sets it") {
+            withOwner {
+                val s = new AppState()
+                s.selectedPanel.set(Panel.Cst)
+                val afterCst = latest(s.selectedPanel.signal)
+                s.selectedPanel.set(Panel.PrettyQuery)
+                val afterPretty = latest(s.selectedPanel.signal)
+                assertTrue(
+                    afterCst == Panel.Cst,
+                    afterPretty == Panel.PrettyQuery
+                )
+            }
         }
     )

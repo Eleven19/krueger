@@ -29,6 +29,9 @@ final class AppState:
     val sourceVar: Var[String] = Var("")
     val queryVar: Var[String]  = Var("")
 
+    /** Which output tab the results panel is currently showing. Defaulted to [[Panel.default]]. */
+    val selectedPanel: Var[Panel] = Var(Panel.default)
+
     val cstResult: Signal[CompilerComponent.CompileResult[Unit, CstModule]] =
         sourceVar.signal.map(s => CompilerComponent.runUnit(compiler.parseCst(s)))
 
