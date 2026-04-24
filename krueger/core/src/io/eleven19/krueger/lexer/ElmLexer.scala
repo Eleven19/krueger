@@ -21,7 +21,10 @@ object ElmLexer:
     // Token Lexer configuration
     // -----------------------------------------------------------------------
 
-    private val elmKeywords: Set[String] = Set(
+    /** Elm reserved keywords. Exposed so tooling (editor tokenizers, doc generators) can stay in sync with the parser's
+      * notion of "keyword" without duplicating the list.
+      */
+    val keywords: Set[String] = Set(
         "module",
         "exposing",
         "import",
@@ -44,7 +47,10 @@ object ElmLexer:
         "where"
     )
 
-    private val elmOperators: Set[String] = Set(
+    /** Elm hard operators. Exposed so tooling (editor tokenizers, doc generators) can stay in sync with the parser's
+      * notion of "operator" without duplicating the list.
+      */
+    val operators: Set[String] = Set(
         "->",
         "<-",
         "::",
@@ -75,7 +81,7 @@ object ElmLexer:
     )
 
     private lazy val hardOperator: Parsley[String] =
-        elmOperators.toList.sortBy(op => -op.length).map(op => symbol(op).as(op)).reduce(_ | _)
+        operators.toList.sortBy(op => -op.length).map(op => symbol(op).as(op)).reduce(_ | _)
 
     private val desc: LexicalDesc = LexicalDesc.plain.copy(
         nameDesc = NameDesc.plain.copy(
@@ -85,8 +91,8 @@ object ElmLexer:
             operatorLetter = predicate.Basic(c => "+-*/<>=&|^!~%?:.\\".contains(c))
         ),
         symbolDesc = SymbolDesc.plain.copy(
-            hardKeywords = elmKeywords,
-            hardOperators = elmOperators
+            hardKeywords = keywords,
+            hardOperators = operators
         ),
         spaceDesc = SpaceDesc.plain.copy(
             commentLine = "--",
