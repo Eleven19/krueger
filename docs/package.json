@@ -13,6 +13,7 @@
     "build:full": "npm run build:api && npm run build:webapp && npm run build:wasm && npm run build",
     "test:build-orchestration": "node scripts/check-build-orchestration.mjs",
     "test:nav": "node scripts/check-nav.mjs",
+    "test:try-wasm-deploy-workflow": "node scripts/check-try-wasm-deploy-workflow.mjs",
     "test:try-page": "node scripts/check-try-page.mjs",
     "test:webapp-wasm-browser": "node scripts/check-webapp-wasm-browser.mjs",
     "preview": "astro preview",

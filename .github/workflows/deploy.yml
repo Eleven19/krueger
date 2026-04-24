@@ -10,6 +10,7 @@ on:
       - 'krueger/compiler-api/**'
       - 'krueger/webapp/**'
       - 'krueger/webapp-wasm/**'
+      - 'sites/try-wasm/**'
       - 'mill-build/**'
       - 'build.mill.yaml'
       - 'VERSION'
@@ -41,7 +42,9 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: docs/package-lock.json
+          cache-dependency-path: |
+            docs/package-lock.json
+            sites/try-wasm/package-lock.json
 
       - name: Cache Coursier
         uses: actions/cache@v4
@@ -59,8 +62,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mill-docs-
 
+      - name: Build web artifacts
+        run: |
+          ./mill krueger.webapp.writeToDocsSrc
+          ./mill krueger.webapp-wasm.writeToWasmSite
+
+      - name: Build WASM playground (SvelteKit)
+        working-directory: sites/try-wasm
+        run: npm ci && npm run build
+
       - name: Build site (Scaladoc + Astro)
         run: ./mill docs.site
+
+      - name: Stitch WASM playground into Pages artifact
+        run: |
+          mkdir -p docs/dist/try-wasm
+          cp -R sites/try-wasm/build/. docs/dist/try-wasm/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
