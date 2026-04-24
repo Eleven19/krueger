@@ -30,36 +30,39 @@ mill krueger.itest
 
 ## Docs site
 
-The Starlight site under `docs/` is built by **two** tools in sequence:
+The full site (docs + Scaladoc for JVM, Scala.js, Scala Native) builds in one
+command:
 
-1. **Mill** generates Scaladoc HTML for each platform and mirrors it into
-   `docs/public/api/{jvm,js,native}/` plus a landing page at
-   `docs/public/api/index.html`:
+```sh
+./mill docs.site        # generates Scaladoc, runs `npm ci` + `npm run build`
+```
 
-   ```sh
-   # Build all three Scaladoc trees + landing page.
-   ./mill docs.writeToDocsPublic
+Or, from `docs/` using the Node toolchain only:
 
-   # Individual trees (for iteration):
-   ./mill docs.apiJvm
-   ./mill docs.apiJs
-   ./mill docs.apiNative
-   ```
+```sh
+cd docs
+npm run build:full      # same as ./mill docs.site, but npm-driven
+```
 
-   The output under `docs/public/api/` is gitignored — always regenerated.
+Both produce the final publishable artifact at `docs/dist/` — which is what
+the `Deploy Docs` workflow uploads to GitHub Pages.
 
-2. **Astro / Starlight** bundles the Markdown content and copies
-   `docs/public/` verbatim into `docs/dist/`:
+### Iteration shortcuts
 
-   ```sh
-   cd docs
-   npm ci
-   npm run build   # -> docs/dist/
-   npm run dev     # local preview at http://localhost:4321/krueger/
-   ```
+When you only need part of the build:
 
-For a combined local preview, run the Mill task first, then `npm run dev` (or
-`npm run build && npm run preview`).
+```sh
+./mill docs.writeToDocsPublic   # Scaladoc only (JVM + JS + Native)
+./mill docs.apiJvm              # JVM tree only
+./mill docs.apiJs               # Scala.js tree only
+./mill docs.apiNative           # Scala Native tree only
+
+cd docs && npm run dev          # hot-reload preview at http://localhost:4321/krueger/
+cd docs && npm run build        # Astro only, assumes Scaladoc already present
+cd docs && npm run preview      # serve the built docs/dist/ locally
+```
+
+The output under `docs/public/api/` is gitignored — always regenerated.
 
 ## Workflow
 

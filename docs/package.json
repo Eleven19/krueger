@@ -7,6 +7,8 @@
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
+    "build:api": "cd .. && ./mill docs.writeToDocsPublic",
+    "build:full": "npm run build:api && npm run build",
     "preview": "astro preview",
     "astro": "astro"
   },

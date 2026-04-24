@@ -126,20 +126,20 @@ object `package` extends Module {
   def apiNative: T[PathRef] = Task { apiNativeModule.scalaDocGenerated() }
 
   /**
-   * Build all three Scaladoc trees and copy them into
-   * `docs/public/api/{jvm,js,native}/`. Existing contents at those paths are
-   * wiped first so stale pages don't linger.
+   * Shared helper: mirror the three pre-built Scaladoc trees into
+   * `docs/public/api/{jvm,js,native}/`, stamp every emitted HTML file with
+   * `data-pagefind-ignore="true"`, and emit a static landing page at
+   * `docs/public/api/index.html`.
    *
-   * Run BEFORE `npm run build` in `docs/` — Astro copies `public/` verbatim
-   * into `dist/` during the static build, so the scaladoc trees will end up
-   * at `docs/dist/api/{jvm,js,native}/` and be served under
-   * `/krueger/api/{jvm,js,native}/`.
+   * Called by both `writeToDocsPublic` (Scaladoc-only, for iteration) and
+   * `site` (full-site orchestrator).
    */
-  def writeToDocsPublic(): Command[Unit] = Task.Command {
-    val jvmDir    = apiJvm().path
-    val jsDir     = apiJs().path
-    val nativeDir = apiNative().path
-
+  private def emitScaladocToPublic(
+      jvmDir: os.Path,
+      jsDir: os.Path,
+      nativeDir: os.Path,
+      version: String
+  )(implicit ctx: mill.api.TaskCtx): Unit = {
     val targetRoot = repoRoot / "docs" / "public" / "api"
     val platforms = Seq(
       "jvm"    -> jvmDir,
@@ -179,14 +179,13 @@ object `package` extends Module {
           tagged += 1
         }
       }
-      Task.log.info(s"Wrote scaladoc for $name -> $dst (tagged $tagged HTML files with data-pagefind-ignore)")
+      ctx.log.info(s"Wrote scaladoc for $name -> $dst (tagged $tagged HTML files with data-pagefind-ignore)")
     }
 
     // Emit a small static landing page at /krueger/api/index.html that links
     // to the three per-platform trees. Tagged with `data-pagefind-ignore`
     // for consistency with the trees themselves.
     val landing = targetRoot / "index.html"
-    val version = projectVersion()
     os.write.over(
       landing,
       s"""<!DOCTYPE html>
@@ -238,6 +237,57 @@ object `package` extends Module {
          |</html>
          |""".stripMargin
     )
-    Task.log.info(s"Wrote landing page -> $landing")
+    ctx.log.info(s"Wrote landing page -> $landing")
+  }
+
+  /**
+   * Build all three Scaladoc trees and copy them into
+   * `docs/public/api/{jvm,js,native}/`. Existing contents at those paths are
+   * wiped first so stale pages don't linger.
+   *
+   * Run BEFORE `npm run build` in `docs/` — Astro copies `public/` verbatim
+   * into `dist/` during the static build, so the scaladoc trees will end up
+   * at `docs/dist/api/{jvm,js,native}/` and be served under
+   * `/krueger/api/{jvm,js,native}/`.
+   */
+  def writeToDocsPublic(): Command[Unit] = Task.Command {
+    emitScaladocToPublic(
+      jvmDir    = apiJvm().path,
+      jsDir     = apiJs().path,
+      nativeDir = apiNative().path,
+      version   = projectVersion()
+    )
+  }
+
+  /**
+   * Full-site orchestrator. Generates Scaladoc for all three platforms,
+   * mirrors them into `docs/public/api/{jvm,js,native}/`, then runs
+   * `npm ci` and `npm run build` inside `docs/` to produce `docs/dist/`.
+   *
+   * Returns a PathRef to `docs/dist/` so `./mill show docs.site` prints the
+   * final artifact directory (what GitHub Pages ingests).
+   *
+   * Usage:
+   *   ./mill docs.site            # full build, fails on any step
+   *   ./mill show docs.site       # full build + print dist PathRef
+   */
+  def site(): Command[PathRef] = Task.Command {
+    emitScaladocToPublic(
+      jvmDir    = apiJvm().path,
+      jsDir     = apiJs().path,
+      nativeDir = apiNative().path,
+      version   = projectVersion()
+    )
+
+    val docsDir = repoRoot / "docs"
+    Task.log.info(s"docs.site: running `npm ci` in $docsDir")
+    os.proc("npm", "ci").call(cwd = docsDir, stdout = os.Inherit, stderr = os.Inherit)
+
+    Task.log.info(s"docs.site: running `npm run build` in $docsDir")
+    os.proc("npm", "run", "build").call(cwd = docsDir, stdout = os.Inherit, stderr = os.Inherit)
+
+    val dist = docsDir / "dist"
+    Task.log.info(s"docs.site: built -> $dist")
+    PathRef(dist)
   }
 }
