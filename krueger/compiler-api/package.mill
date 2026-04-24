@@ -45,3 +45,16 @@ object native extends CompilerApiModule with _root_.build.CommonScalaNativeModul
     )
     object test extends ScalaNativeTests with CompilerApiTestModule
 }
+
+/** WASM linker variant. Shares the same Scala source as `js`; only the linker config differs so a main.wasm artifact
+  * and an ES-module JS loader are emitted. No FFI surfaces here — consumers wrap it from the webapp-wasm module.
+  */
+object wasm extends CompilerApiModule with _root_.build.CommonScalaJSWasmModule {
+    override def moduleDeps = Seq(
+        build.krueger.core.js,
+        build.krueger.trees.js
+    )
+    override def sources = Task.Sources(
+        moduleDir / os.up / "src"
+    )
+}
