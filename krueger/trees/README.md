@@ -60,8 +60,6 @@ explicit `Unsupported directive: ...` parse diagnostic.
 
 ## Canonical query rendering
 
-## Canonical query rendering
-
 Two complementary APIs produce canonical S-expression output from a parsed `Query`:
 
 - **`QueryPretty.render(query)`** — backed by Kindlings `FastShowPretty`; supports

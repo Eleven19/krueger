@@ -78,6 +78,12 @@ object QueryPrinter:
     private def printRegex(rx: RegexPattern): String =
         s""""${escapeString(rx.source)}""""
 
-    /** Escape double-quote and backslash so the output is a valid query string literal. */
+    /** Escape double-quote and backslash so the output is a valid query string literal.
+      *
+      * Note: [[QueryParser]] does not support escape sequences in string literals. Consequently, any `StringArg` or
+      * `RegexPattern` produced by `QueryParser.parse` will never contain a `"` character. The escaping here is
+      * defensive for programmatically constructed queries; callers should ensure that string values do not contain
+      * literal `"` if a round-trip through `QueryParser` is required.
+      */
     private def escapeString(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"")

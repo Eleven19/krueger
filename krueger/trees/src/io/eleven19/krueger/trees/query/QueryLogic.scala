@@ -27,7 +27,9 @@ object QueryLogic:
                 }
             }
         }
+        // Combine accumulated state errors and any abort error into a single list.
         val allErrors = value.left.toOption.fold(state.errors)(state.errors :+ _)
+        // Return Left(allErrors) if any errors exist; otherwise preserve the Right value.
         val rendered = if allErrors.nonEmpty then Left(allErrors) else value.left.map(_ => allErrors)
         Result(state.context, logs, allErrors, rendered)
 

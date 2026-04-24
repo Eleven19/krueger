@@ -82,5 +82,9 @@ object QueryPretty:
     private def renderCapture(name: CaptureName): String =
         s"@${CaptureName.unwrap(name)}"
 
+    // Note: string content in regex patterns and string literals is used as-is.
+    // Escaping is handled at parse time by QueryParser, which stores unescaped values
+    // in the AST, so no re-escaping is needed when rendering back to query text.
+    // This function exists as an extension point in case escaping is ever required.
     private def renderString(raw: String): String =
         raw
