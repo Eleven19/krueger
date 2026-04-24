@@ -87,6 +87,48 @@ object QuerySpec extends ZIOSpecDefault:
                     List(EqPredicate(CaptureRef(l), StringArg("x")))
                 )
                 assertTrue(q.captureNames == Set(l))
+            },
+            test("pretty-print renders canonical query syntax") {
+                val query = Query(
+                    NodePattern(
+                        namedType,
+                        List(FieldPattern(nameField, NodePattern(leafType, Nil, Nil, Some(n)))),
+                        List(WildcardPattern(Some(b))),
+                        Some(outer),
+                        adjacentChildAnchors = Set.empty,
+                        negatedFields = Set(bodyField),
+                        childQuantifiers = Map(0 -> QuantifierKind.ZeroOrMore)
+                    ),
+                    List(
+                        NotEqPredicate(CaptureRef(n), StringArg("main")),
+                        NotMatchPredicate(CaptureRef(n), rx("^tmp"))
+                    )
+                )
+                val expected =
+                    """(Named name: (Leaf) @n !body _ @b*) @outer
+                      |(#not-eq? @n "main")
+                      |(#not-match? @n "^tmp")""".stripMargin
+                assertTrue(QueryPretty.render(query) == expected)
+            },
+            test("parse -> pretty -> parse roundtrips every supported construct") {
+                val source =
+                    """(Named name: [(Leaf) @n (Named) @b] @a !body (Leaf) @x . _ @w*)
+                      |(#eq? @n "x")
+                      |(#not-eq? @b @x)
+                      |(#match? @x "^foo")
+                      |(#not-match? @n "bar$")""".stripMargin
+                val parsed = QueryParser.parse(source).toEither
+                val reparsed = parsed.flatMap(q => QueryParser.parse(QueryPretty.render(q)).toEither)
+                assertTrue(reparsed == parsed)
+            },
+            test("whitespace-only query differences normalize to same canonical output") {
+                val a = "(Named name: (Leaf) @n)"
+                val b = "( Named   name:   (Leaf)   @n   )"
+                val rendered = for
+                    qa <- QueryParser.parse(a).toEither
+                    qb <- QueryParser.parse(b).toEither
+                yield (QueryPretty.render(qa), QueryPretty.render(qb))
+                assertTrue(rendered == Right(("(Named name: (Leaf) @n)", "(Named name: (Leaf) @n)")))
             }
         ),
         suite("Match")(

@@ -58,12 +58,69 @@ other placements fail with `invalid anchor placement`.
 Directives (for example `#set!`) are currently unsupported and fail with an
 explicit `Unsupported directive: ...` parse diagnostic.
 
+## Canonical query rendering
+
+## Canonical query rendering
+
+Two complementary APIs produce canonical S-expression output from a parsed `Query`:
+
+- **`QueryPretty.render(query)`** — backed by Kindlings `FastShowPretty`; supports
+  `RenderConfig.Compact` (one clause per line) and `RenderConfig.Normal` (with indentation).
+  Used by `TestDriver.canonicalizeQuerySource()` in BDD scenarios.
+- **`QueryPrinter.print(query)`** — a lightweight, dependency-free alternative that
+  produces a single-line compact string with spaces between tokens.
+
+Both guarantee round-trip: `parse -> render -> parse` preserves query meaning and
+normalises whitespace/trivia.
+
+## Query visitor and cursor
+
+The query module now exposes visitor and zipper-style traversal utilities:
+
+- `QueryVisitor` provides typed dispatch for `Query`, `Pattern`,
+  `FieldPattern`, `Predicate`, and `PredicateArg`.
+- `QueryVisitor.children` is the canonical node expansion used by:
+  - `foldLeft` / `count`
+  - `collect` / `collectPostOrder`
+  - `traverse` (effectful pre-order walk)
+- `QueryCursor` provides navigation over `QueryNode`:
+  - `firstChild`, `lastChild`, `nextSibling`, `previousSibling`, `parent`
+  - `depth`, `isRoot`, `isLeaf`, `root`
+  - `preOrder` for deterministic cursor traversal
+
+## PureLogic-backed query effect
+
+`QueryLogic` defines a PureLogic-backed alias and helpers for query analysis and
+execution workflows:
+
+- `QueryEffect[Ctx, Log, Err, A]` is backed by PureLogic capabilities.
+- Context threading is provided by stateful `readContext` / `setContext` /
+  `updateContext`.
+- Log accumulation uses `log`.
+- Error gathering uses `error` (accumulate) and `failFast` (abort).
+- `run(initialContext)` returns context, logs, gathered errors, and final value.
+
+## Staged query execution pipeline
+
+`QueryExecutionPipeline` structures query execution into explicit phases:
+
+1. `normalize`
+2. `analyze`
+3. `validate`
+4. `lower`
+5. `execute`
+
+Each stage emits deterministic logs and returns typed intermediate values
+(`Analysis`, `Plan`, `Lowered`), so future planner/optimizer work can insert new
+phases without changing caller entry points.
+
 ## CST example
 
 ```scala
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.cst.CstName
 import io.eleven19.krueger.cst.CstQueryableTree.given
+import io.eleven19.krueger.trees.CaptureName
 import io.eleven19.krueger.trees.query.*
 import parsley.Success
 
@@ -79,7 +136,7 @@ val Success(query) = QueryParser.parse(
 
 val names = Matcher
     .matches(query, module)
-    .flatMap(_.captures.get("n"))
+    .flatMap(m => CaptureName.make("n").toOption.flatMap(cn => m.captures.get(cn)))
     .collect { case n: CstName => n.value }
     .toList
 // names == List("main")
@@ -175,21 +232,6 @@ val registry = PredicateRegistry.default.withPredicate(
 Matcher.matches(query, root, registry)
 ```
 
-## Serializing queries
-
-`QueryPrinter` converts a parsed `Query` back to a canonical S-expression string:
-
-```scala
-import io.eleven19.krueger.trees.query.QueryPrinter
-
-val canonical: String = QueryPrinter.print(query)
-// "(ValueDeclaration) @v (#eq? @v \"main\")"
-```
-
-The output is guaranteed to round-trip through `QueryParser.parse`. This is
-useful for tests that assert a stable canonical query form or verify that a
-query is self-consistent.
-
 ## Roadmap
 
 Delivered in v1:
@@ -202,7 +244,11 @@ Delivered in v1:
   (`#eq?`, `#not-eq?`, `#match?`, `#not-match?`).
 - Alternation (`[(A) (B)]`), quantifiers (`?`, `*`, `+`), anchors (`.`),
   negated fields (`!field`), and multi-pattern queries.
-- `QueryPrinter` for round-trip canonicalization.
+- `QueryPrinter` (lightweight, dependency-free) and `QueryPretty` (Kindlings-backed,
+  configurable) for round-trip canonicalization.
+- `QueryVisitor` (typed dispatch + fold/collect/traverse) and `QueryCursor` (zipper
+  navigation) for query AST analysis.
+- `QueryLogic` PureLogic effect and `QueryExecutionPipeline` staged execution.
 - Given instances for `CstNode` and `AstNode`.
 - `QuerySteps` BDD step pack with canonicalization verbs.
 

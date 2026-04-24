@@ -434,3 +434,18 @@ Feature: Tree queries
     And capture "v" of match 2 has text "beta"
     And capture "i" of match 3 has text "1"
     And capture "i" of match 4 has text "2"
+
+  @REQ-QRY-001 @REQ-QRY-003 @REQ-QRY-004
+  Scenario: Canonical pretty-print roundtrips query semantics
+    Given the query source:
+      """
+      ( CstValueDeclaration   name: (CstName) @n  !typeAnnotation )
+      ( #not-eq?   @n   "tmp" )
+      """
+    When the query is canonicalized
+    Then the canonical query text is:
+      """
+      (CstValueDeclaration name: (CstName) @n !typeAnnotation)
+      (#not-eq? @n "tmp")
+      """
+    And the canonical query reparses successfully

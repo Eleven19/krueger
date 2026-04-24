@@ -20,14 +20,16 @@ final class TestDriver:
     private var cstResult: Option[Result[String, CstModule]] = None
     private var astResult: Option[Result[String, Module]]    = None
     private var lastMatchesBuf: Vector[MatchView]            = Vector.empty
-    private var querySourceBuf: String                       = ""
-    private var canonicalQueryBuf: Option[String]            = None
+    private var querySource: Option[String]                  = None
+    private var canonicalQueryText: Option[String]           = None
 
     def setSource(raw: String): Unit =
         source = raw
         cstResult = None
         astResult = None
         lastMatchesBuf = Vector.empty
+        querySource = None
+        canonicalQueryText = None
 
     def setSourceFromResource(resourcePath: String): Unit =
         val stream = Option(getClass.getClassLoader.getResourceAsStream(resourcePath)) match
@@ -65,36 +67,36 @@ final class TestDriver:
 
     /** Store a raw query string for later canonicalization via [[canonicalizeQuerySource]]. */
     def setQuerySource(queryText: String): Unit =
-        querySourceBuf = queryText
-        canonicalQueryBuf = None
+        querySource = Some(queryText)
+        canonicalQueryText = None
 
-    /** Parse the stored query source and compute its canonical S-expression form.
+    /** Parse the stored query source and compute its canonical S-expression form via [[QueryPretty]].
       *
       * Throws an `AssertionError` if the query fails to parse. The canonical text is then available via
       * [[canonicalQuery]].
       */
     def canonicalizeQuerySource(): Unit =
-        val q = QueryParser.parse(querySourceBuf) match
+        val raw = querySource.getOrElse(throw new AssertionError("query source not set — missing Given step?"))
+        val query = QueryParser.parse(raw) match
             case Success(q)   => q
             case Failure(msg) =>
-                throw new AssertionError(s"query parse failed: $msg\nQuery: $querySourceBuf")
-        canonicalQueryBuf = Some(QueryPrinter.print(q))
+                throw new AssertionError(s"query parse failed: $msg\nQuery: $raw")
+        canonicalQueryText = Some(QueryPretty.render(query))
 
     /** The canonical S-expression text produced by the most recent [[canonicalizeQuerySource]] call. */
-    def canonicalQuery: String = canonicalQueryBuf.getOrElse(
-        throw new AssertionError("no canonical query — call 'When the query is canonicalized' first")
-    )
+    def canonicalQuery: String =
+        canonicalQueryText.getOrElse(throw new AssertionError("canonical query not set — missing When step?"))
 
     /** Assert that [[canonicalQuery]] can itself be parsed successfully.
       *
       * Throws an `AssertionError` if the canonical form does not round-trip.
       */
     def canonicalQueryReparses: Unit =
-        val q = canonicalQuery
-        QueryParser.parse(q) match
+        val canonical = canonicalQuery
+        QueryParser.parse(canonical) match
             case Success(_)   => ()
             case Failure(msg) =>
-                throw new AssertionError(s"canonical query failed to reparse: $msg\nQuery: $q")
+                throw new AssertionError(s"canonical query failed to parse: $msg\nQuery:\n$canonical")
 
     private def runQuery[T](queryText: String, root: T)(using qt: QueryableTree[T]): Vector[MatchView] =
         val query = QueryParser.parse(queryText) match
