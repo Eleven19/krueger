@@ -7,7 +7,7 @@ object `package` extends _root_.build.CommonScalaModule
 
     def moduleDeps = Seq(
         build.krueger.core.jvm,
-        build.krueger.`compiler-api-abi`.jvm
+        build.krueger.`compiler-api`.jvm
     )
 
     override def forkArgs = Task {
