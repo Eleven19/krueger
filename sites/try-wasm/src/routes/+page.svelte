@@ -3,9 +3,11 @@
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
+  import ExplorerPane from "$lib/components/ExplorerPane.svelte";
+  import InspectorPanel from "$lib/components/InspectorPanel.svelte";
   import PaneResizeHandle from "$lib/components/PaneResizeHandle.svelte";
-  import ResultsPanel from "$lib/components/ResultsPanel.svelte";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
+  import UtilityPanel from "$lib/components/UtilityPanel.svelte";
   import {
     fallbackBackend,
     isAvailable,
@@ -19,7 +21,7 @@
     type MatchView
   } from "$lib/krueger";
   import { commandSurfaceActions } from "$lib/playground/catalog";
-  import type { UtilityTab } from "$lib/playground/types";
+  import type { PlaygroundDiagnostic, PlaygroundLog, TreeSelection } from "$lib/playground/types";
   import { defaultPanel, type Panel } from "$lib/panels";
   import { supportsWasmGc } from "$lib/wasm-gc";
 
@@ -40,7 +42,9 @@ main = 42
   let commandText = $state('');
   let editorPercent = $state(62);
   let utilityPercent = $state(76);
-  let activeUtilityTab = $state<UtilityTab>('logs');
+  let selection = $state<TreeSelection | null>(null);
+  let logs = $state<PlaygroundLog[]>([{ message: 'Playground ready.', kind: 'info' }]);
+  let problems = $state<PlaygroundDiagnostic[]>([]);
 
   const cstResult = $derived(
     compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
@@ -169,7 +173,7 @@ main = 42
     />
 
     <div class="center-stack">
-      <section class="editor-shell" aria-label="Editor workspace">
+      <div class="editor-explorer-grid">
         <ActivityBar
           {selectedPanel}
           onSelect={(panel) => {
@@ -186,7 +190,7 @@ main = 42
             query = next;
           }}
         />
-        <ResultsPanel
+        <ExplorerPane
           {selectedPanel}
           {cstResult}
           {astResult}
@@ -198,8 +202,11 @@ main = 42
           {backend}
           {wasmGcSupported}
           onBackendChange={handleBackendChange}
+          onSelectNode={(next) => {
+            selection = next;
+          }}
         />
-      </section>
+      </div>
 
       <PaneResizeHandle
         value={utilityPercent}
@@ -211,62 +218,11 @@ main = 42
       />
 
       <section class="utility-shell" aria-label="Output utility panel">
-        <div class="utility-tablist" role="tablist" aria-label="Output panels">
-          <button
-            type="button"
-            id="utility-tab-logs"
-            class="utility-tab"
-            role="tab"
-            aria-controls="utility-panel-logs"
-            aria-selected={activeUtilityTab === 'logs'}
-            tabindex={activeUtilityTab === 'logs' ? '0' : '-1'}
-            onclick={() => {
-              activeUtilityTab = 'logs';
-            }}
-          >
-            Logs
-          </button>
-          <button
-            type="button"
-            id="utility-tab-problems"
-            class="utility-tab"
-            role="tab"
-            aria-controls="utility-panel-problems"
-            aria-selected={activeUtilityTab === 'problems'}
-            tabindex={activeUtilityTab === 'problems' ? '0' : '-1'}
-            onclick={() => {
-              activeUtilityTab = 'problems';
-            }}
-          >
-            Problems
-          </button>
-        </div>
-
-        <div
-          id="utility-panel-logs"
-          class="utility-panel"
-          role="tabpanel"
-          aria-labelledby="utility-tab-logs"
-          hidden={activeUtilityTab !== 'logs'}
-        >
-          <p>Logs will wire into compiler diagnostics in later tasks.</p>
-        </div>
-
-        <div
-          id="utility-panel-problems"
-          class="utility-panel"
-          role="tabpanel"
-          aria-labelledby="utility-tab-problems"
-          hidden={activeUtilityTab !== 'problems'}
-        >
-          <p>Problems will appear here when diagnostic grouping ships in later tasks.</p>
-        </div>
+        <UtilityPanel {logs} {problems} />
       </section>
     </div>
 
-    <aside class="inspector-shell" role="region" aria-label="Selection inspector">
-      <p>Inspector details will appear here when explorer selection ships in Task 3.</p>
-    </aside>
+    <InspectorPanel {selection} />
   </section>
 </main>
 
@@ -395,7 +351,7 @@ main = 42
     border-block: 1px solid var(--kr-border);
   }
 
-  .editor-shell {
+  .editor-explorer-grid {
     display: grid;
     grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
     min-width: 0;
@@ -404,51 +360,12 @@ main = 42
   }
 
   .utility-shell {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
-    background: linear-gradient(180deg, var(--kr-panel-bg), var(--kr-panel-bg-strong));
+    overflow: hidden;
   }
 
-  .utility-tablist {
-    display: flex;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--kr-border);
-  }
-
-  .utility-tab {
-    padding: 0.45rem 0.8rem;
-    color: var(--kr-muted);
-    background: transparent;
-    border: 1px solid var(--kr-border);
-    border-radius: 999px;
-    font: inherit;
-  }
-
-  .utility-tab[aria-selected='true'] {
-    color: var(--kr-text);
-    background: color-mix(in srgb, var(--kr-panel-bg-strong) 86%, white 14%);
-    border-color: color-mix(in srgb, var(--kr-accent) 45%, var(--kr-border));
-  }
-
-  .utility-panel {
-    padding: 1rem;
-    color: var(--kr-muted);
-  }
-
-  .utility-panel p,
-  .inspector-shell p {
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .inspector-shell {
+  :global(.inspector-panel) {
     grid-area: inspector;
-    min-width: 18rem;
-    padding: 1rem;
-    background: linear-gradient(180deg, var(--kr-panel-bg), var(--kr-editor-bg));
-    border-left: 1px solid var(--kr-border);
   }
 
   @media (max-width: 1100px) {
@@ -463,11 +380,8 @@ main = 42
       display: none;
     }
 
-    .inspector-shell {
+    :global(.inspector-panel) {
       min-width: 0;
-      min-height: 10rem;
-      border-left: 0;
-      border-top: 1px solid var(--kr-border);
     }
   }
 </style>

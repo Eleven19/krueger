@@ -7,6 +7,29 @@ import ActivityBar from './ActivityBar.svelte';
 import ResultsPanel from './ResultsPanel.svelte';
 import type { CompilerEnvelope, MatchView, UnistNode } from '$lib/krueger';
 import type { Panel } from '$lib/panels';
+import Page from '../../routes/+page.svelte';
+
+vi.mock('$lib/krueger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('$lib/krueger')>();
+  const ok = (value: unknown) => ({ ok: true, value, logs: [], errors: [] });
+
+  return {
+    ...actual,
+    createKruegerClient: vi.fn(async () => ({
+      backend: 'js',
+      parseCst: () => ok({}),
+      parseAst: () => ok({}),
+      parseCstUnist: () =>
+        ok({ type: 'CstModule', data: { fields: {}, childCount: 1 }, children: [] }),
+      parseAstUnist: () =>
+        ok({ type: 'Module', data: { fields: {}, childCount: 1 }, children: [] }),
+      parseQuery: () => ok({}),
+      runQuery: () => ok([]),
+      prettyQuery: () => '(CstValueDeclaration) @decl',
+      tokenize: () => ok([])
+    }))
+  };
+});
 
 const ok = <T>(value: T): CompilerEnvelope<T> => ({ ok: true, value, logs: [], errors: [] });
 const error = (message: string, phase = 'cst'): CompilerEnvelope<unknown> => ({
@@ -300,5 +323,31 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     expect(screen.queryByRole('tree', { name: 'AST tree' })).toBeNull();
     expect(astRawView.value).toBe('Module(raw opaque fallback)');
     expect(screen.queryByText('unist bridge unavailable')).toBeNull();
+  });
+});
+
+describe('try-wasm page explorer composition', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('sends tree selection into the inspector and keeps logs/problems in a bottom tabset', async () => {
+    render(Page);
+
+    const treeToggle = await screen.findByRole('button', { name: 'Select CstModule' });
+    await fireEvent.click(treeToggle);
+
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'CstModule'
+    );
+    expect(screen.getByRole('tab', { name: 'Logs' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Problems' })).not.toBeNull();
+  });
+
+  it('keeps CST and AST as explorer-facing activity rail labels with explicit tooltips', () => {
+    render(Page);
+
+    expect(screen.getByRole('tab', { name: 'CST' }).getAttribute('title')).toBe('CST');
+    expect(screen.getByRole('tab', { name: 'AST' }).getAttribute('title')).toBe('AST');
   });
 });
