@@ -20,5 +20,6 @@ val cst = Krueger.parseModule(source)
 val ast = Krueger.parseModuleToAst(source)
 ```
 
-See the [API Reference](/krueger/reference/api/) for the full surface area, and
-[Examples](/krueger/examples/) for richer end-to-end walkthroughs.
+See the [API Reference](/krueger/reference/api/) for the full surface area,
+[Examples](/krueger/examples/) for richer end-to-end walkthroughs, and
+[Tooling](/krueger/tooling/) for browser playgrounds and the WASM-backed `Krueger` API.

@@ -23,6 +23,14 @@ if (!docsMill.includes('build.krueger.`webapp-wasm`.writeToWasmSite()')) {
     fail('docs.site must run krueger.webapp-wasm.writeToWasmSite before Astro/SvelteKit builds');
 }
 
+if (!docsMill.includes('runTryWasmNpmBuild(') || !docsMill.includes('copyTryWasmBuildInto(')) {
+    fail('docs.package.mill must build sites/try-wasm and stitch into docs output');
+}
+
+if (!docsMill.includes('prepareLocalDevSite')) {
+    fail('docs.package.mill must expose docs.prepareLocalDevSite for full local dev');
+}
+
 if (docsPackage.scripts['build:wasm'] !== 'cd .. && ./mill krueger.webapp-wasm.writeToWasmSite') {
     fail('docs/package.json must expose build:wasm for local and CI orchestration');
 }
@@ -31,4 +39,24 @@ if (!docsPackage.scripts['build:full']?.includes('npm run build:wasm')) {
     fail('docs/package.json build:full must include build:wasm');
 }
 
-console.log('check-build-orchestration: OK - docs.site and npm scripts orchestrate compiler web artifacts.');
+if (!docsPackage.scripts['build:full']?.includes('npm run build:try-wasm')) {
+    fail('docs/package.json build:full must include build:try-wasm');
+}
+
+if (!docsPackage.scripts['build:full']?.includes('npm run stitch:try-wasm')) {
+    fail('docs/package.json build:full must stitch try-wasm into docs/dist');
+}
+
+if (docsPackage.scripts['prepare:try-wasm'] !== 'cd .. && ./mill docs.prepareLocalDevSite') {
+    fail('docs/package.json must expose prepare:try-wasm -> mill docs.prepareLocalDevSite');
+}
+
+if (!docsPackage.scripts['dev:full']?.includes('npm run prepare:try-wasm')) {
+    fail('docs/package.json dev:full must run prepare:try-wasm before astro dev');
+}
+
+if (docsPackage.scripts['site:build'] !== 'npm run build:full') {
+    fail('docs/package.json site:build must alias npm run build:full');
+}
+
+console.log('check-build-orchestration: OK - docs.site, prepareLocalDevSite, and npm scripts orchestrate full site.');

@@ -62,22 +62,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mill-docs-
 
-      - name: Build web artifacts
-        run: |
-          ./mill krueger.webapp.writeToDocsSrc
-          ./mill krueger.webapp-wasm.writeToWasmSite
-
-      - name: Build WASM playground (SvelteKit)
-        working-directory: sites/try-wasm
-        run: npm ci && npm run build
-
-      - name: Build site (Scaladoc + Astro)
+      - name: Build full site (Scaladoc, playgrounds, Astro, try-wasm stitch)
         run: ./mill docs.site
-
-      - name: Stitch WASM playground into Pages artifact
-        run: |
-          mkdir -p docs/dist/try-wasm
-          cp -R sites/try-wasm/build/. docs/dist/try-wasm/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -32,6 +32,7 @@ const config: StarlightUserConfig = {
     { label: 'Introduction', link: '/introduction/' },
     { label: 'Installation', link: '/installation/' },
     { label: 'Usage', link: '/usage/' },
+    { label: 'Tooling', link: '/tooling/' },
     {
       label: 'API Reference',
       items: [

@@ -22,3 +22,6 @@ over either tree.
 Reach for Krueger when you need to programmatically read or transform Elm
 source from Scala — for example, linters, codegen pipelines, formatters,
 migration scripts, or editor tooling.
+
+See [Tooling across platforms](/krueger/tooling/) for JVM vs browser surfaces,
+the published playgrounds, and the `Krueger` JS facade used by the WASM site.

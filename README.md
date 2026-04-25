@@ -22,6 +22,7 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 
 - JDK 25+ (Temurin recommended)
 - [Mill](https://mill-build.org/) 1.1.5+
+- Node.js 22+ (for the Starlight docs site, SvelteKit `sites/try-wasm`, and Playwright checks — match [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml))
 - For Scala Native: `clang`, `libunwind`, and a boehm-gc library (`libgc` on Linux)
 
 ### Installation
@@ -113,6 +114,38 @@ mill krueger.itest
 
 To add new scenarios, drop a `.feature` file into `resources/features/` and
 add or extend a step-definition class in `steps/`.
+
+## Documentation site and playgrounds
+
+The published handbook and API reference live on [GitHub Pages](https://eleven19.github.io/krueger/) (Starlight + generated Scaladoc). Two browser playgrounds ship with that site:
+
+- **`/krueger/try/`** — Laminar + Scala.js bundle embedded in the Astro app
+- **`/krueger/try-wasm/`** — SvelteKit static app that loads the Scala.js WASM facade
+
+**Production-sized artifact (same shape CI deploys):**
+
+```sh
+./mill docs.site   # writes docs/dist/, including dist/try-wasm/
+```
+
+**Local dev with both playgrounds** (Mill prepares Scaladoc, bundles, WASM artifacts, builds try-wasm, and copies it into `docs/public/try-wasm/` for Astro):
+
+```sh
+cd docs
+npm ci
+npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
+```
+
+Then open `http://localhost:4321/krueger/` (and `/krueger/try/`, `/krueger/try-wasm/`).
+
+**Playwright regression** for the playgrounds (from `docs/` after `npm ci`):
+
+```sh
+npx playwright install
+npm run test:playground-e2e
+```
+
+More detail: [Contributing → Docs site](https://eleven19.github.io/krueger/contributing/#docs-site) and [Tooling across platforms](https://eleven19.github.io/krueger/tooling/).
 
 ## Querying trees
 
