@@ -172,6 +172,13 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     expect(onSelect).toHaveBeenCalledWith('cst');
   });
 
+  it('keeps explicit text labels available alongside activity icons', () => {
+    render(ActivityBar, { selectedPanel: 'matches', onSelect: vi.fn() });
+
+    expect(screen.getByText('CST')).not.toBeNull();
+    expect(screen.getByText('AST')).not.toBeNull();
+  });
+
   it('renders matches by default and shows a no-match placeholder for empty results', () => {
     render(ResultsPanel, resultProps({ matchResult: ok([]) }));
 

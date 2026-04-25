@@ -28,6 +28,7 @@
         aria-label={panel.label}
       >
         <span class="activity-icon" aria-hidden="true">{panel.icon}</span>
+        <span class="sr-only">{panel.label}</span>
       </Tabs.Trigger>
     {/each}
 
@@ -104,6 +105,18 @@
 
   .activity-icon-svg {
     display: block;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   :global(.activity-spacer) {

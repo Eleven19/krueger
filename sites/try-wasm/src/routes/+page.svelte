@@ -58,13 +58,13 @@ main = 42
   );
   const cstUnistResult = $derived(
     compilerEnvelope(
-      () => client?.parseCstUnist(source) as CompilerEnvelope<unknown> | undefined,
+      () => client?.parseCstUnist?.(source) as CompilerEnvelope<unknown> | undefined,
       "Compiler loading..."
     )
   );
   const astUnistResult = $derived(
     compilerEnvelope(
-      () => client?.parseAstUnist(source) as CompilerEnvelope<unknown> | undefined,
+      () => client?.parseAstUnist?.(source) as CompilerEnvelope<unknown> | undefined,
       "Compiler loading..."
     )
   );
@@ -84,6 +84,17 @@ main = 42
         ? astUnistResult.ok || astResult.ok
         : false
   );
+
+  $effect(() => {
+    if (!cstResult.ok) {
+      problems = cstResult.errors.map((error) => ({
+        code: `compiler/${error.phase}`,
+        message: error.message,
+        severity: 'error',
+        source: 'compiler'
+      }));
+    }
+  });
 
   $effect(() => {
     if (selection == null) return;
