@@ -85,6 +85,17 @@ Acceptance:
   - dogfooded query-AST fixtures when validating query language internals.
 - For cross-tree behavior, verify both CST and AST paths.
 
+## Value-Unlock Documentation (Mandatory)
+
+- Every user-facing feature ships with use-case-based docs that demonstrate the value to a developer integrating Krueger. A feature without these docs is not complete and shall not merge.
+- Required surfaces for each user-facing feature:
+  - **Why this exists** — one paragraph in plain language, no jargon, answers "what problem does this solve for me."
+  - **Use it from your code** — runnable, copy-pasteable code snippet that compiles against the published artifact.
+  - **Compose with other Krueger features** — at least one cross-feature example (e.g., parse + query, run testkit + custom reporter, CLI + library co-use).
+  - **Real-world recipe** — a full mini use case showing intent → integration → outcome (parse → transform → emit, query → analyze, run a corpus → report failures, etc.).
+- Convention applies to libraries (`core`, `trees`, `testkit`), the CLI, and the playground.
+- The PR description shall link to the new or updated docs page; reviewers shall block on missing or vague value-unlock content.
+
 ## Retroactive Coverage Upgrades (Mandatory)
 
 - Apply this testing rigor to existing implemented features, not only new gaps.
@@ -95,6 +106,8 @@ Acceptance:
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+**Multi-worktree note (mandatory).** Krueger routinely runs multiple agents in parallel across multiple git worktrees. Read [`docs/conventions/beads-multi-worktree.md`](docs/conventions/beads-multi-worktree.md) before running any `bd create` / `bd update` / `bd dolt push` / `bd dolt pull` from an agent. Key rules: pull at session start, push at session end, never `bd init` without authorization, confirm `bd config get issue-prefix` returns `krueger` (target state) before writing.
 
 ### Quick Reference
 

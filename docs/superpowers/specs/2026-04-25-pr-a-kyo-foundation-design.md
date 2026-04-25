@@ -19,6 +19,14 @@ and the future `testkit` and `cli` modules, and establishes the conventions that
 the rest of the planned epics depend on. PR-A is intentionally **behavior-preserving** —
 it adds APIs alongside existing ones, never replaces or breaks them.
 
+PR-A also lands a project-wide convention update (see `CLAUDE.md` /
+`AGENTS.md`): every user-facing feature must ship with use-case-based
+value-unlock docs (Why-this-exists, Use-it-from-your-code, Compose-with-
+other-Krueger-features, Real-world recipe). PR-A is library-foundation only
+and does not introduce user-facing surfaces — the convention applies to
+EPIC-2..EPIC-6 PRs as they land user-visible behavior. EPIC-5 owns the
+docs-site cookbook surface where these recipes live.
+
 ## Goals
 
 - Make Kyo available on every Krueger module, including the cross-platform
@@ -31,6 +39,10 @@ it adds APIs alongside existing ones, never replaces or breaks them.
 - Add a `KyoQueryableTree` extension over `QueryableTree[T]`.
 - Introduce a typed `Stage[I, O, S]` abstraction in `compiler-api` so future
   pipeline work has a single composition operator to lean on.
+- Wire **scribe** (`com.outr::scribe :: 3.16.1`, cross JVM/JS/Native) as the
+  default logging backend, bridged to Kyo's `Log` effect via a small
+  `ScribeLogHandler`. Services log through `Env[Log]`; production layers
+  provide the scribe-backed handler.
 
 ## Non-Goals
 
@@ -44,7 +56,7 @@ it adds APIs alongside existing ones, never replaces or breaks them.
 
 ## Decision Summary
 
-PR-A delivers six artifacts, all behavior-preserving:
+PR-A delivers seven artifacts, all behavior-preserving:
 
 1. **Kyo deps + Sonatype snapshots resolver** in `mill-build/src/build/Modules.scala`
    so every `CommonScalaModule` (and its JS / Native peers) can depend on
@@ -64,16 +76,21 @@ PR-A delivers six artifacts, all behavior-preserving:
    stages, with `>>>` preserving type-level effect tracking.
 6. **PureLogic / kyo-schema decision docs** (K-1.5, K-1.6) filed but not
    implemented in PR-A — they ship as PR-F and PR-G follow-ons.
+7. **scribe logging backend + Kyo `Log` bridge.** Adds `com.outr::scribe :: 3.16.1`
+   (cross JVM/JS/Native) and a `ScribeLogHandler` in `krueger.core` that consumes
+   Kyo `Log` events and routes them to scribe. Convention: services declare
+   `Env[Log]` dependence; production layers wire the scribe-backed handler;
+   tests wire an in-memory handler.
 
 ## Module Impact
 
-| Module                | Change                                                                 |
-|-----------------------|------------------------------------------------------------------------|
-| `mill-build`          | Adds Kyo deps, Sonatype snapshots resolver via `repositoriesTask`.    |
-| `krueger.core`        | Adds Kyo-aware visitor variants in `cst` / `ast` packages.             |
-| `krueger.trees`       | Adds `KyoQueryableTree` extension and the Kyo `KyoQueryVisitor`.       |
-| `krueger.compiler-api`| Adds `Stage[I, O, S]` abstraction.                                     |
-| Other modules         | No source changes; gain Kyo on the classpath.                          |
+| Module                | Change                                                                  |
+|-----------------------|-------------------------------------------------------------------------|
+| `mill-build`          | Adds Kyo deps, scribe dep, Sonatype snapshots resolver via `repositoriesTask`. |
+| `krueger.core`        | Adds Kyo-aware visitor variants in `cst` / `ast` packages; adds `ScribeLogHandler` bridging Kyo `Log` to scribe. |
+| `krueger.trees`       | Adds `KyoQueryableTree` extension and `KyoQueryVisitor`.                |
+| `krueger.compiler-api`| Adds `Stage[I, O, S]` abstraction.                                      |
+| Other modules         | No source changes; gain Kyo + scribe on the classpath.                  |
 
 Cross-platform coverage matches each module's existing `jvm` / `js` / `native`
 matrix. Kyo modules that do not publish a Native artifact are gated behind a
@@ -90,9 +107,34 @@ The convention doc anchors three rules:
   impl. The compiler tracks the dependency in the effect row.
 - **Provide via `Layer`.** Production code wires layers using `Layer.init`. Tests
   swap an in-memory layer in.
+- **Log via `Env[Log]`.** Services that emit diagnostics declare a Kyo `Log`
+  dependency. Production layers wire the scribe-backed handler; tests wire an
+  in-memory recorder.
 
-The doc includes one runnable example combining two services and showing
-`Env.runLayer` + `Memo.run`.
+The doc includes one runnable example combining two services with logging and
+showing `Env.runLayer` + `Memo.run`.
+
+## Logging Strategy
+
+Krueger standardizes on `com.outr::scribe :: 3.16.1` (cross JVM/JS/Native) as
+its logging substrate. All in-process logging flows through Kyo's `Log` effect
+to keep service signatures honest about side effects:
+
+```
+service code:                          Env[Log]      (effect-tracked)
+production layer:        Log -- ScribeLogHandler -- scribe sinks
+test layer:              Log -- InMemoryLogRecorder
+```
+
+`ScribeLogHandler` (in `krueger.core`) is a thin Kyo `Log` consumer that
+maps level/message/context onto scribe's API. Tests can swap in a recorder
+that captures emissions for assertion. CLI consumers configure scribe sinks
+(stdout, file, JSON) at the outer edge; library consumers can override the
+default scribe configuration via standard scribe APIs.
+
+This separation keeps libraries free of any scribe coupling at the API level —
+they speak Kyo `Log` only — while giving the CLI and other production hosts a
+single, conventional logging backend.
 
 ## Visitor Variant Strategy
 
@@ -154,6 +196,9 @@ Per the project's mandatory testing-depth rule:
 - **`KyoQueryableTree`.** Specs round-trip `traverseKyo` / `foldKyo` with effects.
 - **`Stage` composition.** Specs verify `>>>` preserves effect rows in the type
   position via compile-time checks (use `summon[Stage[A, C, S1 & S2]]`).
+- **Scribe bridge.** Spec verifies `ScribeLogHandler` routes Kyo `Log.info` /
+  `Log.warn` / `Log.error` emissions into scribe; in-memory recorder asserts
+  level + message + context fields are preserved.
 - **Negative.** A failing `Abort.fail` in a Kyo visitor short-circuits cleanly
   with a stable diagnostic; misuse of `Stage` (incompatible types) fails at
   compile time.
@@ -185,6 +230,10 @@ Per the project's mandatory testing-depth rule:
 - **Service-pattern adoption drift.** Two patterns coexisting (visitor vs
   service) could sprawl. Mitigate by limiting PR-A to scaffolding + the
   convention doc; downstream PRs apply the conventions in concrete features.
+- **No upstream `kyo-scribe` bridge.** Maven Central shows no published
+  `kyo-scribe` artifact, so PR-A ships a small in-house `ScribeLogHandler`
+  in `krueger.core`. Kept narrow (one file, ~50 LOC of glue) so an upstream
+  bridge can replace it later with minimal churn.
 
 ## Out of Scope (Tracked Elsewhere)
 
@@ -201,8 +250,10 @@ PR-A is mergeable when:
 
 1. Mill build succeeds on JVM, JS, and Native targets supported by Kyo.
 2. All pre-existing test suites stay green.
-3. New specs cover Kyo-aware visitors, `KyoQueryableTree`, and `Stage`
-   composition.
-4. `docs/conventions/kyo-services.md` includes a runnable worked example.
+3. New specs cover Kyo-aware visitors, `KyoQueryableTree`, `Stage`
+   composition, and the `ScribeLogHandler` bridge.
+4. `docs/conventions/kyo-services.md` includes a runnable worked example,
+   showing both layered services and `Env[Log]` use with a scribe-backed
+   production layer and an in-memory test layer.
 5. CI pipeline updated for the Sonatype snapshots resolver (no new secret
    needed; snapshots are public).
