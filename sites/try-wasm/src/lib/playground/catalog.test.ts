@@ -22,13 +22,14 @@ describe('playground catalog', () => {
   });
 
   it('keeps command and explorer actions aligned for discoverability', () => {
-    expect(commandSurfaceActions.map((action) => action.id)).toEqual([
-      'example.open',
-      'github.import'
+    expect(commandSurfaceActions).toEqual([
+      { id: 'example.open', label: 'Open Example', hint: 'Load a curated example' },
+      {
+        id: 'github.import',
+        label: 'Import From GitHub',
+        hint: 'Load a repo file into the editor'
+      }
     ]);
-    expect(explorerToolbarActions.map((action) => action.id)).toEqual([
-      'example.open',
-      'github.import'
-    ]);
+    expect(explorerToolbarActions).toEqual(commandSurfaceActions);
   });
 });

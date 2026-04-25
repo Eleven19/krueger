@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { Effect } from 'effect';
 
 import { loadExample } from './actions';
+import type { ExampleNotFoundDiagnostic, PlaygroundExample } from './types';
 
 describe('playground actions', () => {
   it('loads a curated example by id', async () => {
@@ -14,10 +15,17 @@ describe('playground actions', () => {
   });
 
   it('maps unknown example ids to a stable diagnostic', async () => {
-    const exit = await Effect.runPromiseExit(loadExample('missing/example'));
+    expectTypeOf(loadExample('missing/example')).toEqualTypeOf<
+      Effect.Effect<PlaygroundExample, ExampleNotFoundDiagnostic>
+    >();
 
-    expect(exit._tag).toBe('Failure');
-    expect(JSON.stringify(exit)).toContain('example/not-found');
-    expect(JSON.stringify(exit)).toContain('Unknown example: missing/example');
+    const diagnostic = await Effect.runPromise(Effect.flip(loadExample('missing/example')));
+
+    expect(diagnostic).toEqual({
+      code: 'example/not-found',
+      message: 'Unknown example: missing/example',
+      severity: 'error',
+      source: 'example'
+    });
   });
 });

@@ -21,6 +21,14 @@ export type PlaygroundDiagnostic = {
   source: 'example' | 'github' | 'compiler' | 'runtime';
 };
 
+export type ExampleNotFoundDiagnostic = {
+  code: 'example/not-found';
+  message: string;
+  detail?: string;
+  severity: 'error';
+  source: 'example';
+};
+
 export type PlaygroundLog = {
   message: string;
   kind: 'info' | 'success' | 'warning' | 'error';

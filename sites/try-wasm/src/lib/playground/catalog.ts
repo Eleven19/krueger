@@ -1,6 +1,6 @@
 import type { CommandAction, PlaygroundExample } from './types';
 
-export const playgroundExamples: PlaygroundExample[] = [
+export const playgroundExamples: ReadonlyArray<PlaygroundExample> = [
   {
     id: 'elm/basic-module',
     label: 'Elm: Basic Module',
@@ -51,9 +51,9 @@ double value =
   }
 ];
 
-export const commandSurfaceActions: CommandAction[] = [
+export const commandSurfaceActions: ReadonlyArray<CommandAction> = [
   { id: 'example.open', label: 'Open Example', hint: 'Load a curated example' },
   { id: 'github.import', label: 'Import From GitHub', hint: 'Load a repo file into the editor' }
 ];
 
-export const explorerToolbarActions: CommandAction[] = [...commandSurfaceActions];
+export const explorerToolbarActions: ReadonlyArray<CommandAction> = [...commandSurfaceActions];
