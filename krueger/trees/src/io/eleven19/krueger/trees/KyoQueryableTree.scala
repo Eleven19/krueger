@@ -3,6 +3,7 @@ package io.eleven19.krueger.trees
 import kyo.*
 
 object KyoQueryableTree:
+
     def traverseKyo[T, S](tree: T)(f: T => Unit < S)(using q: QueryableTree[T]): Unit < S =
         f(tree).map(_ => visitChildren(q.children(tree).toList)(child => traverseKyo(child)(f)))
 

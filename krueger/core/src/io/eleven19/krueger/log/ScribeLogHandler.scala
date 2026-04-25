@@ -4,6 +4,7 @@ import kyo.*
 import scribe.Logger
 
 final class ScribeLogHandler(logger: Logger):
+
     val log: Log =
         Log(new Log.Unsafe:
             def level: Log.Level = Log.Level.trace
@@ -36,5 +37,4 @@ final class ScribeLogHandler(logger: Logger):
                 logger.error(msg.toString)
 
             def error(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.error(msg.toString, t)
-        )
+                logger.error(msg.toString, t))

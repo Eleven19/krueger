@@ -17,6 +17,7 @@ object QueryPretty:
         queryFastShowPretty.render(sb, config, config.startLevel)(query).toString
 
     given queryFastShowPretty: FastShowPretty[Query] with
+
         def render(sb: StringBuilder, config: RenderConfig, level: Int)(query: Query): StringBuilder =
             val roots = query.root match
                 case MultiPattern(patterns) => patterns
@@ -76,8 +77,8 @@ object QueryPretty:
             s"""(#not-match? ${renderPredicateArg(arg)} "${renderString(regex.source)}")"""
 
     private def renderPredicateArg(arg: PredicateArg): String = arg match
-        case CaptureRef(name)  => renderCapture(name)
-        case StringArg(value)  => s""""${renderString(value)}""""
+        case CaptureRef(name) => renderCapture(name)
+        case StringArg(value) => s""""${renderString(value)}""""
 
     private def renderCapture(name: CaptureName): String =
         s"@${CaptureName.unwrap(name)}"

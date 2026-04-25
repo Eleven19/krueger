@@ -42,10 +42,10 @@ object QueryPrinter:
             patterns.map(printPattern).mkString(" ")
 
         case NodePattern(nt, fieldPatterns, childPatterns, cap, adjacentAnchors, negatedFields, quantifiers) =>
-            val ntStr       = NodeTypeName.unwrap(nt)
+            val ntStr        = NodeTypeName.unwrap(nt)
             val negatedParts = negatedFields.toList.map(FieldName.unwrap).sorted.map(fn => s"!$fn")
             val fieldParts   = fieldPatterns.map(fp => s"${FieldName.unwrap(fp.name)}: ${printPattern(fp.pattern)}")
-            val childParts   = childPatterns.zipWithIndex.flatMap { (child, i) =>
+            val childParts = childPatterns.zipWithIndex.flatMap { (child, i) =>
                 val withQuantifier = quantifiers.get(i) match
                     case Some(QuantifierKind.Optional)   => printPattern(child) + "?"
                     case Some(QuantifierKind.ZeroOrMore) => printPattern(child) + "*"
@@ -61,10 +61,10 @@ object QueryPrinter:
     // --- Predicates ----------------------------------------------------------
 
     private def printPredicate(p: Predicate): String = p match
-        case EqPredicate(left, right)        => s"(#eq? ${printArg(left)} ${printArg(right)})"
-        case MatchPredicate(arg, regex)      => s"(#match? ${printArg(arg)} ${printRegex(regex)})"
-        case NotEqPredicate(left, right)     => s"(#not-eq? ${printArg(left)} ${printArg(right)})"
-        case NotMatchPredicate(arg, regex)   => s"(#not-match? ${printArg(arg)} ${printRegex(regex)})"
+        case EqPredicate(left, right)      => s"(#eq? ${printArg(left)} ${printArg(right)})"
+        case MatchPredicate(arg, regex)    => s"(#match? ${printArg(arg)} ${printRegex(regex)})"
+        case NotEqPredicate(left, right)   => s"(#not-eq? ${printArg(left)} ${printArg(right)})"
+        case NotMatchPredicate(arg, regex) => s"(#not-match? ${printArg(arg)} ${printRegex(regex)})"
 
     // --- Helpers -------------------------------------------------------------
 

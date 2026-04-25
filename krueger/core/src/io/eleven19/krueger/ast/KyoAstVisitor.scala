@@ -5,6 +5,7 @@ import io.eleven19.krueger.trees.KyoQueryableTree
 import kyo.*
 
 object KyoAstVisitor:
+
     def visit[S](root: AstNode)(f: AstNode => Unit < S): Unit < S =
         KyoQueryableTree.traverseKyo(root)(f)
 

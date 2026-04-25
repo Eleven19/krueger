@@ -98,8 +98,10 @@ final case class WildcardPattern(capture: Option[CaptureName]) extends Pattern d
 enum QuantifierKind derives CanEqual:
     /** The child pattern may match zero or one child. */
     case Optional
+
     /** The child pattern may match zero or more children. */
     case ZeroOrMore
+
     /** The child pattern must match one or more children. */
     case OneOrMore
 

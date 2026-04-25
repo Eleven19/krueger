@@ -19,7 +19,8 @@ import io.eleven19.krueger.trees.NodeTypeName
   *   - Field pattern: `(NodeType field_name: (ChildType))`
   *   - Capture: `@name` appended to any pattern
   *   - Wildcard: `_` or `(_)`, optionally followed by `@name`
-  *   - Predicate clauses at top level: `(#eq? @a @b)`, `(#not-eq? @a "x")`, `(#match? @x "regex")`, `(#not-match? @x "regex")`
+  *   - Predicate clauses at top level: `(#eq? @a @b)`, `(#not-eq? @a "x")`, `(#match? @x "regex")`,
+  *     `(#not-match? @x "regex")`
   *   - Line comments: `;; ...` to end of line
   *   - Flexible whitespace between tokens
   *
@@ -131,8 +132,8 @@ object QueryParser:
         case StringArg(_)     => None
 
     private def normalizeFailure(msg: String): String =
-        val withPrefix = s"$parseFailurePrefix$msg"
-        val unknownPredicatePattern    = """unexpected \"(#[\w-]+\?)\"""".r
+        val withPrefix                  = s"$parseFailurePrefix$msg"
+        val unknownPredicatePattern     = """unexpected \"(#[\w-]+\?)\"""".r
         val unsupportedDirectivePattern = """unexpected \"(#[\w-]+!)\"""".r
         unsupportedDirectivePattern.findFirstMatchIn(msg) match
             case Some(m) if msg.contains("expected") =>
@@ -264,9 +265,9 @@ object QueryParser:
                     case Some(_) =>
                         Left("invalid quantifier placement: quantifiers must follow an unfielded child pattern")
                     case None =>
-                        val fields = members.collect { case NodeMember.Field(value) => value }
-                        val children = members.collect { case NodeMember.Child(value) => value }
-                        val negatedFields = members.collect { case NodeMember.NegatedField(value) => value }.toSet
+                        val fields            = members.collect { case NodeMember.Field(value) => value }
+                        val children          = members.collect { case NodeMember.Child(value) => value }
+                        val negatedFields     = members.collect { case NodeMember.NegatedField(value) => value }.toSet
                         val conflictingFields = fields.map(_.name).toSet.intersect(negatedFields)
                         if conflictingFields.nonEmpty then
                             Left(
@@ -337,7 +338,7 @@ object QueryParser:
 
     private val queryParser: Parsley[Query] =
         (skipTrivia *> many(queryPart) <~ eof).flatMap { parts =>
-            val roots = parts.collect { case Left(p)   => p }
+            val roots = parts.collect { case Left(p) => p }
             val preds = parts.collect { case Right(pr) => pr }
             roots match
                 case Nil =>

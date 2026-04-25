@@ -15,21 +15,21 @@ trait QueryVisitor[A]:
 
     def visitNode(node: QueryNode): A
 
-    def visitQuery(node: Query): A                         = visitNode(QueryNode.Root(node))
-    def visitPattern(node: Pattern): A                     = visitNode(QueryNode.PatternNode(node))
-    def visitNodePattern(node: NodePattern): A             = visitPattern(node)
-    def visitMultiPattern(node: MultiPattern): A           = visitPattern(node)
+    def visitQuery(node: Query): A                           = visitNode(QueryNode.Root(node))
+    def visitPattern(node: Pattern): A                       = visitNode(QueryNode.PatternNode(node))
+    def visitNodePattern(node: NodePattern): A               = visitPattern(node)
+    def visitMultiPattern(node: MultiPattern): A             = visitPattern(node)
     def visitAlternationPattern(node: AlternationPattern): A = visitPattern(node)
-    def visitWildcardPattern(node: WildcardPattern): A     = visitPattern(node)
-    def visitFieldPattern(node: FieldPattern): A           = visitNode(QueryNode.FieldPatternNode(node))
-    def visitPredicate(node: Predicate): A                 = visitNode(QueryNode.PredicateNode(node))
-    def visitEqPredicate(node: EqPredicate): A             = visitPredicate(node)
-    def visitMatchPredicate(node: MatchPredicate): A       = visitPredicate(node)
-    def visitNotEqPredicate(node: NotEqPredicate): A       = visitPredicate(node)
-    def visitNotMatchPredicate(node: NotMatchPredicate): A = visitPredicate(node)
-    def visitPredicateArg(node: PredicateArg): A           = visitNode(QueryNode.PredicateArgNode(node))
-    def visitCaptureRef(node: CaptureRef): A               = visitPredicateArg(node)
-    def visitStringArg(node: StringArg): A                 = visitPredicateArg(node)
+    def visitWildcardPattern(node: WildcardPattern): A       = visitPattern(node)
+    def visitFieldPattern(node: FieldPattern): A             = visitNode(QueryNode.FieldPatternNode(node))
+    def visitPredicate(node: Predicate): A                   = visitNode(QueryNode.PredicateNode(node))
+    def visitEqPredicate(node: EqPredicate): A               = visitPredicate(node)
+    def visitMatchPredicate(node: MatchPredicate): A         = visitPredicate(node)
+    def visitNotEqPredicate(node: NotEqPredicate): A         = visitPredicate(node)
+    def visitNotMatchPredicate(node: NotMatchPredicate): A   = visitPredicate(node)
+    def visitPredicateArg(node: PredicateArg): A             = visitNode(QueryNode.PredicateArgNode(node))
+    def visitCaptureRef(node: CaptureRef): A                 = visitPredicateArg(node)
+    def visitStringArg(node: StringArg): A                   = visitPredicateArg(node)
 
 object QueryVisitor:
 
@@ -45,10 +45,10 @@ object QueryVisitor:
             visitor.visitFieldPattern(fieldPattern)
         case QueryNode.PredicateNode(predicate) =>
             predicate match
-                case eq: EqPredicate             => visitor.visitEqPredicate(eq)
-                case m: MatchPredicate           => visitor.visitMatchPredicate(m)
-                case neq: NotEqPredicate         => visitor.visitNotEqPredicate(neq)
-                case nmatch: NotMatchPredicate   => visitor.visitNotMatchPredicate(nmatch)
+                case eq: EqPredicate           => visitor.visitEqPredicate(eq)
+                case m: MatchPredicate         => visitor.visitMatchPredicate(m)
+                case neq: NotEqPredicate       => visitor.visitNotEqPredicate(neq)
+                case nmatch: NotMatchPredicate => visitor.visitNotMatchPredicate(nmatch)
         case QueryNode.PredicateArgNode(arg) =>
             arg match
                 case c: CaptureRef => visitor.visitCaptureRef(c)

@@ -11,9 +11,9 @@ final case class LogRecord(
 ) derives CanEqual
 
 final class InMemoryLogRecorder private (private val buffer: mutable.ArrayBuffer[LogRecord]):
-    def snapshot(): Seq[LogRecord] = synchronized { buffer.toList }
+    def snapshot(): Seq[LogRecord] = synchronized(buffer.toList)
 
-    def clear(): Unit = synchronized { buffer.clear() }
+    def clear(): Unit = synchronized(buffer.clear())
 
     private[log] def append(record: LogRecord): Unit = synchronized {
         buffer += record
@@ -21,6 +21,7 @@ final class InMemoryLogRecorder private (private val buffer: mutable.ArrayBuffer
     }
 
 object InMemoryLogRecorder:
+
     def unsafeMake(): InMemoryLogRecorder =
         new InMemoryLogRecorder(mutable.ArrayBuffer.empty)
 
@@ -56,5 +57,4 @@ object InMemoryLogRecorder:
                 recorder.append(LogRecord(Log.Level.error, msg.toString))
 
             def error(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.error, msg.toString, Some(t)))
-        )
+                recorder.append(LogRecord(Log.Level.error, msg.toString, Some(t))))

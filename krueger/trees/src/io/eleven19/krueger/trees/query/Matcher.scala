@@ -76,13 +76,21 @@ object Matcher:
                                     val (accCaptures, usedChildren) = acc
                                     val values                      = fieldsMap.getOrElse(fp.name, Seq.empty)
                                     values.iterator
-                                        .flatMap(v => matchPattern(fp.pattern, v, accCaptures).map(c => (c, usedChildren :+ v)))
+                                        .flatMap(v =>
+                                            matchPattern(fp.pattern, v, accCaptures).map(c => (c, usedChildren :+ v))
+                                        )
                                         .nextOption()
                                 }
                         }
                     withFields.flatMap { case (acc, usedChildren) =>
                         val remainingChildren = excludeUsed(qt.children(node), usedChildren)
-                        matchOrderedChildren(childPatterns, remainingChildren, acc, adjacentChildAnchors, childQuantifiers)
+                        matchOrderedChildren(
+                            childPatterns,
+                            remainingChildren,
+                            acc,
+                            adjacentChildAnchors,
+                            childQuantifiers
+                        )
                     }
 
     private def excludeUsed[T](children: Seq[T], used: List[T]): Seq[T] =
@@ -112,7 +120,7 @@ object Matcher:
 
                     def matchOneAt(i: Int, inCaps: Map[CaptureName, T]): Option[Map[CaptureName, T]] =
                         val anchoredToPrev = adjacentChildAnchors.contains(nextPatternIdx - 1)
-                        val placementOk = !anchoredToPrev || lastMatchedChildIdx.contains(i - 1)
+                        val placementOk    = !anchoredToPrev || lastMatchedChildIdx.contains(i - 1)
                         if !placementOk then None
                         else matchPattern(wanted, children(i), inCaps)
 
@@ -132,11 +140,13 @@ object Matcher:
                             (currentStart until children.size).iterator
                                 .flatMap { i =>
                                     val anchoredToPrev = adjacentChildAnchors.contains(nextPatternIdx - 1)
-                                    val placementOk = !anchoredToPrev || currentLast.contains(i - 1)
+                                    val placementOk    = !anchoredToPrev || currentLast.contains(i - 1)
                                     if !placementOk then Iterator.empty
                                     else
                                         matchPattern(wanted, children(i), currentCaps)
-                                            .flatMap(updated => repeatAtLeast(minMatches, i + 1, Some(i), updated, matched + 1))
+                                            .flatMap(updated =>
+                                                repeatAtLeast(minMatches, i + 1, Some(i), updated, matched + 1)
+                                            )
                                             .iterator
                                 }
                                 .nextOption()
