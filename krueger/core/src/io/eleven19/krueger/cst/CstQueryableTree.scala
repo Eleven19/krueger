@@ -8,7 +8,7 @@ import io.eleven19.krueger.trees.QueryableTree
   *
   * nodeType is the Scala case-class simple name (e.g. "CstValueDeclaration"). children delegates to
   * [[CstVisitor.children]]. fields exposes case-class field names whose values are themselves CstNodes; scalar leaves
-  * (String, Long, Double, Char) are surfaced through [[text]] instead. trivia is excluded from fields to keep queries
+  * (String, Long, Double, Char) are surfaced through `text` instead. trivia is excluded from fields to keep queries
   * focused on structure.
   */
 object CstQueryableTree:

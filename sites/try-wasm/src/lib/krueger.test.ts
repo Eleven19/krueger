@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { createElmTokensProvider } from './elm-language';
 import { createKruegerClient, type CompilerEnvelope } from './krueger';
 
 const wasmRoot = resolve(process.cwd(), 'static', 'wasm');
@@ -109,5 +110,35 @@ describe('krueger.ts real compiler facade wrapper', () => {
 
     expect(query.ok).toBe(true);
     expect(krueger.prettyQuery(query.value)).toContain('CstValueDeclaration');
+  });
+
+  it('exposes shared tokenizer tokens from the loaded facade instance', async () => {
+    const krueger = await createKruegerClient({ facadeUrl });
+
+    const tokens = krueger.tokenize('module Demo = 1');
+
+    expectEnvelope(tokens);
+    expect(tokens.ok).toBe(true);
+    expect(tokens.value?.map((token) => token.kind)).toEqual([
+      'Keyword',
+      'UpperIdentifier',
+      'Operator',
+      'Number'
+    ]);
+    expect(tokens.value?.[0]).toMatchObject({ lexeme: 'module', start: 0, end: 6 });
+  });
+
+  it('backs the Monaco token provider with the real loaded facade tokenizer by default', async () => {
+    await createKruegerClient({ facadeUrl });
+
+    const provider = createElmTokensProvider();
+    const state = provider.getInitialState();
+
+    expect(provider.tokenize('module Demo = 1', state).tokens).toEqual([
+      { startIndex: 0, scopes: 'keyword' },
+      { startIndex: 7, scopes: 'type.identifier' },
+      { startIndex: 12, scopes: 'operator' },
+      { startIndex: 14, scopes: 'number' }
+    ]);
   });
 });

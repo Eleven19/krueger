@@ -8,7 +8,7 @@ import scala.scalajs.js.annotation.JSImport
 /** Minimal Scala.js facade over the `monaco-editor` npm package.
   *
   * We expose only the slice the playground needs: create an editor bound to a DOM element, read/write its content,
-  * subscribe to content changes, and register a language + Monarch tokenizer. The full Monaco surface is vast; adding
+  * subscribe to content changes, and register a language + token provider. The full Monaco surface is vast; adding
   * more bindings here is cheap, but resist the urge until something actually calls them.
   *
   * @note
@@ -42,6 +42,21 @@ object MonacoFacade:
         def register(definition: LanguageExtensionPoint): Unit           = js.native
         def getLanguages(): js.Array[LanguageExtensionPoint]             = js.native
         def setMonarchTokensProvider(id: String, rules: js.Object): Unit = js.native
+        def setTokensProvider(id: String, provider: TokensProvider): Unit = js.native
+
+    trait TokensProvider extends js.Object:
+        def getInitialState(): IState
+        def tokenize(line: String, state: IState): ILineTokens
+
+    trait IState extends js.Object
+
+    trait ILineTokens extends js.Object:
+        var endState: IState
+        var tokens: js.Array[IToken]
+
+    trait IToken extends js.Object:
+        var startIndex: Int
+        var scopes: String
 
     /** Options object passed to `editor.create`. Every field is optional; the playground fills in what it needs. */
     trait EditorOptions extends js.Object:

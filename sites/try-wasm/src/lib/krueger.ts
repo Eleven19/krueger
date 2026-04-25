@@ -1,3 +1,5 @@
+import type { ElmToken } from './elm-language';
+
 export type CompilerError = {
   phase: string;
   message: string;
@@ -36,6 +38,7 @@ type RawKruegerFacade = {
   parseQuery(query: string): unknown;
   runQuery(query: unknown, root: unknown): unknown;
   prettyQuery(query: unknown): string;
+  tokenize(source: string): unknown;
 };
 
 export type KruegerClient = {
@@ -44,12 +47,11 @@ export type KruegerClient = {
   parseQuery(query: string): CompilerEnvelope<unknown>;
   runQuery(query: unknown, root: unknown): CompilerEnvelope<MatchView[]>;
   prettyQuery(query: unknown): string;
+  tokenize(source: string): CompilerEnvelope<ElmToken[]>;
 };
 
-const defaultFacadeUrl = '/wasm/facade/main.js';
-
 export async function createKruegerClient(options: KruegerClientOptions = {}): Promise<KruegerClient> {
-  const facade = await loadFacade(options.facadeUrl ?? defaultFacadeUrl);
+  const facade = await loadFacade(options.facadeUrl ?? defaultFacadeUrl());
 
   return {
     parseCst(source) {
@@ -66,8 +68,16 @@ export async function createKruegerClient(options: KruegerClientOptions = {}): P
     },
     prettyQuery(query) {
       return facade.prettyQuery(query);
+    },
+    tokenize(source) {
+      return invokeEnvelope<ElmToken[]>(() => facade.tokenize(source), normalizeTokens);
     }
   };
+}
+
+function defaultFacadeUrl(): string {
+  if (typeof globalThis.location === 'undefined') return '/wasm/facade/main.js';
+  return new URL('wasm/facade/main.js', globalThis.location.href).href;
 }
 
 async function loadFacade(facadeUrl: string): Promise<RawKruegerFacade> {
@@ -78,6 +88,7 @@ async function loadFacade(facadeUrl: string): Promise<RawKruegerFacade> {
     throw new Error(`Krueger facade was not exported by ${facadeUrl}`);
   }
 
+  globalThis.Krueger = candidate;
   return candidate;
 }
 
@@ -123,6 +134,41 @@ function normalizeMatches(value: unknown): MatchView[] {
       captures: normalizeCaptures(record.captures)
     };
   });
+}
+
+function normalizeTokens(value: unknown): ElmToken[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((raw) => {
+    const record = asRecord(raw);
+    return {
+      kind: normalizeTokenKind(record.kind),
+      lexeme: String(record.lexeme ?? ''),
+      start: Number(record.start ?? 0),
+      end: Number(record.end ?? 0)
+    };
+  });
+}
+
+function normalizeTokenKind(value: unknown): ElmToken['kind'] {
+  const rendered = String(value);
+  if (
+    rendered === 'Keyword' ||
+    rendered === 'LowerIdentifier' ||
+    rendered === 'UpperIdentifier' ||
+    rendered === 'Operator' ||
+    rendered === 'Number' ||
+    rendered === 'StringLiteral' ||
+    rendered === 'CharLiteral' ||
+    rendered === 'Comment' ||
+    rendered === 'Whitespace' ||
+    rendered === 'Newline' ||
+    rendered === 'Punctuation' ||
+    rendered === 'Unknown'
+  ) {
+    return rendered;
+  }
+  return 'Unknown';
 }
 
 function normalizeCaptures(value: unknown): Record<string, CapturedNode> {
@@ -178,7 +224,8 @@ function isKruegerFacade(value: unknown): value is RawKruegerFacade {
     typeof record.parseAst === 'function' &&
     typeof record.parseQuery === 'function' &&
     typeof record.runQuery === 'function' &&
-    typeof record.prettyQuery === 'function'
+    typeof record.prettyQuery === 'function' &&
+    typeof record.tokenize === 'function'
   );
 }
 

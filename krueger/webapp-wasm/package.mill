@@ -60,11 +60,16 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
 
     private def copyChildren(from: os.Path, to: os.Path): Int =
         var copied = 0
-        for (child <- os.list(from)) {
-            os.copy.into(child, to, replaceExisting = true)
+        for (child <- os.list(from) if !child.last.endsWith(".map")) {
+            val target = to / child.last
+            if (child.last.endsWith(".js")) os.write.over(target, stripSourceMapReference(os.read(child)))
+            else os.copy.over(child, target)
             copied += 1
         }
         copied
+
+    private def stripSourceMapReference(source: String): String =
+        source.linesIterator.filterNot(_.startsWith("//# sourceMappingURL=")).mkString("\n") + "\n"
 
     object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with TestModule.ZioTest {
         override def sources = Task.Sources(

@@ -12,7 +12,10 @@ import io.eleven19.krueger.compiler.MatchView
 import io.eleven19.krueger.compiler.Span
 import io.eleven19.krueger.cst.CstModule
 import io.eleven19.krueger.cst.CstNode
+import io.eleven19.krueger.lexer.ElmToken
+import io.eleven19.krueger.lexer.ElmTokenizer
 import io.eleven19.krueger.trees.query.Query
+import io.eleven19.krueger.trees.query.QueryLogic
 
 /** Plain-JS FFI facade over the shared [[CompilerComponent]]. Exposed as the
   * top-level `Krueger` binding in the emitted ES module so a framework-agnostic
@@ -68,6 +71,10 @@ object KruegerJs:
     @JSExport
     def prettyQuery(q: js.Any): String = BackendLoader.current().prettyQuery(q.asInstanceOf[Query])
 
+    @JSExport
+    def tokenize(src: String): js.Object =
+        envelopeWithTokens(ElmTokenizer.run(src))
+
     // ------------------------------------------------------------------
     // Envelope helpers
     // ------------------------------------------------------------------
@@ -106,7 +113,22 @@ object KruegerJs:
         attachLogsAndErrors(env, r)
         env.asInstanceOf[js.Object]
 
-    private def attachLogsAndErrors[A](env: js.Dynamic, r: CompileResult[Unit, A]): Unit =
+    private def envelopeWithTokens(r: ElmTokenizer.TokenizeResult[Vector[ElmToken]]): js.Object =
+        val env = js.Dynamic.literal()
+        r.value match
+            case Right(tokens) =>
+                env.updateDynamic("ok")(true)
+                env.updateDynamic("value")(tokens.map(tokenPojo).toJSArray.asInstanceOf[js.Any])
+            case Left(_) =>
+                env.updateDynamic("ok")(false)
+                env.updateDynamic("value")(null)
+        attachLogsAndErrors(env, r)
+        env.asInstanceOf[js.Object]
+
+    private def attachLogsAndErrors[Ctx, A](
+        env: js.Dynamic,
+        r: QueryLogic.Result[Ctx, String, CompileError, A]
+    ): Unit =
         env.updateDynamic("logs")(r.logs.toJSArray.asInstanceOf[js.Any])
         env.updateDynamic("errors")(r.errors.map(errorPojo).toJSArray.asInstanceOf[js.Any])
 
@@ -133,6 +155,14 @@ object KruegerJs:
         val o = js.Dynamic.literal(rootNodeType = m.rootNodeType, captures = captures)
         m.rootText.foreach(t => o.updateDynamic("rootText")(t))
         o.asInstanceOf[js.Object]
+
+    private def tokenPojo(t: ElmToken): js.Object =
+        js.Dynamic.literal(
+            kind = t.kind.toString,
+            lexeme = t.lexeme,
+            start = t.start,
+            end = t.end
+        ).asInstanceOf[js.Object]
 
     private def capturedNodePojo(n: CapturedNode): js.Object =
         val o = js.Dynamic.literal(nodeType = n.nodeType, childCount = n.childCount)

@@ -116,6 +116,33 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 assertTrue(hasEnvelopeShape(env))
             }
         ),
+        suite("shared tokenizer facade")(
+            test("tokenize returns plain JS token POJOs with spans and kinds") {
+                val env    = dyn(KruegerJs.tokenize("""module Main = "hi""""))
+                val tokens = env.value.asInstanceOf[js.Array[js.Dynamic]]
+
+                assertTrue(
+                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
+                    env.ok.asInstanceOf[Boolean],
+                    tokens.length == 4,
+                    tokens(0).kind.asInstanceOf[String] == "Keyword",
+                    tokens(0).lexeme.asInstanceOf[String] == "module",
+                    tokens(0).start.asInstanceOf[Int] == 0,
+                    tokens(0).end.asInstanceOf[Int] == 6,
+                    tokens(3).kind.asInstanceOf[String] == "StringLiteral"
+                )
+            },
+            test("tokenize recovers unknown input as token value plus logs") {
+                val env    = dyn(KruegerJs.tokenize("main @ value"))
+                val tokens = env.value.asInstanceOf[js.Array[js.Dynamic]]
+
+                assertTrue(
+                    env.ok.asInstanceOf[Boolean],
+                    tokens.exists(_.kind.asInstanceOf[String] == "Unknown"),
+                    arrayLen(env.logs) >= 1
+                )
+            }
+        ),
         suite("runQuery over parsed CST + query (REQ-webappwasm-001)")(
             test("valid source + valid query returns ok=true and value is a JS array") {
                 val cstEnv = dyn(KruegerJs.parseCst(validSource))

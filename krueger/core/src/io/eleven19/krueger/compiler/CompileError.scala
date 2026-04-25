@@ -1,6 +1,6 @@
 package io.eleven19.krueger.compiler
 
-/** Structured compilation diagnostics emitted by [[CompilerComponent]].
+/** Structured compilation diagnostics emitted by Krueger compiler and tooling APIs.
   *
   * Cases carry enough context (phase, message, optional span) so downstream UIs can render actionable errors without
   * re-parsing messages.

@@ -2,50 +2,59 @@ package io.eleven19.krueger.webapp.monaco
 
 import scala.scalajs.js
 
-import io.eleven19.krueger.lexer.ElmLexer
+import io.eleven19.krueger.lexer.ElmTokenKind
+import io.eleven19.krueger.lexer.ElmTokenizer
 
 /** Monaco language descriptor for the Elm dialect Krueger parses.
   *
-  * The keyword and operator sets are sourced directly from [[ElmLexer]] so a parser change automatically updates the
-  * editor highlighting. [[ElmLanguageSpec]] pins that equality as a test-time contract — any drift fails CI rather than
-  * shipping mismatched highlights.
+  * Highlighting is sourced from the shared core tokenizer so parser-facing and UI-facing token categories stay aligned.
   *
   * All Monaco touch-points live behind [[register]], keeping the rest of this object callable from Node (where
-  * `monaco-editor` is not resolvable) so tests can assert on the pure data.
+  * `monaco-editor` is not resolvable) so tests can assert on the pure token adapter.
   */
 object ElmLanguage:
 
     val id: String = "elm"
 
-    val keywords: Set[String]  = ElmLexer.keywords
-    val operators: Set[String] = ElmLexer.operators
+    final case class TokenSpan(startIndex: Int, scope: String) derives CanEqual
 
-    /** Monarch tokenizer definition. Built lazily as a plain JS object so tests can inspect shape without running
-      * Monaco. Rules are intentionally simple — we want sensible highlighting, not a full parser.
-      */
-    lazy val monarchDefinition: js.Object =
-        val operatorChars = "+-*/<>=&|^!~%?:.\\\\"
-        val defaultCases = js.Dictionary[js.Any](
-            "@keywords" -> "keyword",
-            "@default"  -> "identifier"
-        )
-        val ops = js.Array(operators.toSeq.sortBy(op => -op.length)*)
-        val kws = js.Array(keywords.toSeq.sorted*)
+    def scopeFor(kind: ElmTokenKind): String = kind match
+        case ElmTokenKind.Keyword         => "keyword"
+        case ElmTokenKind.LowerIdentifier => "identifier"
+        case ElmTokenKind.UpperIdentifier => "type.identifier"
+        case ElmTokenKind.Operator        => "operator"
+        case ElmTokenKind.Number          => "number"
+        case ElmTokenKind.StringLiteral   => "string"
+        case ElmTokenKind.CharLiteral     => "string"
+        case ElmTokenKind.Comment         => "comment"
+        case ElmTokenKind.Whitespace      => "white"
+        case ElmTokenKind.Newline         => "white"
+        case ElmTokenKind.Punctuation     => "delimiter"
+        case ElmTokenKind.Unknown         => "invalid"
 
-        val tokenizerRoot = js.Array[js.Any](
-            js.Array[js.Any](js.RegExp("^[a-z][\\w]*"), js.Dictionary("cases" -> defaultCases)),
-            js.Array[js.Any](js.RegExp("^[A-Z][\\w]*"), "type"),
-            js.Array[js.Any](js.RegExp("^\\d+(\\.\\d+)?"), "number"),
-            js.Array[js.Any](js.RegExp("^\"([^\"\\\\]|\\\\.)*\""), "string"),
-            js.Array[js.Any](js.RegExp("^--.*$"), "comment"),
-            js.Array[js.Any](js.RegExp(s"^[$operatorChars]+"), "operator")
+    def tokenSpans(line: String): Vector[TokenSpan] =
+        val result = ElmTokenizer.run(line)
+        result.value.fold(
+            _ => Vector(TokenSpan(0, "invalid")),
+            tokens => tokens.filterNot(_.kind == ElmTokenKind.Newline).map(t => TokenSpan(t.start, scopeFor(t.kind)))
         )
 
-        js.Dynamic.literal(
-            keywords = kws,
-            operators = ops,
-            tokenizer = js.Dynamic.literal(root = tokenizerRoot)
-        )
+    lazy val tokensProvider: MonacoFacade.TokensProvider = new MonacoFacade.TokensProvider:
+        private lazy val state: MonacoFacade.IState =
+            js.Dynamic.literal(
+                clone = () => state,
+                equals = (_: MonacoFacade.IState) => true
+            ).asInstanceOf[MonacoFacade.IState]
+
+        def getInitialState(): MonacoFacade.IState = state
+
+        def tokenize(line: String, previousState: MonacoFacade.IState): MonacoFacade.ILineTokens =
+            js.Dynamic.literal(
+                endState = state,
+                tokens = js.Array(tokenSpans(line).map(span =>
+                    js.Dynamic.literal(startIndex = span.startIndex, scopes = span.scope).asInstanceOf[MonacoFacade.IToken]
+                )*)
+            ).asInstanceOf[MonacoFacade.ILineTokens]
 
     /** Idempotently register Elm with Monaco. Safe to call twice — the second call is a no-op because Monaco's
       * `getLanguages` will already list the id.
@@ -60,4 +69,4 @@ object ElmLanguage:
         if !alreadyThere then
             val ext = js.Dynamic.literal(id = id).asInstanceOf[MonacoFacade.LanguageExtensionPoint]
             monaco.languages.register(ext)
-            monaco.languages.setMonarchTokensProvider(id, monarchDefinition)
+            monaco.languages.setTokensProvider(id, tokensProvider)

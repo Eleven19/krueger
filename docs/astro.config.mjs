@@ -23,5 +23,10 @@ export default defineConfig({
     worker: {
       format: 'es',
     },
+    build: {
+      // Monaco is intentionally bundled for the Laminar playground; keep the
+      // build output signal focused on unexpected warnings.
+      chunkSizeWarningLimit: 5000,
+    },
   },
 });
