@@ -197,6 +197,14 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     expect(screen.getByText('CstValueDeclaration')).not.toBeNull();
   });
 
+  it('styles quoted node values through the dedicated tree value color token', () => {
+    render(ResultsPanel, resultProps({ selectedPanel: 'cst' }));
+
+    const quotedValue = screen.getByText('"main"');
+
+    expect(quotedValue.getAttribute('style')).toContain('var(--kr-tree-value)');
+  });
+
   it('filters visible nodes and shows a no-match state when the search misses', async () => {
     render(ResultsPanel, resultProps({ selectedPanel: 'cst' }));
 

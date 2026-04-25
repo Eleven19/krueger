@@ -211,6 +211,7 @@ main = 42
     /* Starlight default accent (--sl-color-accent in dark mode) */
     --kr-accent: hsl(224, 100%, 60%);
     --kr-accent-soft: hsl(224, 100%, 85%);
+    --kr-tree-value: var(--kr-accent-soft);
     /* Brand text color — mirrors Starlight's `--sl-color-text-accent`,
        which resolves to the soft lavender on dark and the saturated
        accent on light. Drives the `Krueger` wordmark in SiteHeader. */
@@ -238,6 +239,7 @@ main = 42
     --kr-muted: hsl(224, 7%, 36%);
     --kr-accent: hsl(234, 90%, 60%);
     --kr-accent-soft: hsl(234, 88%, 90%);
+    --kr-tree-value: hsl(234, 68%, 56%);
     /* In light mode the soft variant is too pale on white; pull from the
        saturated accent instead so the brand stays readable. */
     --kr-brand: var(--kr-accent);

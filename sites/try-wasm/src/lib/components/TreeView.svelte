@@ -222,7 +222,9 @@
       <span class="node-type">{entry.node.type}</span>
 
       {#if entry.node.value != null}
-        <span class="node-value">{JSON.stringify(entry.node.value)}</span>
+        <span class="node-value" style:color="var(--kr-tree-value)">
+          {JSON.stringify(entry.node.value)}
+        </span>
       {/if}
 
       <span class="node-count">{childCountLabel(entry.node)}</span>
@@ -379,7 +381,6 @@
 
   .node-value {
     overflow: hidden;
-    color: var(--kr-accent-soft);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
