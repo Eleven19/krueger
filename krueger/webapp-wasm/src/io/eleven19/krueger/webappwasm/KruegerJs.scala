@@ -17,26 +17,22 @@ import io.eleven19.krueger.lexer.ElmTokenizer
 import io.eleven19.krueger.trees.query.Query
 import io.eleven19.krueger.trees.query.QueryLogic
 
-/** Plain-JS FFI facade over the shared [[CompilerComponent]]. Exposed as the
-  * top-level `Krueger` binding in the emitted ES module so a framework-agnostic
-  * front-end (in particular the SvelteKit `sites/try-wasm/` playground) can
-  * drive the compiler from TypeScript without touching Scala types.
+/** Plain-JS FFI facade over the shared [[CompilerComponent]]. Exposed as the top-level `Krueger` binding in the emitted
+  * ES module so a framework-agnostic front-end (in particular the SvelteKit `sites/try-wasm/` playground) can drive the
+  * compiler from TypeScript without touching Scala types.
   *
-  * Every entry point runs the PureLogic effect at the boundary (via
-  * [[CompilerComponent.runUnit]]) and serializes the [[QueryLogic.Result]] into
-  * a stable envelope:
+  * Every entry point runs the PureLogic effect at the boundary (via [[CompilerComponent.runUnit]]) and serializes the
+  * [[QueryLogic.Result]] into a stable envelope:
   *
   * {{{
   *   { ok: boolean, value: T | null, logs: string[], errors: ErrorPojo[] }
   * }}}
   *
-  * The `Logic` type itself never crosses the JS boundary. Callers receive a
-  * plain object whose shape is pinned by [[KruegerJsSpec]] per
-  * REQ-webappwasm-001..003.
+  * The `Logic` type itself never crosses the JS boundary. Callers receive a plain object whose shape is pinned by
+  * [[KruegerJsSpec]] per REQ-webappwasm-001..003.
   *
-  * `runQuery` is intentionally specialised to [[CstModule]] roots for MVP —
-  * all current consumers drive the playground through `parseCst -> runQuery`.
-  * An AST-root variant can be added alongside once the SvelteKit UI needs it.
+  * `runQuery` is intentionally specialised to [[CstModule]] roots for MVP — all current consumers drive the playground
+  * through `parseCst -> runQuery`. An AST-root variant can be added alongside once the SvelteKit UI needs it.
   */
 @JSExportTopLevel("Krueger")
 object KruegerJs:
@@ -45,31 +41,30 @@ object KruegerJs:
 
     @JSExport
     def parseCst(src: String): js.Object =
-        envelopeWithOpaqueValue(BackendLoader.current().parseCst(src))
+        envelopeWithOpaqueValue(LinkedCompilerBackend.parseCst(src))
 
     @JSExport
     def parseAst(src: String): js.Object =
-        envelopeWithOpaqueValue(BackendLoader.current().parseAst(src))
+        envelopeWithOpaqueValue(LinkedCompilerBackend.parseAst(src))
 
     @JSExport
     def parseQuery(q: String): js.Object =
-        envelopeWithOpaqueValue(BackendLoader.current().parseQuery(q))
+        envelopeWithOpaqueValue(LinkedCompilerBackend.parseQuery(q))
 
-    /** Execute a previously-parsed [[Query]] against a previously-parsed
-      * [[CstModule]]. Both handles must come from earlier `parseQuery` /
-      * `parseCst` calls — the wrapping Scala values are passed back through
-      * the JS boundary as opaque references, not serialized JSON.
+    /** Execute a previously-parsed [[Query]] against a previously-parsed [[CstModule]]. Both handles must come from
+      * earlier `parseQuery` / `parseCst` calls — the wrapping Scala values are passed back through the JS boundary as
+      * opaque references, not serialized JSON.
       */
     @JSExport
     def runQuery(q: js.Any, root: js.Any): js.Object =
         val qScala    = q.asInstanceOf[Query]
         val rootScala = root.asInstanceOf[CstNode]
-        val result    = BackendLoader.current().runQuery(qScala, rootScala)
+        val result    = LinkedCompilerBackend.runQuery(qScala, rootScala)
         envelopeWithMatches(result)
 
     /** Canonical echo of a parsed query. Pure — no envelope. */
     @JSExport
-    def prettyQuery(q: js.Any): String = BackendLoader.current().prettyQuery(q.asInstanceOf[Query])
+    def prettyQuery(q: js.Any): String = LinkedCompilerBackend.prettyQuery(q.asInstanceOf[Query])
 
     @JSExport
     def tokenize(src: String): js.Object =
@@ -79,11 +74,9 @@ object KruegerJs:
     // Envelope helpers
     // ------------------------------------------------------------------
 
-    /** Used by parseCst/parseAst/parseQuery: the success value is a Scala
-      * handle (CstModule / AstModule / Query) and we pass it back through the
-      * FFI as an opaque reference. The SvelteKit side never inspects the
-      * internals — it only round-trips the handle into `runQuery` /
-      * `prettyQuery`.
+    /** Used by parseCst/parseAst/parseQuery: the success value is a Scala handle (CstModule / AstModule / Query) and we
+      * pass it back through the FFI as an opaque reference. The SvelteKit side never inspects the internals — it only
+      * round-trips the handle into `runQuery` / `prettyQuery`.
       */
     private def envelopeWithOpaqueValue[A <: AnyRef](r: CompileResult[Unit, A]): js.Object =
         val env = js.Dynamic.literal()
@@ -97,9 +90,8 @@ object KruegerJs:
         attachLogsAndErrors(env, r)
         env.asInstanceOf[js.Object]
 
-    /** Used by runQuery: the success value is a List[MatchView] and we
-      * serialize it to a plain JS array of POJOs so consumers don't need to
-      * import any Scala.js runtime helpers.
+    /** Used by runQuery: the success value is a List[MatchView] and we serialize it to a plain JS array of POJOs so
+      * consumers don't need to import any Scala.js runtime helpers.
       */
     private def envelopeWithMatches(r: CompileResult[Unit, List[MatchView]]): js.Object =
         val env = js.Dynamic.literal()
@@ -157,12 +149,14 @@ object KruegerJs:
         o.asInstanceOf[js.Object]
 
     private def tokenPojo(t: ElmToken): js.Object =
-        js.Dynamic.literal(
-            kind = t.kind.toString,
-            lexeme = t.lexeme,
-            start = t.start,
-            end = t.end
-        ).asInstanceOf[js.Object]
+        js.Dynamic
+            .literal(
+                kind = t.kind.toString,
+                lexeme = t.lexeme,
+                start = t.start,
+                end = t.end
+            )
+            .asInstanceOf[js.Object]
 
     private def capturedNodePojo(n: CapturedNode): js.Object =
         val o = js.Dynamic.literal(nodeType = n.nodeType, childCount = n.childCount)

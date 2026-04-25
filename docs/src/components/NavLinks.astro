@@ -1,14 +1,12 @@
 ---
 /**
- * Shared primary-nav links used by both the Starlight Header override
- * (`Header.astro`) and the standalone `/try/` playground page
- * (`src/pages/try.astro`). Extracted so the two pages render the same
- * Docs / Try ▾ / API structure without either depending on the other.
- *
- * Deliberately framework-inert: no Starlight virtual imports, no use of
- * `Astro.locals`. That makes it safe to render outside Starlight's
- * routing context — the try.astro page in particular is a plain Astro
- * page that does not flow through Starlight's layout pipeline.
+ * Shared primary-nav links used by the Starlight Header override
+ * (`Header.astro`). The previous version included a "Try ▾" dropdown
+ * with two playgrounds (Laminar/Scala.js and SvelteKit/WASM); the
+ * Laminar entry has been removed and the SvelteKit playground at
+ * `/krueger/try/` (sourced from `sites/try-wasm/`) is now the
+ * canonical playground. The dropdown is therefore collapsed to a
+ * single anchor.
  *
  * Active-route highlighting mirrors Header.astro: derived from
  * `Astro.url.pathname` after normalising trailing slashes, so
@@ -22,10 +20,8 @@ function norm(p: string): string {
 }
 
 const pathname = norm(Astro.url.pathname);
-const inTry = pathname === norm(`${base}/try`) || pathname.startsWith(norm(`${base}/try/`));
 const inTryWasm =
-    pathname === norm(`${base}/try-wasm`) || pathname.startsWith(norm(`${base}/try-wasm/`));
-const inAnyTry = inTry || inTryWasm;
+    pathname === norm(`${base}/try`) || pathname.startsWith(norm(`${base}/try/`));
 ---
 
 <nav class="primary-nav" aria-label="Primary">
@@ -35,30 +31,11 @@ const inAnyTry = inTry || inTryWasm;
         href={`${base}/introduction/`}>Docs</a
     >
 
-    <details class="try-dropdown" data-active={inAnyTry ? 'true' : undefined}>
-        <summary>
-            Try
-            <span class="caret" aria-hidden="true">▾</span>
-        </summary>
-        <ul class="try-menu" role="menu">
-            <li role="none">
-                <a
-                    role="menuitem"
-                    href={`${base}/try/`}
-                    data-active={inTry && !inTryWasm ? 'true' : undefined}
-                    >Laminar <span class="subtle">Scala.js</span></a
-                >
-            </li>
-            <li role="none">
-                <a
-                    role="menuitem"
-                    href={`${base}/try-wasm/`}
-                    data-active={inTryWasm ? 'true' : undefined}
-                    >WASM <span class="subtle">SvelteKit</span></a
-                >
-            </li>
-        </ul>
-    </details>
+    <a
+        class="nav-link"
+        data-active={inTryWasm ? 'true' : undefined}
+        href={`${base}/try/`}>Try</a
+    >
 
     <a
         class="nav-link"
@@ -75,8 +52,7 @@ const inAnyTry = inTry || inTryWasm;
         font-size: var(--sl-text-sm, 0.875rem);
     }
 
-    .nav-link,
-    .try-dropdown > summary {
+    .nav-link {
         display: inline-flex;
         align-items: center;
         gap: 0.35em;
@@ -87,70 +63,12 @@ const inAnyTry = inTry || inTryWasm;
         cursor: pointer;
         white-space: nowrap;
     }
-    .nav-link:hover,
-    .try-dropdown > summary:hover,
-    .try-dropdown[open] > summary {
+    .nav-link:hover {
         color: var(--sl-color-white, #f7f7f7);
         background: var(--sl-color-gray-6, #2a2d35);
     }
-    .nav-link[data-active='true'],
-    .try-dropdown[data-active='true'] > summary {
+    .nav-link[data-active='true'] {
         color: var(--sl-color-white, #f7f7f7);
         font-weight: 600;
-    }
-
-    .try-dropdown {
-        position: relative;
-    }
-    .try-dropdown > summary {
-        list-style: none;
-    }
-    .try-dropdown > summary::-webkit-details-marker {
-        display: none;
-    }
-    .caret {
-        font-size: 0.7em;
-        transition: transform 150ms ease;
-    }
-    .try-dropdown[open] .caret {
-        transform: rotate(180deg);
-    }
-
-    .try-menu {
-        position: absolute;
-        top: calc(100% + 0.25rem);
-        left: 0;
-        min-width: 12rem;
-        margin: 0;
-        padding: 0.25rem;
-        list-style: none;
-        background: var(--sl-color-bg-nav, #1c1e24);
-        border: 1px solid var(--sl-color-gray-5, #2a2d35);
-        border-radius: 0.375rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 10;
-    }
-    .try-menu a {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0.4rem 0.6rem;
-        color: var(--sl-color-gray-1, #e7ebf0);
-        text-decoration: none;
-        border-radius: 0.25rem;
-        white-space: nowrap;
-    }
-    .try-menu a:hover,
-    .try-menu a:focus-visible {
-        background: var(--sl-color-gray-6, #2a2d35);
-        color: var(--sl-color-white, #f7f7f7);
-    }
-    .try-menu a[data-active='true'] {
-        color: var(--sl-color-white, #f7f7f7);
-        font-weight: 600;
-    }
-    .try-menu .subtle {
-        color: var(--sl-color-gray-3, #8a94a7);
-        font-size: 0.85em;
     }
 </style>

@@ -16,15 +16,14 @@ The top-level entrypoint is `io.eleven19.krueger.Krueger` (`parseModule`,
 `parseModuleToAst`, `parseCst`, …). Generated API HTML for each platform
 lives under [/krueger/api/](/krueger/api/).
 
-## Published docs and playgrounds
+## Published docs and playground
 
 The site at [eleven19.github.io/krueger](https://eleven19.github.io/krueger/)
-includes this handbook plus:
+includes this handbook plus a single browser playground:
 
 | Route | Stack | Purpose |
 | ----- | ----- | ------- |
-| [`/krueger/try/`](https://eleven19.github.io/krueger/try/) | Astro + Laminar + Scala.js | Full-bleed playground bundled with the docs app |
-| [`/krueger/try-wasm/`](https://eleven19.github.io/krueger/try-wasm/) | SvelteKit + Scala.js WASM | Same compiler UX with the WASM artifact and `Krueger` JS facade |
+| [`/krueger/try/`](https://eleven19.github.io/krueger/try/) | SvelteKit + Scala.js | Interactive playground with a runtime backend selector (WASM or JS). |
 
 To build that tree locally, see [Contributing → Docs site](/krueger/contributing/#docs-site).
 

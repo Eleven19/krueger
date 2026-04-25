@@ -92,10 +92,15 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: docs
 
-      - name: Run headless browser compiler facade parity check
+      - name: Run headless browser compiler facade parity check (JS-linked)
         run: |
           ./mill krueger.webapp-wasm.fullLinkJS
           npm --prefix docs run test:webapp-wasm-browser -- -- out/krueger/webapp-wasm/fullLinkJS.dest
+
+      - name: Run Wasm-linked compiler facade smoke
+        run: |
+          ./mill krueger.webapp-wasm.wasm.fullLinkJS
+          npm --prefix docs run test:wasm-facade-smoke
 
   build-native:
     name: Build & Test (Scala Native)
@@ -121,7 +126,7 @@ jobs:
         run: ./mill krueger.core.native.test
 
   build-docs:
-    name: Build Docs Site (Scaladoc + playgrounds + Astro)
+    name: Build Docs Site (Scaladoc + playground + Astro)
     needs: [build]
     runs-on: ubuntu-latest
     steps:
@@ -156,7 +161,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mill-docs-
 
-      - name: Build full site (Scaladoc, playgrounds, Astro, try-wasm stitch)
+      - name: Build full site (Scaladoc, playground, Astro, try-wasm stitch)
         run: ./mill docs.site
 
       - name: Verify docs.site outputs
@@ -169,8 +174,7 @@ jobs:
             docs/dist/api/jvm/index.html \
             docs/dist/api/js/index.html \
             docs/dist/api/native/index.html \
-            docs/dist/try-wasm/index.html \
-            docs/src/playground/generated/app/main.js \
+            docs/dist/try/index.html \
             sites/try-wasm/static/wasm/facade \
             sites/try-wasm/static/wasm/webgc; do
             if [ ! -e "$path" ]; then

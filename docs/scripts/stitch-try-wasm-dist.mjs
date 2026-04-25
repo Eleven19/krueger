@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
- * Copy sites/try-wasm/build into docs/dist/try-wasm (mirrors CI / docs.site stitch).
+ * Copy sites/try-wasm/build into docs/dist/try (mirrors CI / docs.site stitch).
  * Run after `npm run build` in docs/ so docs/dist exists.
+ *
+ * The source directory keeps the historical `try-wasm` name; only the
+ * deployment URL is `/krueger/try/`.
  */
 
 import { cpSync, existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
@@ -11,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
 const src = join(repoRoot, 'sites', 'try-wasm', 'build');
-const dest = join(repoRoot, 'docs', 'dist', 'try-wasm');
+const dest = join(repoRoot, 'docs', 'dist', 'try');
 
 function fail(msg) {
   console.error(`stitch-try-wasm-dist: FAIL — ${msg}`);

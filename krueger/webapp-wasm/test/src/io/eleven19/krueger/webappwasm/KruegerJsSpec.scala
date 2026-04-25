@@ -170,26 +170,22 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 )
             }
         ),
-        suite("supported WebGC backend routing")(
-            test("parseCst preserves the public envelope shape through the supported WebGC backend") {
-                val backend = BackendLoader.current()
-                val env     = KruegerJs.parseCst(validSource)
-                val d       = dyn(env)
+        suite("LinkedCompilerBackend routing")(
+            test("parseCst preserves the public envelope shape through the link-target compiler") {
+                val env = KruegerJs.parseCst(validSource)
+                val d   = dyn(env)
                 assertTrue(
-                    backend.id == "webgc",
                     d.hasOwnProperty("ok").asInstanceOf[Boolean],
                     d.hasOwnProperty("value").asInstanceOf[Boolean],
                     d.hasOwnProperty("logs").asInstanceOf[Boolean],
                     d.hasOwnProperty("errors").asInstanceOf[Boolean]
                 )
             },
-            test("runQuery returns results through the supported WebGC backend") {
-                val backend = BackendLoader.current()
-                val cstEnv  = dyn(KruegerJs.parseCst(validSource))
-                val qEnv    = dyn(KruegerJs.parseQuery(validQuery))
-                val env     = dyn(KruegerJs.runQuery(qEnv.value, cstEnv.value))
+            test("runQuery returns results through the link-target compiler") {
+                val cstEnv = dyn(KruegerJs.parseCst(validSource))
+                val qEnv   = dyn(KruegerJs.parseQuery(validQuery))
+                val env    = dyn(KruegerJs.runQuery(qEnv.value, cstEnv.value))
                 assertTrue(
-                    backend.id == "webgc",
                     env.ok.asInstanceOf[Boolean],
                     js.Array.isArray(env.value)
                 )

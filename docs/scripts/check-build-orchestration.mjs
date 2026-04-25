@@ -15,12 +15,9 @@ function fail(message) {
 const docsMill = await readFile(resolve(repoRoot, 'docs', 'package.mill'), 'utf8');
 const docsPackage = JSON.parse(await readFile(resolve(repoRoot, 'docs', 'package.json'), 'utf8'));
 
-if (!docsMill.includes('build.krueger.webapp.writeToDocsSrc()')) {
-    fail('docs.site must run krueger.webapp.writeToDocsSrc before Astro builds');
-}
-
-if (!docsMill.includes('build.krueger.`webapp-wasm`.writeToWasmSite()')) {
-    fail('docs.site must run krueger.webapp-wasm.writeToWasmSite before Astro/SvelteKit builds');
+if (!docsMill.includes('copyWasmArtifactsToTryWasm(') ||
+    !docsMill.includes('build.krueger.`webapp-wasm`.fullLinkJS()')) {
+    fail('docs.site must stage the krueger.webapp-wasm + compiler-api.wasm artifacts (via copyWasmArtifactsToTryWasm) before Astro/SvelteKit builds');
 }
 
 if (!docsMill.includes('runTryWasmNpmBuild(') || !docsMill.includes('copyTryWasmBuildInto(')) {
@@ -31,8 +28,16 @@ if (!docsMill.includes('prepareLocalDevSite')) {
     fail('docs.package.mill must expose docs.prepareLocalDevSite for full local dev');
 }
 
+if (docsMill.includes('build.krueger.webapp.') || docsMill.includes('copyWebappBundleToDocsSrc')) {
+    fail('docs.package.mill must not reference the removed Laminar `webapp` module');
+}
+
 if (docsPackage.scripts['build:wasm'] !== 'cd .. && ./mill krueger.webapp-wasm.writeToWasmSite') {
     fail('docs/package.json must expose build:wasm for local and CI orchestration');
+}
+
+if (docsPackage.scripts['build:webapp']) {
+    fail('docs/package.json must not expose build:webapp (Laminar bundle removed)');
 }
 
 if (!docsPackage.scripts['build:full']?.includes('npm run build:wasm')) {
@@ -45,6 +50,10 @@ if (!docsPackage.scripts['build:full']?.includes('npm run build:try-wasm')) {
 
 if (!docsPackage.scripts['build:full']?.includes('npm run stitch:try-wasm')) {
     fail('docs/package.json build:full must stitch try-wasm into docs/dist');
+}
+
+if (docsPackage.scripts['build:full']?.includes('npm run build:webapp')) {
+    fail('docs/package.json build:full must not invoke removed build:webapp step');
 }
 
 if (docsPackage.scripts['prepare:try-wasm'] !== 'cd .. && ./mill docs.prepareLocalDevSite') {

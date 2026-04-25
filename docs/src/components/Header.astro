@@ -6,16 +6,11 @@
  * ThemeSelect, LanguageSelect) via `virtual:starlight/components/*` so the
  * default ergonomics (search shortcut, theme toggle, GitHub link) keep
  * working, and inserts a middle nav group via the shared
- * [NavLinks](./NavLinks.astro) component that adds links to the Try Krueger
- * playgrounds (Docs / Try ▾ / API).
+ * [NavLinks](./NavLinks.astro) component (Docs / Try / API).
  *
- * The middle nav is factored into its own component because the
- * `/try/` playground page (src/pages/try.astro) is a plain Astro page
- * that does not flow through Starlight's layout pipeline, and therefore
- * cannot render SiteTitle/Search/ThemeSelect/LanguageSelect (those read
- * `Astro.locals.starlightRoute`, which is only populated on Starlight
- * routes). The shared nav links themselves are framework-inert and used
- * in both places.
+ * The middle nav lives in its own component so the SvelteKit playground
+ * shipped under `/krueger/try/` and any other non-Starlight surface
+ * can render the same nav without depending on `Astro.locals.starlightRoute`.
  */
 
 import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
@@ -37,11 +32,11 @@ const shouldRenderSearch =
     <SiteTitle />
   </div>
 
-  <NavLinks />
-
   <div class="sl-flex print:hidden search-wrapper">
     {shouldRenderSearch && <Search />}
   </div>
+
+  <NavLinks />
 
   <div class="sl-hidden md:sl-flex print:hidden right-group">
     <div class="sl-flex social-icons">
@@ -69,15 +64,34 @@ const shouldRenderSearch =
       min-width: 0;
     }
 
+    /* Let the search bar stretch to fill the gap between the title and
+       the nav cluster — same visual as Starlight's stock header where
+       search is the only middle element. The flex-grow takes whatever
+       space `.title-wrapper`, `.primary-nav`, and `.right-group` don't
+       claim; the search input itself is centered inside the wrapper via
+       Starlight's own `--sl-search-width` variable. */
+    .search-wrapper {
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+    .search-wrapper :global(> *) {
+      flex: 1 1 auto;
+    }
+
     .right-group,
     .social-icons {
       gap: 1rem;
       align-items: center;
     }
-    .social-icons::after {
+    /* Vertical separator between the primary nav (Docs / Try / API) and
+       the trailing GitHub / theme / language group. Replaces the previous
+       trailing separator after the social icons — the visual seam now sits
+       between the link cluster and the icon cluster. */
+    .right-group::before {
       content: '';
+      align-self: center;
       height: 2rem;
-      border-inline-end: 1px solid var(--sl-color-gray-5);
+      border-inline-start: 1px solid var(--sl-color-gray-5);
     }
 
     @media (min-width: 50rem) {

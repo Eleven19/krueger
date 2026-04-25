@@ -36,8 +36,17 @@ trait CommonScalaJSModule extends ScalaJSModule with scalafmt.ScalafmtModule {
   * Safari 18.2+ (browsers with Wasm GC).
   *
   * @note
-  *   The WebAssembly backend silently ignores `@JSExport` and `@JSExportAll`. FFI surfaces that need JS exports should
-  *   use a conventional JS variant; WASM variants expose behavior through explicit ES-module entry points instead.
+  *   The WebAssembly backend treats `@JSExport*` annotations differently from the JS linker:
+  *   - `@JSExport` on object/class members is silently dropped — those members are not callable from JS.
+  *   - `@JSExportTopLevel` on a top-level **`val`** IS honored: the linker generates an import-callback that
+  *     populates the named ES-module export with the val's value. So FFI surfaces that need a populated namespace
+  *     should expose it as `@JSExportTopLevel("Name") val foo: js.Object = js.Dynamic.literal(...)` rather than as an
+  *     `@JSExportTopLevel object` (the latter produces an empty namespace under the Wasm linker).
+  *   - `@JSExportTopLevel` on an `object` produces the ES-module export but with no members, since the per-member
+  *     `@JSExport` annotations are dropped.
+  *
+  *   The `webapp-wasm.wasm` submodule's `WasmFacade` uses the val pattern; the JS-linked `webapp-wasm` module reuses
+  *   the conventional `@JSExportTopLevel object` pattern under the JS linker, where it works as expected.
   */
 trait CommonScalaJSWasmModule extends CommonScalaJSModule {
   override def scalaJSExperimentalUseWebAssembly: T[Boolean] = Task { true }
