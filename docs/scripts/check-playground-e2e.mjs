@@ -107,7 +107,6 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
     );
     await page.getByRole('tab', { name: 'Matches' }).click();
     await page.getByRole('tabpanel', { name: 'Matches' }).waitFor();
-    const wasmRequestsAfterSelection = wasmRequests.slice(wasmRequestsBeforeSelection);
 
     await fillMonacoEditor(page, 0, validSource, `/try/ (${backendId}) Elm source`);
     await fillMonacoEditor(page, 1, validQuery, `/try/ (${backendId}) query`);
@@ -134,6 +133,7 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
         );
       }
     } else {
+      const wasmRequestsAfterSelection = wasmRequests.slice(wasmRequestsBeforeSelection);
       if (wasmRequestsAfterSelection.length > 0) {
         fail(
           `/try/ (js): expected zero .wasm requests after selecting JS, observed: ${JSON.stringify(wasmRequestsAfterSelection)}`
