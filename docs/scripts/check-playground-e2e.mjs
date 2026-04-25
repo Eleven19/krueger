@@ -16,6 +16,7 @@ const validSource = `module Demo exposing (..)
 main = 42
 `;
 const validQuery = '(CstValueDeclaration) @decl';
+const matchRootSelector = '.krueger-match-root, .match-root';
 
 const contentTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -92,25 +93,32 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
   try {
     await page.goto(`${baseUrl}/try/`, { waitUntil: 'domcontentloaded' });
 
-    // Wait for the backend selector to be present, then switch (or confirm) it.
+    // The backend selector lives inside the Settings panel, not on the
+    // default Matches view. Follow the actual activity-bar flow before
+    // returning to Matches for the existing assertions.
+    await page.getByRole('tab', { name: 'Settings' }).click();
     await page.waitForSelector('select[aria-label="Compiler backend"]');
+    const wasmRequestsBeforeSelection = wasmRequests.length;
     await page.selectOption('select[aria-label="Compiler backend"]', backendId);
     await page.waitForFunction(
       (id) =>
         document.querySelector('select[aria-label="Compiler backend"]')?.value === id,
       backendId
     );
+    await page.getByRole('tab', { name: 'Matches' }).click();
+    await page.getByRole('tabpanel', { name: 'Matches' }).waitFor();
+    const wasmRequestsAfterSelection = wasmRequests.slice(wasmRequestsBeforeSelection);
 
     await fillMonacoEditor(page, 0, validSource, `/try/ (${backendId}) Elm source`);
     await fillMonacoEditor(page, 1, validQuery, `/try/ (${backendId}) query`);
 
     await expectText(
       page,
-      '.krueger-match-root',
+      matchRootSelector,
       'CstValueDeclaration',
       `/try/ (${backendId}) matches panel`
     );
-    const matchRoot = await page.locator('.krueger-match-root').first().textContent();
+    const matchRoot = await page.locator(matchRootSelector).first().textContent();
 
     // Per-backend network expectations: the WASM pass MUST fetch main.wasm;
     // the JS pass MUST NOT (it loads only `wasm/facade/main.js`). This is
@@ -126,9 +134,9 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
         );
       }
     } else {
-      if (wasmRequests.length > 0) {
+      if (wasmRequestsAfterSelection.length > 0) {
         fail(
-          `/try/ (js): expected zero .wasm requests, observed: ${JSON.stringify(wasmRequests)}`
+          `/try/ (js): expected zero .wasm requests after selecting JS, observed: ${JSON.stringify(wasmRequestsAfterSelection)}`
         );
       }
     }
