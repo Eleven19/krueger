@@ -34,6 +34,18 @@
   } = $props();
 
   const label = $derived(panelLabel(selectedPanel));
+  const cstDisplayResult = $derived(selectTreeDisplayResult(cstUnistResult, cstResult));
+  const astDisplayResult = $derived(selectTreeDisplayResult(astUnistResult, astResult));
+
+  function selectTreeDisplayResult(
+    preferred: CompilerEnvelope<unknown>,
+    fallback: CompilerEnvelope<unknown>
+  ): CompilerEnvelope<unknown> {
+    if (preferred.ok) return preferred;
+    if (fallback.ok) return fallback;
+    if (preferred.errors.length > 0) return preferred;
+    return fallback;
+  }
 </script>
 
 <div class="results-panel" role="tabpanel" aria-label={label}>
@@ -45,9 +57,9 @@
     {#if selectedPanel === 'matches'}
       <MatchesView result={matchResult} />
     {:else if selectedPanel === 'cst'}
-      <TreeView result={cstUnistResult} label="CST" />
+      <TreeView result={cstDisplayResult} label="CST" />
     {:else if selectedPanel === 'ast'}
-      <TreeView result={astUnistResult} label="AST" errorTitle="AST errors:" />
+      <TreeView result={astDisplayResult} label="AST" errorTitle="AST errors:" />
     {:else if selectedPanel === 'settings'}
       <SettingsPanel {backend} {wasmGcSupported} {onBackendChange} />
     {:else}

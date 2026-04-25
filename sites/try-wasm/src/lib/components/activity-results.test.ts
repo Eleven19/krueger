@@ -9,11 +9,11 @@ import type { CompilerEnvelope, MatchView, UnistNode } from '$lib/krueger';
 import type { Panel } from '$lib/panels';
 
 const ok = <T>(value: T): CompilerEnvelope<T> => ({ ok: true, value, logs: [], errors: [] });
-const error = (message: string): CompilerEnvelope<unknown> => ({
+const error = (message: string, phase = 'cst'): CompilerEnvelope<unknown> => ({
   ok: false,
   value: null,
   logs: [],
-  errors: [{ phase: 'cst', message }]
+  errors: [{ phase, message }]
 });
 
 const match: MatchView = {
@@ -224,5 +224,35 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     expect(screen.queryByRole('tree', { name: 'CST tree' })).toBeNull();
     expect(screen.getByText(/"kind": "pending"/)).not.toBeNull();
     expect(screen.getByText(/"detail": "opaque cst payload"/)).not.toBeNull();
+  });
+
+  it('falls back to raw CST and AST output when unist parsing fails but opaque parsing succeeds', () => {
+    const { unmount } = render(
+      ResultsPanel,
+      resultProps({
+        selectedPanel: 'cst',
+        cstResult: ok('CstModule(raw opaque fallback)'),
+        cstUnistResult: error('unist bridge unavailable')
+      })
+    );
+
+    expect(screen.queryByRole('tree', { name: 'CST tree' })).toBeNull();
+    expect(screen.getByText('CstModule(raw opaque fallback)')).not.toBeNull();
+    expect(screen.queryByText('unist bridge unavailable')).toBeNull();
+
+    unmount();
+
+    render(
+      ResultsPanel,
+      resultProps({
+        selectedPanel: 'ast',
+        astResult: ok('Module(raw opaque fallback)'),
+        astUnistResult: error('unist bridge unavailable', 'ast')
+      })
+    );
+
+    expect(screen.queryByRole('tree', { name: 'AST tree' })).toBeNull();
+    expect(screen.getByText('Module(raw opaque fallback)')).not.toBeNull();
+    expect(screen.queryByText('unist bridge unavailable')).toBeNull();
   });
 });
