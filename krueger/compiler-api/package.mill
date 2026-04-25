@@ -1,0 +1,76 @@
+package build.krueger.`compiler-api`
+
+import mill.*, scalalib.*, scalajslib.*, scalanativelib.*
+
+trait CompilerApiModule extends _root_.build.CommonScalaModule
+    with PlatformScalaModule
+    with _root_.build.PublishSupport {
+
+    override def artifactName = "krueger-compiler-api"
+
+    override def mvnDeps = Task {
+        super.mvnDeps() ++ Seq(
+            mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core::2.38.9",
+            mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros::2.38.9"
+        )
+    }
+}
+
+trait CompilerApiTestModule extends _root_.build.CommonScalaTestModule
+    with TestModule.ZioTest {
+
+    override def sources = Task.Sources(
+        moduleDir / os.up / "test" / "src"
+    )
+
+    def mvnDeps = Seq(
+        mvn"dev.zio::zio-test::2.1.24",
+        mvn"dev.zio::zio-test-sbt::2.1.24"
+    )
+}
+
+def test(): Command[Unit] = Task.Command {
+    jvm.test.testForked()
+    js.test.testForked()
+    native.test.testForked()
+    wasm.test.testForked()
+    ()
+}
+
+object jvm extends CompilerApiModule {
+    override def moduleDeps = Seq(
+        build.krueger.core.jvm,
+        build.krueger.trees.jvm
+    )
+    object test extends ScalaTests with CompilerApiTestModule
+}
+
+object js extends CompilerApiModule with _root_.build.CommonScalaJSModule {
+    override def moduleDeps = Seq(
+        build.krueger.core.js,
+        build.krueger.trees.js
+    )
+    object test extends ScalaJSTests with CompilerApiTestModule
+}
+
+object native extends CompilerApiModule with _root_.build.CommonScalaNativeModule {
+    override def moduleDeps = Seq(
+        build.krueger.core.native,
+        build.krueger.trees.native
+    )
+    object test extends ScalaNativeTests with CompilerApiTestModule
+}
+
+/** WASM linker variant. Shares the same Scala source as `js`; only the linker config differs so a main.wasm artifact
+  * and an ES-module JS loader are emitted. No FFI surfaces here — consumers wrap it from the webapp-wasm module.
+  */
+object wasm extends CompilerApiModule with _root_.build.CommonScalaJSWasmModule {
+    override def moduleDeps = Seq(
+        build.krueger.core.js,
+        build.krueger.trees.js
+    )
+    override def sources = Task.Sources(
+        moduleDir / "src"
+    )
+    object test extends ScalaJSTests with CompilerApiTestModule
+}

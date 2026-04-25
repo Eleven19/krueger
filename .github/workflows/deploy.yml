@@ -7,6 +7,10 @@ on:
       - 'docs/**'
       - 'krueger/core/**'
       - 'krueger/trees/**'
+      - 'krueger/compiler-api/**'
+      - 'krueger/webapp/**'
+      - 'krueger/webapp-wasm/**'
+      - 'sites/try-wasm/**'
       - 'mill-build/**'
       - 'build.mill.yaml'
       - 'VERSION'
@@ -38,7 +42,9 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: docs/package-lock.json
+          cache-dependency-path: |
+            docs/package-lock.json
+            sites/try-wasm/package-lock.json
 
       - name: Cache Coursier
         uses: actions/cache@v4
@@ -56,7 +62,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mill-docs-
 
-      - name: Build site (Scaladoc + Astro)
+      - name: Build full site (Scaladoc, playgrounds, Astro, try-wasm stitch)
         run: ./mill docs.site
 
       - name: Upload Pages artifact

@@ -30,53 +30,76 @@ mill krueger.itest
 
 ## Docs site
 
-### One-shot: build the full site
+The handbook under `docs/` is **Starlight / Astro** with a **Laminar** playground
+at [`/krueger/try/`](https://eleven19.github.io/krueger/try/) and a **SvelteKit +
+WASM** playground at
+[`/krueger/try-wasm/`](https://eleven19.github.io/krueger/try-wasm/). GitHub
+Pages runs the same pipeline as `./mill docs.site`: Scaladoc, Laminar bundle,
+WASM artifacts for try-wasm, SvelteKit production build, Astro build, then a
+copy of `sites/try-wasm/build/` into `docs/dist/try-wasm/`.
 
-The full site (docs + Scaladoc for JVM, Scala.js, Scala Native) builds in one
-command from either toolchain:
+### Local dev (full site, including `/try-wasm/`)
+
+`astro dev` only sees `/krueger/try-wasm/` if the SvelteKit app is built and
+mirrored into `docs/public/try-wasm/` (gitignored). The one-step prep is:
 
 ```sh
-./mill docs.site                # Mill-driven
-cd docs && npm run build:full   # npm-driven (shells out to Mill)
+cd docs
+npm ci
+npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
 ```
 
-Both produce the final publishable artifact at `docs/dist/` — which is what
-the `Deploy Docs` workflow uploads to GitHub Pages.
+Open `http://localhost:4321/krueger/`, `/krueger/try/`, and `/krueger/try-wasm/`.
+
+### Production-sized artifact / GitHub Pages parity
+
+Build everything exactly as deploy does:
+
+```sh
+./mill docs.site
+```
+
+Output: `docs/dist/` (including `dist/try-wasm/`). Equivalent npm orchestration:
+
+```sh
+cd docs && npm ci && npm run site:build   # alias for build:full — Mill + try-wasm + Astro + stitch
+```
+
+Preview the static tree:
+
+```sh
+cd docs && npm run preview   # serves docs/dist/
+```
 
 ### Under the hood
 
-The Starlight site under `docs/` is built by **two** tools in sequence, and
-`docs.site` / `build:full` just run them together:
-
-1. **Mill** generates Scaladoc HTML for each platform and mirrors it into
-   `docs/public/api/{jvm,js,native}/` plus a landing page at
-   `docs/public/api/index.html`:
+1. **Scaladoc** for JVM, Scala.js, and Scala Native is emitted into
+   `docs/public/api/{jvm,js,native}/` (gitignored):
 
    ```sh
-   # Build all three Scaladoc trees + landing page.
    ./mill docs.writeToDocsPublic
-
-   # Individual trees (for iteration):
    ./mill docs.apiJvm
    ./mill docs.apiJs
    ./mill docs.apiNative
    ```
 
-   The output under `docs/public/api/` is gitignored — always regenerated.
+2. **Laminar playground** — `./mill krueger.webapp.writeToDocsSrc` writes the
+   Scala.js bundle consumed by `docs/src/pages/try.astro`.
 
-2. **Astro / Starlight** bundles the Markdown content and copies
-   `docs/public/` verbatim into `docs/dist/`:
+3. **try-wasm** — `./mill krueger.webapp-wasm.writeToWasmSite` populates
+   `sites/try-wasm/static/wasm/` before `npm run build` in `sites/try-wasm`.
 
-   ```sh
-   cd docs
-   npm ci
-   npm run build   # -> docs/dist/
-   npm run dev     # local preview at http://localhost:4321/krueger/
-   npm run preview # serve the built docs/dist/ locally
-   ```
+4. **Astro** — `docs/public/` (API HTML, optional `try-wasm/` mirror during dev)
+   is copied into `docs/dist/` on `npm run build`.
 
-For a combined local preview, run the Mill task first, then `npm run dev` (or
-`npm run build && npm run preview`).
+### Playwright checks
+
+From `docs/` after `npm ci`:
+
+```sh
+npx playwright install
+npm run test:playground-e2e
+```
 
 ## Workflow
 

@@ -5,10 +5,22 @@ import mill.*, scalalib.*
 object `package` extends _root_.build.CommonScalaModule
     with TestModule.Junit5 {
 
-    def moduleDeps = Seq(build.krueger.core.jvm)
+    def moduleDeps = Seq(
+        build.krueger.core.jvm,
+        build.krueger.`compiler-api-abi`.jvm
+    )
+
+    override def forkArgs = Task {
+        super.forkArgs() ++ Seq(
+            s"-Dkrueger.compiler-api.wasm.dir=${build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path}",
+            s"-Dkrueger.webapp-wasm.facade.dir=${build.krueger.`webapp-wasm`.fullLinkJS().dest.path}"
+        )
+    }
 
     def mvnDeps = Seq(
         mvn"org.scalameta::munit::1.0.4",
+        mvn"com.dylibso.chicory:runtime:1.7.5",
+        mvn"com.dylibso.chicory:wabt:1.7.5",
         mvn"io.cucumber::cucumber-scala::8.39.1",
         mvn"io.cucumber:cucumber-picocontainer:7.20.1",
         mvn"io.cucumber:cucumber-junit-platform-engine:7.20.1",

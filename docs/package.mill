@@ -15,6 +15,8 @@ import mill.*, scalalib.*, scalajslib.*, scalanativelib.*
  *   ./mill docs.apiJs                  # build combined Scala.js Scaladoc
  *   ./mill docs.apiNative              # build combined Scala Native Scaladoc
  *   ./mill docs.writeToDocsPublic      # build all three and copy into docs/public/api/
+ *   ./mill docs.prepareLocalDevSite    # codegen + try-wasm -> docs/public/try-wasm for astro dev
+ *   ./mill docs.site                   # full Pages artifact at docs/dist/ (includes dist/try-wasm/)
  */
 object `package` extends Module {
 
@@ -240,6 +242,59 @@ object `package` extends Module {
     ctx.log.info(s"Wrote landing page -> $landing")
   }
 
+  /** Run `npm ci` + `npm run build` in `sites/try-wasm` (requires `writeToWasmSite` first). */
+  private def runTryWasmNpmBuild(logInfo: String => Unit): Unit = {
+    val tryWasmDir = repoRoot / "sites" / "try-wasm"
+    logInfo(s"docs: running `npm ci` in $tryWasmDir")
+    os.proc("npm", "ci").call(cwd = tryWasmDir, stdout = os.Inherit, stderr = os.Inherit)
+    logInfo(s"docs: running `npm run build` in $tryWasmDir")
+    os.proc("npm", "run", "build").call(cwd = tryWasmDir, stdout = os.Inherit, stderr = os.Inherit)
+  }
+
+  /** Copy `sites/try-wasm/build/` into `destRoot` (wiping `destRoot` first). */
+  private def copyTryWasmBuildInto(destRoot: os.Path, logInfo: String => Unit): Unit = {
+    val buildDir = repoRoot / "sites" / "try-wasm" / "build"
+    if (!os.isDir(buildDir))
+      throw new RuntimeException(
+        s"try-wasm build output missing: $buildDir — run npm run build in sites/try-wasm"
+      )
+    if (os.exists(destRoot)) os.remove.all(destRoot)
+    os.makeDir.all(destRoot)
+    for (child <- os.list(buildDir))
+      os.copy.into(child, destRoot, replaceExisting = true)
+    logInfo(s"Copied try-wasm static site -> $destRoot")
+  }
+
+  /**
+   * Prepare local Astro dev: Scaladoc, Laminar bundle, WASM artifacts for
+   * try-wasm, SvelteKit production build, then mirror try-wasm into
+   * `docs/public/try-wasm/` so `astro dev` serves `/krueger/try-wasm/` like
+   * GitHub Pages.
+   *
+   * Usage:
+   *   ./mill docs.prepareLocalDevSite
+   *   cd docs && npm ci && npm run dev
+   */
+  def prepareLocalDevSite(): Command[Unit] = Task.Command {
+    emitScaladocToPublic(
+      jvmDir    = apiJvm().path,
+      jsDir     = apiJs().path,
+      nativeDir = apiNative().path,
+      version   = projectVersion()
+    )
+
+    Task.log.info("docs.prepareLocalDevSite: writing Laminar playground bundle")
+    build.krueger.webapp.writeToDocsSrc()
+
+    Task.log.info("docs.prepareLocalDevSite: writing webapp-wasm compiler artifacts")
+    build.krueger.`webapp-wasm`.writeToWasmSite()
+
+    runTryWasmNpmBuild(Task.log.info(_))
+
+    val publicTryWasm = repoRoot / "docs" / "public" / "try-wasm"
+    copyTryWasmBuildInto(publicTryWasm, Task.log.info(_))
+  }
+
   /**
    * Build all three Scaladoc trees and copy them into
    * `docs/public/api/{jvm,js,native}/`. Existing contents at those paths are
@@ -260,9 +315,10 @@ object `package` extends Module {
   }
 
   /**
-   * Full-site orchestrator. Generates Scaladoc for all three platforms,
-   * mirrors them into `docs/public/api/{jvm,js,native}/`, then runs
-   * `npm ci` and `npm run build` inside `docs/` to produce `docs/dist/`.
+   * Full-site orchestrator (GitHub Pages–parity). Generates Scaladoc, mirrors
+   * the Laminar bundle and WASM artifacts, builds the SvelteKit try-wasm site,
+   * runs Astro `npm ci` + `npm run build`, then stitches
+   * `sites/try-wasm/build/` into `docs/dist/try-wasm/`.
    *
    * Returns a PathRef to `docs/dist/` so `./mill show docs.site` prints the
    * final artifact directory (what GitHub Pages ingests).
@@ -279,6 +335,14 @@ object `package` extends Module {
       version   = projectVersion()
     )
 
+    Task.log.info("docs.site: writing Laminar playground bundle")
+    build.krueger.webapp.writeToDocsSrc()
+
+    Task.log.info("docs.site: writing webapp-wasm compiler artifacts")
+    build.krueger.`webapp-wasm`.writeToWasmSite()
+
+    runTryWasmNpmBuild(Task.log.info(_))
+
     val docsDir = repoRoot / "docs"
     Task.log.info(s"docs.site: running `npm ci` in $docsDir")
     os.proc("npm", "ci").call(cwd = docsDir, stdout = os.Inherit, stderr = os.Inherit)
@@ -287,7 +351,9 @@ object `package` extends Module {
     os.proc("npm", "run", "build").call(cwd = docsDir, stdout = os.Inherit, stderr = os.Inherit)
 
     val dist = docsDir / "dist"
-    Task.log.info(s"docs.site: built -> $dist")
+    copyTryWasmBuildInto(dist / "try-wasm", Task.log.info(_))
+
+    Task.log.info(s"docs.site: built -> $dist (includes try-wasm/)")
     PathRef(dist)
   }
 }

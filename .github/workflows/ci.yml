@@ -41,11 +41,18 @@ jobs:
           distribution: temurin
           java-version: "25"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Compile JVM modules
         run: ./mill krueger.core.jvm.compile
 
       - name: Run JVM tests
         run: ./mill krueger.core.jvm.test
+
+      - name: Stage webapp-wasm artifacts for itest
+        run: ./mill krueger.webapp-wasm.writeToWasmSite
 
       - name: Run BDD integration tests
         run: ./mill krueger.itest
@@ -65,12 +72,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
+          cache-dependency-path: docs/package-lock.json
 
       - name: Compile JS modules
         run: ./mill krueger.core.js.compile
 
       - name: Run JS tests
         run: ./mill krueger.core.js.test
+
+      - name: Run webapp-wasm Scala.js tests
+        run: ./mill krueger.webapp-wasm.test
+
+      - name: Install docs npm dependencies
+        run: npm ci
+        working-directory: docs
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: docs
+
+      - name: Run headless browser compiler facade parity check
+        run: |
+          ./mill krueger.webapp-wasm.fullLinkJS
+          npm --prefix docs run test:webapp-wasm-browser -- -- out/krueger/webapp-wasm/fullLinkJS.dest
 
   build-native:
     name: Build & Test (Scala Native)
