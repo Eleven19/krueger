@@ -11,6 +11,8 @@
     selectedPanel,
     cstResult,
     astResult,
+    cstUnistResult,
+    astUnistResult,
     matchResult,
     queryResult,
     prettyQuery,
@@ -21,6 +23,8 @@
     selectedPanel: Panel;
     cstResult: CompilerEnvelope<unknown>;
     astResult: CompilerEnvelope<unknown>;
+    cstUnistResult: CompilerEnvelope<unknown>;
+    astUnistResult: CompilerEnvelope<unknown>;
     matchResult: CompilerEnvelope<MatchView[]>;
     queryResult: CompilerEnvelope<unknown>;
     prettyQuery: string;
@@ -41,9 +45,9 @@
     {#if selectedPanel === 'matches'}
       <MatchesView result={matchResult} />
     {:else if selectedPanel === 'cst'}
-      <TreeView result={cstResult} />
+      <TreeView result={cstUnistResult} label="CST" />
     {:else if selectedPanel === 'ast'}
-      <TreeView result={astResult} errorTitle="AST errors:" />
+      <TreeView result={astUnistResult} label="AST" errorTitle="AST errors:" />
     {:else if selectedPanel === 'settings'}
       <SettingsPanel {backend} {wasmGcSupported} {onBackendChange} />
     {:else}

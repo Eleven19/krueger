@@ -41,6 +41,18 @@ main = 42
   const astResult = $derived(
     compilerEnvelope(() => client?.parseAst(source), "Compiler loading...")
   );
+  const cstUnistResult = $derived(
+    compilerEnvelope(
+      () => client?.parseCstUnist(source) as CompilerEnvelope<unknown> | undefined,
+      "Compiler loading..."
+    )
+  );
+  const astUnistResult = $derived(
+    compilerEnvelope(
+      () => client?.parseAstUnist(source) as CompilerEnvelope<unknown> | undefined,
+      "Compiler loading..."
+    )
+  );
   const queryResult = $derived(
     compilerEnvelope(() => client?.parseQuery(query), "Compiler loading...")
   );
@@ -147,6 +159,8 @@ main = 42
       {selectedPanel}
       {cstResult}
       {astResult}
+      {cstUnistResult}
+      {astUnistResult}
       {matchResult}
       {queryResult}
       {prettyQuery}
