@@ -29,19 +29,24 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
     /** Repo root; `moduleDir` here is `<repo>/krueger/webapp-wasm`. */
     private def repoRoot: os.Path = moduleDir / os.up / os.up
 
-    /** Copy the supported compiler artifacts into
+    /** Copy both compiler-facade artifacts into
       * `sites/try-wasm/static/wasm/` so the SvelteKit static adapter picks
       * them up at `/krueger/try-wasm/wasm/`.
       *
+      * - `facade/` is the JS-linked `webapp-wasm` ESM (top-level
+      *   `Krueger` namespace). The SvelteKit playground loads this when
+      *   the user picks the "JavaScript" backend.
+      * - `webgc/` is the Wasm-linked `webapp-wasm.wasm` ESM (top-level
+      *   `KruegerWasm` namespace + `main.wasm` binary). Loaded for the
+      *   "WASM" backend; the actual compile path runs through
+      *   WebAssembly.
+      *
       * Deterministically wipes the target on every run so stale artifacts
-      * from a previous link never leak into a fresh build. Creates parent
-      * directories if the SvelteKit site has not been scaffolded yet —
-      * earlier slices may land this module before `sites/try-wasm/` exists;
-      * the task is expected to be forward-compatible.
+      * from a previous link never leak into a fresh build.
       */
     def writeToWasmSite(): Command[PathRef] = Task.Command {
         val facadeDir = fullLinkJS().dest.path
-        val webgcDir  = build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path
+        val webgcDir  = wasm.fullLinkJS().dest.path
         val target    = repoRoot / "sites" / "try-wasm" / "static" / "wasm"
 
         if (os.exists(target)) os.remove.all(target)
@@ -80,5 +85,40 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
             mvn"dev.zio::zio-test::2.1.24",
             mvn"dev.zio::zio-test-sbt::2.1.24"
         )
+    }
+
+    /** WASM-linked sibling of the JS facade.
+      *
+      * Shares the same `KruegerJs` / `BackendLoader` sources as the JS
+      * variant — only the linker output differs. The Scala.js Wasm linker
+      * actually honors `@JSExportTopLevel`, so the emitted `main.js` ESM
+      * exports the same `Krueger` namespace; the SvelteKit playground
+      * picks a URL between the JS and WASM artifact and consumes them
+      * through one TS interface.
+      */
+    object wasm extends _root_.build.CommonScalaModule with _root_.build.CommonScalaJSWasmModule {
+
+        override def moduleDeps = Seq(build.krueger.`compiler-api`.js)
+
+        override def sources = Task.Sources(
+            // Reuse KruegerJs.scala / BackendLoader.scala / etc. so both
+            // facades expose identical envelope behaviour at the source level.
+            moduleDir / os.up / "src",
+            // Wasm-only `KruegerWasm` top-level export — see WasmFacade.scala.
+            moduleDir / "src"
+        )
+
+        override def mvnDeps = build.krueger.`webapp-wasm`.mvnDeps
+
+        object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with TestModule.ZioTest {
+            override def sources = Task.Sources(
+                moduleDir / os.up / "test" / "src"
+            )
+
+            def mvnDeps = Seq(
+                mvn"dev.zio::zio-test::2.1.24",
+                mvn"dev.zio::zio-test-sbt::2.1.24"
+            )
+        }
     }
 }

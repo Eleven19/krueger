@@ -41,15 +41,15 @@ object KruegerJs:
 
     @JSExport
     def parseCst(src: String): js.Object =
-        envelopeWithOpaqueValue(BackendLoader.current().parseCst(src))
+        envelopeWithOpaqueValue(LinkedCompilerBackend.parseCst(src))
 
     @JSExport
     def parseAst(src: String): js.Object =
-        envelopeWithOpaqueValue(BackendLoader.current().parseAst(src))
+        envelopeWithOpaqueValue(LinkedCompilerBackend.parseAst(src))
 
     @JSExport
     def parseQuery(q: String): js.Object =
-        envelopeWithOpaqueValue(BackendLoader.current().parseQuery(q))
+        envelopeWithOpaqueValue(LinkedCompilerBackend.parseQuery(q))
 
     /** Execute a previously-parsed [[Query]] against a previously-parsed [[CstModule]]. Both handles must come from
       * earlier `parseQuery` / `parseCst` calls — the wrapping Scala values are passed back through the JS boundary as
@@ -59,29 +59,16 @@ object KruegerJs:
     def runQuery(q: js.Any, root: js.Any): js.Object =
         val qScala    = q.asInstanceOf[Query]
         val rootScala = root.asInstanceOf[CstNode]
-        val result    = BackendLoader.current().runQuery(qScala, rootScala)
+        val result    = LinkedCompilerBackend.runQuery(qScala, rootScala)
         envelopeWithMatches(result)
 
     /** Canonical echo of a parsed query. Pure — no envelope. */
     @JSExport
-    def prettyQuery(q: js.Any): String = BackendLoader.current().prettyQuery(q.asInstanceOf[Query])
+    def prettyQuery(q: js.Any): String = LinkedCompilerBackend.prettyQuery(q.asInstanceOf[Query])
 
     @JSExport
     def tokenize(src: String): js.Object =
         envelopeWithTokens(ElmTokenizer.run(src))
-
-    /** JS-callable: id of the currently active compile backend. */
-    @JSExport
-    def currentBackend(): String = BackendLoader.currentId()
-
-    /** JS-callable: switch the active compile backend.
-      *
-      * @return
-      *   `true` if `id` is a recognised backend ("webgc" or "js"); `false` otherwise. The currently-active backend is
-      *   left unchanged on a `false` return so callers can recover by leaving the previous selection in place.
-      */
-    @JSExport
-    def setBackend(id: String): Boolean = BackendLoader.setBackend(id)
 
     // ------------------------------------------------------------------
     // Envelope helpers

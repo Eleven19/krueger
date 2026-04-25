@@ -5,18 +5,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import Page from './+page.svelte';
 import { supportsWasmGc } from '$lib/wasm-gc';
+import type { BackendId } from '$lib/backend';
 
 vi.mock('$lib/krueger', async () => {
   const ok = (value: unknown) => ({ ok: true, value, logs: [], errors: [] });
   return {
-    createKruegerClient: vi.fn(async () => ({
+    createKruegerClient: vi.fn(async (backend: BackendId) => ({
+      backend,
       parseCst: () => ok('CstModule(...)'),
       parseAst: () => ok('Module(...)'),
       parseQuery: () => ok({}),
       runQuery: () => ok([]),
       prettyQuery: () => '(CstValueDeclaration) @decl',
-      currentBackend: () => 'webgc',
-      setBackend: () => true
+      tokenize: () => ok([])
     }))
   };
 });

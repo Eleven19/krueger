@@ -328,7 +328,7 @@ object `package` extends Module {
     Task.log.info("docs.prepareLocalDevSite: writing webapp-wasm compiler artifacts")
     copyWasmArtifactsToTryWasm(
       facadeDir = build.krueger.`webapp-wasm`.fullLinkJS().dest.path,
-      webgcDir  = build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path,
+      webgcDir  = build.krueger.`webapp-wasm`.wasm.fullLinkJS().dest.path,
       logInfo   = Task.log.info(_)
     )
 
@@ -381,7 +381,7 @@ object `package` extends Module {
     Task.log.info("docs.site: writing webapp-wasm compiler artifacts")
     copyWasmArtifactsToTryWasm(
       facadeDir = build.krueger.`webapp-wasm`.fullLinkJS().dest.path,
-      webgcDir  = build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path,
+      webgcDir  = build.krueger.`webapp-wasm`.wasm.fullLinkJS().dest.path,
       logInfo   = Task.log.info(_)
     )
 

@@ -30,6 +30,11 @@ export type MatchView = {
 };
 
 export type KruegerClientOptions = {
+  /**
+   * Override the URL used to load the compiler facade ES module. Path is
+   * relative to the document. Each backend has its own default URL — supply
+   * this only for tests or non-standard hosting layouts.
+   */
   facadeUrl?: string;
 };
 
@@ -40,33 +45,40 @@ type RawKruegerFacade = {
   runQuery(query: unknown, root: unknown): unknown;
   prettyQuery(query: unknown): string;
   tokenize(source: string): unknown;
-  /** Optional — present only when the deployed facade was built after the
-   *  backend selector was wired up. The client treats absence as "no
-   *  switching support" and reports a structured error. */
-  setBackend?(id: string): boolean;
-  /** Optional — same compatibility caveat as `setBackend`. */
-  currentBackend?(): string;
 };
 
 export type KruegerClient = {
+  /** Backend id this client was constructed for. Stable for the lifetime of the client. */
+  readonly backend: BackendId;
   parseCst(source: string): CompilerEnvelope<unknown>;
   parseAst(source: string): CompilerEnvelope<unknown>;
   parseQuery(query: string): CompilerEnvelope<unknown>;
   runQuery(query: unknown, root: unknown): CompilerEnvelope<MatchView[]>;
   prettyQuery(query: unknown): string;
   tokenize(source: string): CompilerEnvelope<ElmToken[]>;
-  /** Currently active backend id (best-effort: returns "unknown" if the
-   *  loaded facade is too old to expose the accessor). */
-  currentBackend(): string;
-  /** Switch the active backend. Resolves to `true` when the facade accepted
-   *  the id, `false` otherwise. */
-  setBackend(id: BackendId): boolean;
 };
 
-export async function createKruegerClient(options: KruegerClientOptions = {}): Promise<KruegerClient> {
-  const facade = await loadFacade(options.facadeUrl ?? defaultFacadeUrl());
+const DEFAULT_FACADE_URLS: Record<BackendId, string> = {
+  // JS-linked Scala.js facade (top-level export name: `Krueger`).
+  js: 'wasm/facade/main.js',
+  // Wasm-linked Scala.js facade (top-level export name: `KruegerWasm`).
+  webgc: 'wasm/webgc/main.js'
+};
+
+const FACADE_EXPORT_NAMES: Record<BackendId, 'Krueger' | 'KruegerWasm'> = {
+  js: 'Krueger',
+  webgc: 'KruegerWasm'
+};
+
+export async function createKruegerClient(
+  backend: BackendId,
+  options: KruegerClientOptions = {}
+): Promise<KruegerClient> {
+  const url = options.facadeUrl ?? defaultFacadeUrl(backend);
+  const facade = await loadFacade(url, FACADE_EXPORT_NAMES[backend]);
 
   return {
+    backend,
     parseCst(source) {
       return invokeEnvelope(() => facade.parseCst(source));
     },
@@ -84,34 +96,42 @@ export async function createKruegerClient(options: KruegerClientOptions = {}): P
     },
     tokenize(source) {
       return invokeEnvelope<ElmToken[]>(() => facade.tokenize(source), normalizeTokens);
-    },
-    currentBackend() {
-      return typeof facade.currentBackend === 'function' ? facade.currentBackend() : 'unknown';
-    },
-    setBackend(id) {
-      return typeof facade.setBackend === 'function' ? facade.setBackend(id) : false;
     }
   };
 }
 
-function defaultFacadeUrl(): string {
-  if (typeof globalThis.location === 'undefined') return '/wasm/facade/main.js';
-  return new URL('wasm/facade/main.js', globalThis.location.href).href;
+function defaultFacadeUrl(backend: BackendId): string {
+  const relative = DEFAULT_FACADE_URLS[backend];
+  if (typeof globalThis.location === 'undefined') return `/${relative}`;
+  return new URL(relative, globalThis.location.href).href;
 }
 
-async function loadFacade(facadeUrl: string): Promise<RawKruegerFacade> {
-  const mod = await import(/* @vite-ignore */ facadeUrl);
-  const candidate = mod.Krueger ?? globalThis.Krueger;
+async function loadFacade(
+  facadeUrl: string,
+  exportName: 'Krueger' | 'KruegerWasm'
+): Promise<RawKruegerFacade> {
+  const mod = (await import(/* @vite-ignore */ facadeUrl)) as Record<string, unknown>;
+  const candidate = mod[exportName] ?? (globalThis as Record<string, unknown>)[exportName];
 
   if (!isKruegerFacade(candidate)) {
-    throw new Error(`Krueger facade was not exported by ${facadeUrl}`);
+    throw new Error(`${exportName} facade was not exported by ${facadeUrl}`);
   }
 
-  globalThis.Krueger = candidate;
+  // Mirror the active facade onto a stable global so anything that runs
+  // outside the React-/Svelte-component stack (notably the Monaco tokens
+  // provider in `elm-language.ts:globalTokenizer`) can reach it without
+  // plumbing the client through Monaco's API. We always write `Krueger`
+  // regardless of which underlying export was loaded — both shapes are
+  // identical at the call sites, so callers don't have to special-case
+  // backend ids.
+  (globalThis as Record<string, unknown>).Krueger = candidate;
   return candidate;
 }
 
-function invokeEnvelope<T>(call: () => unknown, normalizeValue: (value: unknown) => T = (value) => value as T): CompilerEnvelope<T> {
+function invokeEnvelope<T>(
+  call: () => unknown,
+  normalizeValue: (value: unknown) => T = (value) => value as T
+): CompilerEnvelope<T> {
   try {
     return normalizeEnvelope(call(), normalizeValue);
   } catch (error) {
@@ -238,10 +258,6 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function isKruegerFacade(value: unknown): value is RawKruegerFacade {
   const record = asRecord(value);
-  // `setBackend` / `currentBackend` are intentionally optional — older
-  // deployed facades may predate the backend selector. The loader still
-  // accepts them so the playground keeps working against a facade that has
-  // not been re-linked yet, just without the toggle.
   return (
     typeof record.parseCst === 'function' &&
     typeof record.parseAst === 'function' &&
@@ -250,10 +266,4 @@ function isKruegerFacade(value: unknown): value is RawKruegerFacade {
     typeof record.prettyQuery === 'function' &&
     typeof record.tokenize === 'function'
   );
-}
-
-declare global {
-  // Scala.js can publish the facade either as an ESM export or as a global,
-  // depending on linker mode. Supporting both keeps the wrapper deployable.
-  var Krueger: RawKruegerFacade | undefined;
 }

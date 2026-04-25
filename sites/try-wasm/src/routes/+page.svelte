@@ -39,26 +39,16 @@ main = 42
   let source = $state(defaultSource);
   let query = $state(defaultQuery);
   let backend = $state<BackendId>(pickInitialBackend(null));
-  let backendSwitchTick = $state(0);
 
   const canInitializeCompiler = $derived(shouldLoadWasmCompiler(wasmGcSupported));
   const cstResult = $derived(
-    compilerEnvelope(() => {
-      void backendSwitchTick;
-      return client?.parseCst(source);
-    }, "Compiler loading...")
+    compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
   );
   const astResult = $derived(
-    compilerEnvelope(() => {
-      void backendSwitchTick;
-      return client?.parseAst(source);
-    }, "Compiler loading...")
+    compilerEnvelope(() => client?.parseAst(source), "Compiler loading...")
   );
   const queryResult = $derived(
-    compilerEnvelope(() => {
-      void backendSwitchTick;
-      return client?.parseQuery(query);
-    }, "Compiler loading...")
+    compilerEnvelope(() => client?.parseQuery(query), "Compiler loading...")
   );
   const matchResult = $derived(computeMatches(client, cstResult, queryResult));
   const prettyQuery = $derived(
@@ -79,15 +69,20 @@ main = 42
       backend = fallbackBackend;
     }
 
-    void createKruegerClient()
+    void loadBackend(backend);
+  });
+
+  function loadBackend(next: BackendId): Promise<void> {
+    return createKruegerClient(next)
       .then((loaded) => {
         client = loaded;
-        loaded.setBackend(backend);
+        compilerLoadError = null;
       })
       .catch((error: unknown) => {
+        client = null;
         compilerLoadError = error instanceof Error ? error.message : String(error);
       });
-  });
+  }
 
   function compilerEnvelope<T>(
     read: () => CompilerEnvelope<T> | undefined,
@@ -121,17 +116,10 @@ main = 42
     if (next === backend) return;
     if (!isAvailable(next, wasmGcSupported)) return;
     backend = next;
-    if (client !== null) {
-      const accepted = client.setBackend(next);
-      if (!accepted) {
-        compilerLoadError = `Backend "${next}" rejected by the loaded compiler facade.`;
-        return;
-      }
-    }
-    // Bump the recompute key so $derived expressions re-run their reads
-    // even when the editor inputs are unchanged — a backend swap should
-    // refresh every panel.
-    backendSwitchTick += 1;
+    // Drop the current client so panels show the "Compiler loading..."
+    // placeholder while the new backend's facade is dynamic-imported.
+    client = null;
+    void loadBackend(next);
   }
 </script>
 

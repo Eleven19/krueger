@@ -29,7 +29,7 @@ function expectEnvelope(env: CompilerEnvelope<unknown>) {
 
 describe('krueger.ts real compiler facade wrapper', () => {
   it('parses CST, AST, and queries through the linked facade artifact', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
 
     const cst = krueger.parseCst(validSource);
     const ast = krueger.parseAst(validSource);
@@ -47,7 +47,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('returns structured errors for malformed source without throwing', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
 
     expect(() => krueger.parseCst(malformedSource)).not.toThrow();
     const cst = krueger.parseCst(malformedSource);
@@ -61,7 +61,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('runs a valid query and preserves deterministic match order', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
     const cst = krueger.parseCst(validSource);
     const query = krueger.parseQuery(validQuery);
 
@@ -76,7 +76,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('returns a query envelope error for malformed queries and never throws on empty inputs', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
 
     expect(() => krueger.parseQuery('(unbalanced')).not.toThrow();
     const malformedQuery = krueger.parseQuery('(unbalanced');
@@ -91,7 +91,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('returns an error envelope when runQuery receives a failed query handle', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
     const cst = krueger.parseCst(validSource);
     const malformedQuery = krueger.parseQuery('(unbalanced');
 
@@ -105,7 +105,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('pretty-prints parsed queries through the same loaded facade instance', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
     const query = krueger.parseQuery(validQuery);
 
     expect(query.ok).toBe(true);
@@ -113,7 +113,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('exposes shared tokenizer tokens from the loaded facade instance', async () => {
-    const krueger = await createKruegerClient({ facadeUrl });
+    const krueger = await createKruegerClient('js', { facadeUrl });
 
     const tokens = krueger.tokenize('module Demo = 1');
 
@@ -129,7 +129,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
   });
 
   it('backs the Monaco token provider with the real loaded facade tokenizer by default', async () => {
-    await createKruegerClient({ facadeUrl });
+    await createKruegerClient('js', { facadeUrl });
 
     const provider = createElmTokensProvider();
     const state = provider.getInitialState();
