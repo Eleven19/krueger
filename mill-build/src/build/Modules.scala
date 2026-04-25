@@ -4,6 +4,16 @@ import mill.*
 import mill.scalalib.*
 import mill.scalajslib.*
 import mill.scalanativelib.*
+import coursier.maven.MavenRepository
+
+object KruegerVersions:
+    /** Minimum required Kyo version. Later snapshot or stable releases are acceptable.
+      * Lower bound exists because this build introduced kyo-schema on the Kyo mainline.
+      */
+    val Kyo: String = "1.0-RC1+214-534321a9-SNAPSHOT"
+
+    /** Pinned scribe version for cross-platform logging (JVM + JS + Native). */
+    val Scribe: String = "3.16.1"
 
 trait CommonScalaModule extends ScalaModule with scalafmt.ScalafmtModule {
   override def scalaVersion = Task {
@@ -19,6 +29,13 @@ trait CommonScalaModule extends ScalaModule with scalafmt.ScalafmtModule {
       "-deprecation",
       "-feature",
       "-Werror"
+    )
+  }
+
+  override def repositoriesTask: Task[Seq[coursier.Repository]] = Task.Anon {
+    super.repositoriesTask() ++ Seq(
+      MavenRepository("https://central.sonatype.com/repository/maven-snapshots/"),
+      MavenRepository("https://oss.sonatype.org/content/repositories/snapshots/")
     )
   }
 }

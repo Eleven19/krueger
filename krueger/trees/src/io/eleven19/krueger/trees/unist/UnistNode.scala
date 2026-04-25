@@ -30,5 +30,6 @@ final case class UnistNode(
 final case class UnistSpan(start: Int, end: Int) derives CanEqual
 
 object UnistSpan:
+
     def fromOffsetLength(offset: Int, length: Int): UnistSpan =
         UnistSpan(offset, offset + length)

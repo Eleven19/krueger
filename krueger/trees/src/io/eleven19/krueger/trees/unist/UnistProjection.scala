@@ -8,11 +8,12 @@ trait UnistProjection[T]:
     def span(t: T): Option[UnistSpan]
 
 object UnistProjection:
+
     def project[T](tree: T, source: Option[String] = None)(using
         queryable: QueryableTree[T],
         projection: UnistProjection[T]
     ): UnistNode =
-        val children = queryable.children(tree).toIndexedSeq
+        val children          = queryable.children(tree).toIndexedSeq
         val projectedChildren = children.map(child => project(child, source))
         val data = UnistData(
             fields = fieldIndexes(queryable.fields(tree), children),
@@ -37,7 +38,8 @@ object UnistProjection:
                 val usedIndexes = scala.collection.mutable.Set.empty[Int]
                 FieldName.unwrap(field) -> fieldChildren.toIndexedSeq.flatMap(fieldChild =>
                     val identityMatch = firstUnusedMatch(children, usedIndexes, fieldChild, sameReference)
-                    val matchedIndex  = identityMatch.orElse(firstUnusedMatch(children, usedIndexes, fieldChild, sameNode))
+                    val matchedIndex =
+                        identityMatch.orElse(firstUnusedMatch(children, usedIndexes, fieldChild, sameNode))
                     matchedIndex.foreach(usedIndexes += _)
                     matchedIndex
                 )
@@ -68,9 +70,9 @@ object UnistProjection:
 
     private def pointAt(source: String, offset: Int): UnistPoint =
         val boundedOffset = offset.max(0).min(source.length)
-        var line = 1
-        var column = 1
-        var index = 0
+        var line          = 1
+        var column        = 1
+        var index         = 0
 
         while index < boundedOffset do
             if source.charAt(index) == '\n' then
