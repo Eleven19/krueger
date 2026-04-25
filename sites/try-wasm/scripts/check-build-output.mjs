@@ -27,7 +27,7 @@ if (!html.includes('assets: "/krueger/try"')) {
   fail('build/index.html must configure SvelteKit assets for /krueger/try');
 }
 
-if (!html.includes('Compiler playground')) {
+if (!html.includes('Try Krueger workspace')) {
   fail('build/index.html must contain the SvelteKit landing page content');
 }
 
