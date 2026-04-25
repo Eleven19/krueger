@@ -174,7 +174,7 @@ jobs:
             docs/dist/api/jvm/index.html \
             docs/dist/api/js/index.html \
             docs/dist/api/native/index.html \
-            docs/dist/try-wasm/index.html \
+            docs/dist/try/index.html \
             sites/try-wasm/static/wasm/facade \
             sites/try-wasm/static/wasm/webgc; do
             if [ ! -e "$path" ]; then

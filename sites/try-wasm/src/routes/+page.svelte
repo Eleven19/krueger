@@ -5,6 +5,7 @@
   import BackendSelect from "$lib/components/BackendSelect.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
   import ResultsPanel from "$lib/components/ResultsPanel.svelte";
+  import SiteHeader from "$lib/components/SiteHeader.svelte";
   import {
     backendInfo,
     fallbackBackend,
@@ -131,6 +132,8 @@ main = 42
   />
 </svelte:head>
 
+<SiteHeader />
+
 <main class="playground-shell">
   {#if wasmGcSupported === false}
     <aside class="fallback" role="status" aria-live="polite">
@@ -202,21 +205,48 @@ main = 42
       "Segoe UI", sans-serif;
   }
 
-  .playground-shell {
-    --kr-bg: var(--sl-color-bg, #0f172a);
-    --kr-panel-bg: var(--sl-color-bg-sidebar, #111827);
-    --kr-panel-bg-strong: var(--sl-color-bg-nav, #1f2937);
-    --kr-editor-bg: var(--sl-color-black, #020617);
-    --kr-border: var(--sl-color-gray-5, #334155);
-    --kr-text: var(--sl-color-white, #e5e7eb);
-    --kr-muted: var(--sl-color-gray-2, #94a3b8);
-    --kr-accent: var(--sl-color-accent-high, #60a5fa);
-    --kr-accent-soft: var(--sl-color-accent-low, #bfdbfe);
+  /* Theme tokens are declared on :root so SiteHeader (which lives outside
+     `.playground-shell`) can read the same variables. The `data-theme`
+     attribute is set by the inline bootstrap in `app.html` before paint,
+     using the same `starlight-theme` localStorage key the Astro pages
+     write — so dark/light tracks the rest of the docs site. */
+  :global(:root) {
+    color-scheme: dark;
+
+    --kr-bg: #0f172a;
+    --kr-panel-bg: #111827;
+    --kr-panel-bg-strong: #1f2937;
+    --kr-editor-bg: #020617;
+    --kr-border: #334155;
+    --kr-text: #e5e7eb;
+    --kr-muted: #94a3b8;
+    --kr-accent: #60a5fa;
+    --kr-accent-soft: #bfdbfe;
     --kr-error-bg: #451a1a;
     --kr-error-border: #ef4444;
     --kr-error-text: #fecaca;
+    --kr-header-h: 3.75rem;
+  }
 
-    min-height: 100vh;
+  :global(:root[data-theme='light']) {
+    color-scheme: light;
+
+    --kr-bg: #ffffff;
+    --kr-panel-bg: #f8fafc;
+    --kr-panel-bg-strong: #f1f5f9;
+    --kr-editor-bg: #ffffff;
+    --kr-border: #e2e8f0;
+    --kr-text: #0f172a;
+    --kr-muted: #64748b;
+    --kr-accent: #4338ca;
+    --kr-accent-soft: #c7d2fe;
+    --kr-error-bg: #fef2f2;
+    --kr-error-border: #ef4444;
+    --kr-error-text: #b91c1c;
+  }
+
+  .playground-shell {
+    min-height: calc(100vh - var(--kr-header-h));
     display: grid;
     gap: 1rem;
     padding: 2rem;

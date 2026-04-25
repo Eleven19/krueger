@@ -4,12 +4,13 @@
  * (`Header.astro`). The previous version included a "Try ▾" dropdown
  * with two playgrounds (Laminar/Scala.js and SvelteKit/WASM); the
  * Laminar entry has been removed and the SvelteKit playground at
- * `/krueger/try-wasm/` is now the canonical playground. The dropdown
- * is therefore collapsed to a single anchor.
+ * `/krueger/try/` (sourced from `sites/try-wasm/`) is now the
+ * canonical playground. The dropdown is therefore collapsed to a
+ * single anchor.
  *
  * Active-route highlighting mirrors Header.astro: derived from
  * `Astro.url.pathname` after normalising trailing slashes, so
- * `/krueger/try-wasm` and `/krueger/try-wasm/` compare equal.
+ * `/krueger/try` and `/krueger/try/` compare equal.
  */
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -20,7 +21,7 @@ function norm(p: string): string {
 
 const pathname = norm(Astro.url.pathname);
 const inTryWasm =
-    pathname === norm(`${base}/try-wasm`) || pathname.startsWith(norm(`${base}/try-wasm/`));
+    pathname === norm(`${base}/try`) || pathname.startsWith(norm(`${base}/try/`));
 ---
 
 <nav class="primary-nav" aria-label="Primary">
@@ -33,7 +34,7 @@ const inTryWasm =
     <a
         class="nav-link"
         data-active={inTryWasm ? 'true' : undefined}
-        href={`${base}/try-wasm/`}>Try</a
+        href={`${base}/try/`}>Try</a
     >
 
     <a

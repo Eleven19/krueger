@@ -3,6 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+      Theme bootstrap: read the same `starlight-theme` localStorage value the
+      Astro/Starlight pages set (Auto / Dark / Light). Resolves "auto" against
+      the prefers-color-scheme media query and stamps `data-theme` on <html>
+      before the playground paints, so the user's docs-side choice carries
+      across to /try/ without a flash of the wrong theme.
+
+      Defaults to dark when localStorage is unavailable (private browsing,
+      first visit) — the playground was always dark before this hook landed,
+      so that preserves the prior look until the user expresses a preference.
+    -->
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('starlight-theme');
+          const auto = window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light';
+          const theme = saved === 'light' || saved === 'dark' ? saved : auto;
+          document.documentElement.dataset.theme = theme;
+        } catch (_) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
+
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

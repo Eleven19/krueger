@@ -119,15 +119,15 @@ add or extend a step-definition class in `steps/`.
 
 The published handbook and API reference live on [GitHub Pages](https://eleven19.github.io/krueger/) (Starlight + generated Scaladoc). One browser playground ships with that site:
 
-- **`/krueger/try-wasm/`** — SvelteKit static app that loads the Scala.js compiler facade and lets the user toggle between WASM and JavaScript compiler backends at runtime.
+- **`/krueger/try/`** — SvelteKit static app that loads the Scala.js compiler facade and lets the user toggle between WASM and JavaScript compiler backends at runtime.
 
 **Production-sized artifact (same shape CI deploys):**
 
 ```sh
-./mill docs.site   # writes docs/dist/, including dist/try-wasm/
+./mill docs.site   # writes docs/dist/, including dist/try/
 ```
 
-**Local dev with the playground** (Mill prepares Scaladoc, WASM artifacts, builds try-wasm, and copies it into `docs/public/try-wasm/` for Astro):
+**Local dev with the playground** (Mill prepares Scaladoc, WASM artifacts, builds the playground from `sites/try-wasm/`, and copies it into `docs/public/try/` for Astro):
 
 ```sh
 cd docs
@@ -135,7 +135,8 @@ npm ci
 npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
 ```
 
-Then open `http://localhost:4321/krueger/` and `/krueger/try-wasm/`.
+Then open `http://localhost:4321/krueger/` and `/krueger/try/`.
+
 
 **Playwright regression** for the playgrounds (from `docs/` after `npm ci`):
 

@@ -33,8 +33,8 @@ function fail(message) {
   process.exit(1);
 }
 
-await access(join(distDir, 'try-wasm', 'index.html')).catch(() => {
-  fail('missing docs/dist/try-wasm/index.html; build and stitch sites/try-wasm into docs/dist first');
+await access(join(distDir, 'try', 'index.html')).catch(() => {
+  fail('missing docs/dist/try/index.html; build and stitch sites/try into docs/dist first');
 });
 
 const server = createServer(async (req, res) => {
@@ -72,7 +72,7 @@ try {
     const js = await runBackendSmoke(browser, baseUrl, 'js');
 
     if (wasm.matchRoot !== js.matchRoot) {
-      fail(`/try-wasm/ match roots diverged across backends: webgc=${wasm.matchRoot} js=${js.matchRoot}`);
+      fail(`/try/ match roots diverged across backends: webgc=${wasm.matchRoot} js=${js.matchRoot}`);
     }
   } finally {
     await browser.close();
@@ -81,7 +81,7 @@ try {
   await new Promise((resolveClose) => server.close(resolveClose));
 }
 
-console.log('check-playground-e2e: OK - /try-wasm/ smoke tests passed for both webgc and js backends.');
+console.log('check-playground-e2e: OK - /try/ smoke tests passed for both webgc and js backends.');
 
 async function runBackendSmoke(browser, baseUrl, backendId) {
   const page = await browser.newPage();
@@ -90,7 +90,7 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
     if (request.url().endsWith('.wasm')) wasmRequests.push(request.url());
   });
   try {
-    await page.goto(`${baseUrl}/try-wasm/`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/try/`, { waitUntil: 'domcontentloaded' });
 
     // Wait for the backend selector to be present, then switch (or confirm) it.
     await page.waitForSelector('select[aria-label="Compiler backend"]');
@@ -101,14 +101,14 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
       backendId
     );
 
-    await fillMonacoEditor(page, 0, validSource, `/try-wasm/ (${backendId}) Elm source`);
-    await fillMonacoEditor(page, 1, validQuery, `/try-wasm/ (${backendId}) query`);
+    await fillMonacoEditor(page, 0, validSource, `/try/ (${backendId}) Elm source`);
+    await fillMonacoEditor(page, 1, validQuery, `/try/ (${backendId}) query`);
 
     await expectText(
       page,
       '.krueger-match-root',
       'CstValueDeclaration',
-      `/try-wasm/ (${backendId}) matches panel`
+      `/try/ (${backendId}) matches panel`
     );
     const matchRoot = await page.locator('.krueger-match-root').first().textContent();
 
@@ -121,14 +121,14 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
       const fetchedWasm = wasmRequests.some((url) => url.includes('/webgc/main.wasm'));
       if (!fetchedWasm) {
         fail(
-          `/try-wasm/ (webgc): expected the page to fetch wasm/webgc/main.wasm, ` +
+          `/try/ (webgc): expected the page to fetch wasm/webgc/main.wasm, ` +
             `but observed wasm requests: ${JSON.stringify(wasmRequests)}`
         );
       }
     } else {
       if (wasmRequests.length > 0) {
         fail(
-          `/try-wasm/ (js): expected zero .wasm requests, observed: ${JSON.stringify(wasmRequests)}`
+          `/try/ (js): expected zero .wasm requests, observed: ${JSON.stringify(wasmRequests)}`
         );
       }
     }

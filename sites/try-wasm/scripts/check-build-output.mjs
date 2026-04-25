@@ -23,12 +23,12 @@ await requireFile('build/wasm/webgc/main.wasm');
 
 const html = await readFile(resolve(siteRoot, 'build/index.html'), 'utf8');
 
-if (!html.includes('assets: "/krueger/try-wasm"')) {
-  fail('build/index.html must configure SvelteKit assets for /krueger/try-wasm');
+if (!html.includes('assets: "/krueger/try"')) {
+  fail('build/index.html must configure SvelteKit assets for /krueger/try');
 }
 
-if (!html.includes('WASM playground')) {
+if (!html.includes('Compiler playground')) {
   fail('build/index.html must contain the SvelteKit landing page content');
 }
 
-console.log('check-build-output: OK - SvelteKit static output is deployable under /krueger/try-wasm.');
+console.log('check-build-output: OK - SvelteKit static output is deployable under /krueger/try.');

@@ -40,8 +40,8 @@ if (!svelteConfig.includes("adapter-static") || !svelteConfig.includes("fallback
   fail('svelte.config.js must configure adapter-static with fallback 404.html');
 }
 
-if (!svelteConfig.includes("base: dev ? '' : '/krueger/try-wasm'")) {
-  fail('svelte.config.js must set production base to /krueger/try-wasm');
+if (!svelteConfig.includes("base: dev ? '' : '/krueger/try'")) {
+  fail('svelte.config.js must set production base to /krueger/try');
 }
 
 if (!viteConfig.includes('sveltekit()')) {
@@ -52,4 +52,4 @@ await requireFile('src/routes/+page.svelte');
 await requireFile('src/app.html');
 await requireFile('static/wasm/.gitkeep');
 
-console.log('check-skeleton: OK - SvelteKit static skeleton is configured for /krueger/try-wasm.');
+console.log('check-skeleton: OK - SvelteKit static skeleton is configured for /krueger/try.');

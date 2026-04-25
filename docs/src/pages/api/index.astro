@@ -1,0 +1,269 @@
+---
+/**
+ * `/krueger/api/` — Scaladoc platform picker.
+ *
+ * Plain Astro page (not Starlight content) so it sits at the same URL as
+ * the per-platform Scaladoc trees `/krueger/api/{jvm,js,native}/` (which
+ * are static HTML written by `mill docs.writeToDocsPublic` into
+ * `docs/public/api/{jvm,js,native}/`). A Starlight page would impose its
+ * full sidebar/TOC chrome on what is really just a three-card landing.
+ *
+ * Reuses the shared [NavLinks](../components/NavLinks.astro) component
+ * for the top-nav so the API page stays consistent with the rest of the
+ * site, and reads the same `starlight-theme` localStorage value so the
+ * dark/light choice carries across the whole tree.
+ */
+
+import NavLinks from '../../components/NavLinks.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const repoUrl = 'https://github.com/Eleven19/krueger';
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="generator" content={Astro.generator} />
+        <title>API Reference — Krueger</title>
+        <meta
+            name="description"
+            content="Generated Scaladoc for Krueger across JVM, Scala.js, and Scala Native platforms."
+        />
+        <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+
+        <!-- Apply the user's saved theme preference (set on Starlight pages
+             via the ThemeSelect component) before any pixels paint. Mirrors
+             the same logic Starlight uses internally so /api/ and /try/
+             render in the same dark/light mode the user chose elsewhere. -->
+        <script is:inline>
+            (() => {
+                try {
+                    const saved = localStorage.getItem('starlight-theme');
+                    const auto = window.matchMedia('(prefers-color-scheme: dark)').matches
+                        ? 'dark'
+                        : 'light';
+                    const theme = saved === 'light' || saved === 'dark' ? saved : auto;
+                    document.documentElement.dataset.theme = theme;
+                } catch (_) {
+                    document.documentElement.dataset.theme = 'dark';
+                }
+            })();
+        </script>
+    </head>
+    <body>
+        <header class="api-header">
+            <a class="api-brand" href={`${base}/`}>
+                <img class="api-logo" src={`${base}/favicon.svg`} alt="" width="28" height="28" />
+                <span>Krueger</span>
+            </a>
+            <NavLinks />
+            <a
+                class="api-github"
+                href={repoUrl}
+                rel="noopener"
+                aria-label="Krueger on GitHub"
+            >
+                <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                >
+                    <path
+                        d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"
+                    />
+                </svg>
+            </a>
+        </header>
+
+        <main class="api-main">
+            <h1>API Reference</h1>
+            <p class="subtitle">
+                Generated Scaladoc for the Krueger Scala libraries. Pick the
+                platform you build against — the underlying types are the
+                same; only the linker output differs.
+            </p>
+
+            <ul class="cards">
+                <li>
+                    <a href={`${base}/api/jvm/`} target="_blank" rel="noopener">
+                        <strong>JVM</strong>
+                        <span>krueger-core &amp; krueger-trees, JVM build</span>
+                    </a>
+                </li>
+                <li>
+                    <a href={`${base}/api/js/`} target="_blank" rel="noopener">
+                        <strong>Scala.js</strong>
+                        <span>krueger-core &amp; krueger-trees, Scala.js build</span>
+                    </a>
+                </li>
+                <li>
+                    <a href={`${base}/api/native/`} target="_blank" rel="noopener">
+                        <strong>Scala Native</strong>
+                        <span>krueger-core &amp; krueger-trees, Scala Native build</span>
+                    </a>
+                </li>
+            </ul>
+
+            <p class="hint">
+                Cards open in a new tab — the Scaladoc trees ship their own
+                navigation and pagefind-ignore the docs search.
+            </p>
+        </main>
+
+        <style is:global>
+            :root {
+                color-scheme: light dark;
+
+                --api-bg: #0f172a;
+                --api-fg: #f8fafc;
+                --api-muted: #a4acbd;
+                --api-card-bg: #1c1e24;
+                --api-card-bg-hover: #23262d;
+                --api-border: #2a2d35;
+                --api-accent: #818cf8;
+            }
+
+            :root[data-theme='light'] {
+                --api-bg: #ffffff;
+                --api-fg: #0f172a;
+                --api-muted: #4b5563;
+                --api-card-bg: #f8fafc;
+                --api-card-bg-hover: #eef2ff;
+                --api-border: #e2e8f0;
+                --api-accent: #4338ca;
+
+                --sl-color-white: var(--api-fg);
+                --sl-color-gray-1: #1f2937;
+                --sl-color-gray-2: var(--api-muted);
+                --sl-color-gray-3: #6b7280;
+                --sl-color-gray-5: var(--api-border);
+                --sl-color-gray-6: #f1f5f9;
+                --sl-color-bg-nav: var(--api-card-bg);
+            }
+
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                background: var(--api-bg);
+                color: var(--api-fg);
+                font-family:
+                    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+                    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            }
+
+            body {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .api-header {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                display: flex;
+                align-items: center;
+                gap: 1.5rem;
+                height: 3.75rem;
+                padding: 0 1rem;
+                background: var(--api-card-bg);
+                border-bottom: 1px solid var(--api-border);
+            }
+
+            .api-brand {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.625rem;
+                color: var(--api-fg);
+                font-weight: 600;
+                font-size: 1.05rem;
+                text-decoration: none;
+            }
+            .api-logo {
+                width: 1.75rem;
+                height: 1.75rem;
+                border-radius: 0.375rem;
+            }
+
+            .primary-nav {
+                margin-inline-start: auto;
+            }
+
+            .api-github {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 2rem;
+                height: 2rem;
+                color: var(--api-muted);
+                border-radius: 0.25rem;
+                padding-inline-start: 1rem;
+                border-inline-start: 1px solid var(--api-border);
+                box-sizing: content-box;
+            }
+            .api-github:hover {
+                color: var(--api-fg);
+            }
+
+            .api-main {
+                max-width: 56rem;
+                margin: 0 auto;
+                padding: 3rem 1.5rem 4rem;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .api-main h1 {
+                margin: 0 0 0.25rem;
+                font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+            }
+            .subtitle {
+                margin: 0 0 2rem;
+                color: var(--api-muted);
+                line-height: 1.6;
+            }
+
+            .cards {
+                list-style: none;
+                padding: 0;
+                margin: 0 0 1.5rem;
+                display: grid;
+                gap: 1rem;
+                grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+            }
+            .cards a {
+                display: block;
+                padding: 1.25rem;
+                background: var(--api-card-bg);
+                border: 1px solid var(--api-border);
+                border-radius: 0.625rem;
+                text-decoration: none;
+                color: inherit;
+                transition: border-color 120ms ease, background-color 120ms ease;
+            }
+            .cards a:hover {
+                background: var(--api-card-bg-hover);
+                border-color: var(--api-accent);
+            }
+            .cards strong {
+                display: block;
+                font-size: 1.1rem;
+                margin-bottom: 0.25rem;
+                color: var(--api-fg);
+            }
+            .cards span {
+                color: var(--api-muted);
+                font-size: 0.9rem;
+            }
+
+            .hint {
+                color: var(--api-muted);
+                font-size: 0.85rem;
+            }
+        </style>
+    </body>
+</html>

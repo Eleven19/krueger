@@ -9,5 +9,6 @@ dist/
 # Astro copies `public/` verbatim into `dist/`, so these are regenerated on every build.
 /public/api/
 
-# SvelteKit try-wasm static output mirrored by `./mill docs.prepareLocalDevSite`.
-/public/try-wasm/
+# SvelteKit playground static output mirrored by `./mill docs.prepareLocalDevSite`.
+# (Source lives in `sites/try-wasm/`; deployment URL is `/krueger/try/`.)
+/public/try/

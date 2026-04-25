@@ -23,7 +23,7 @@ includes this handbook plus a single browser playground:
 
 | Route | Stack | Purpose |
 | ----- | ----- | ------- |
-| [`/krueger/try-wasm/`](https://eleven19.github.io/krueger/try-wasm/) | SvelteKit + Scala.js | Interactive playground with a runtime backend selector (WASM or JS). |
+| [`/krueger/try/`](https://eleven19.github.io/krueger/try/) | SvelteKit + Scala.js | Interactive playground with a runtime backend selector (WASM or JS). |
 
 To build that tree locally, see [Contributing → Docs site](/krueger/contributing/#docs-site).
 
