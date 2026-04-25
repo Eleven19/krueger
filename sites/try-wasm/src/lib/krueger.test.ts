@@ -76,14 +76,20 @@ describe('krueger.ts real compiler facade wrapper', () => {
     expect(cst.errors[0]?.message).toContain('unexpected end of input');
   });
 
-  it('returns existing error envelopes for malformed unist parses', async () => {
+  it('returns existing error envelopes for malformed CST and AST unist parses', async () => {
     const krueger = await createKruegerClient('js', { facadeUrl });
     const cst = krueger.parseCstUnist(malformedSource);
+    const ast = krueger.parseAstUnist(malformedSource);
 
     expectEnvelope(cst);
+    expectEnvelope(ast);
     expect(cst.ok).toBe(false);
+    expect(ast.ok).toBe(false);
     expect(cst.value).toBeNull();
+    expect(ast.value).toBeNull();
     expect(cst.errors[0]?.phase).toBe('cst');
+    expect(ast.errors[0]?.phase).toBe('ast');
+    expect(ast.errors[0]?.message).toContain('unexpected end of input');
   });
 
   it('runs a valid query and preserves deterministic match order', async () => {
