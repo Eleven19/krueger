@@ -3,6 +3,7 @@
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
+  import PaneResizeHandle from "$lib/components/PaneResizeHandle.svelte";
   import ResultsPanel from "$lib/components/ResultsPanel.svelte";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
   import {
@@ -17,6 +18,7 @@
     type KruegerClient,
     type MatchView
   } from "$lib/krueger";
+  import { commandSurfaceActions } from "$lib/playground/catalog";
   import { defaultPanel, type Panel } from "$lib/panels";
   import { supportsWasmGc } from "$lib/wasm-gc";
 
@@ -34,6 +36,9 @@ main = 42
   let source = $state(defaultSource);
   let query = $state(defaultQuery);
   let backend = $state<BackendId>(pickInitialBackend(null));
+  let commandText = $state('');
+  let editorPercent = $state(62);
+  let utilityPercent = $state(76);
 
   const cstResult = $derived(
     compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
@@ -135,39 +140,87 @@ main = 42
   />
 </svelte:head>
 
-<SiteHeader centerTitle="Try Krueger" />
+<SiteHeader
+  commandActions={commandSurfaceActions}
+  commandValue={commandText}
+  onCommandInput={(next) => {
+    commandText = next;
+  }}
+  onCommandSubmit={(value) => {
+    commandText = value;
+  }}
+/>
 
 <main class="playground-shell">
-  <section class="workspace" aria-label="Try Krueger workspace">
-    <ActivityBar
-      {selectedPanel}
-      onSelect={(panel) => {
-        selectedPanel = panel;
+  <section
+    class="workspace"
+    aria-label="Source workspace"
+    style={`--editor-percent:${editorPercent}; --utility-percent:${utilityPercent};`}
+  >
+    <PaneResizeHandle
+      value={editorPercent}
+      label="Resize workspace panels"
+      onAdjust={(next) => {
+        editorPercent = next;
       }}
     />
-    <EditorGroup
-      {source}
-      {query}
-      onSourceChange={(next) => {
-        source = next;
-      }}
-      onQueryChange={(next) => {
-        query = next;
-      }}
-    />
-    <ResultsPanel
-      {selectedPanel}
-      {cstResult}
-      {astResult}
-      {cstUnistResult}
-      {astUnistResult}
-      {matchResult}
-      {queryResult}
-      {prettyQuery}
-      {backend}
-      {wasmGcSupported}
-      onBackendChange={handleBackendChange}
-    />
+
+    <div class="center-stack">
+      <section class="editor-shell" aria-label="Editor workspace">
+        <ActivityBar
+          {selectedPanel}
+          onSelect={(panel) => {
+            selectedPanel = panel;
+          }}
+        />
+        <EditorGroup
+          {source}
+          {query}
+          onSourceChange={(next) => {
+            source = next;
+          }}
+          onQueryChange={(next) => {
+            query = next;
+          }}
+        />
+        <ResultsPanel
+          {selectedPanel}
+          {cstResult}
+          {astResult}
+          {cstUnistResult}
+          {astUnistResult}
+          {matchResult}
+          {queryResult}
+          {prettyQuery}
+          {backend}
+          {wasmGcSupported}
+          onBackendChange={handleBackendChange}
+        />
+      </section>
+
+      <PaneResizeHandle
+        value={utilityPercent}
+        label="Resize output panels"
+        onAdjust={(next) => {
+          utilityPercent = next;
+        }}
+      />
+
+      <section class="utility-shell" aria-label="Output utility panel">
+        <div class="utility-tablist" role="tablist" aria-label="Output panels">
+          <button type="button" class="utility-tab" role="tab" aria-selected="true">Logs</button>
+          <button type="button" class="utility-tab" role="tab" aria-selected="false">Problems</button>
+        </div>
+
+        <div class="utility-panel" role="tabpanel" aria-label="Logs">
+          <p>Logs and problems will wire into compiler diagnostics in later tasks.</p>
+        </div>
+      </section>
+    </div>
+
+    <aside class="inspector-shell" role="region" aria-label="Selection inspector">
+      <p>Inspector details will appear here when explorer selection ships in Task 3.</p>
+    </aside>
   </section>
 </main>
 
@@ -260,10 +313,111 @@ main = 42
 
   .workspace {
     display: grid;
-    grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
+    grid-template-columns:
+      auto
+      minmax(0, calc(var(--editor-percent) * 1%))
+      minmax(18rem, calc(100% - (var(--editor-percent) * 1%)));
+    grid-template-areas: "center-handle center inspector";
     min-height: calc(100vh - var(--kr-header-h));
     overflow: hidden;
     border-top: 0;
     border-bottom: 1px solid var(--kr-border);
+  }
+
+  .workspace > :global(.resize-handle) {
+    grid-area: center-handle;
+    min-height: 100%;
+    cursor: col-resize;
+    border-inline: 1px solid var(--kr-border);
+  }
+
+  .center-stack {
+    grid-area: center;
+    display: grid;
+    grid-template-rows:
+      minmax(0, calc(var(--utility-percent) * 1%))
+      auto
+      minmax(9rem, calc(100% - (var(--utility-percent) * 1%)));
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .center-stack > :global(.resize-handle) {
+    min-width: 100%;
+    cursor: row-resize;
+    border-block: 1px solid var(--kr-border);
+  }
+
+  .editor-shell {
+    display: grid;
+    grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .utility-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    background: linear-gradient(180deg, var(--kr-panel-bg), var(--kr-panel-bg-strong));
+  }
+
+  .utility-tablist {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--kr-border);
+  }
+
+  .utility-tab {
+    padding: 0.45rem 0.8rem;
+    color: var(--kr-muted);
+    background: transparent;
+    border: 1px solid var(--kr-border);
+    border-radius: 999px;
+    font: inherit;
+  }
+
+  .utility-tab[aria-selected='true'] {
+    color: var(--kr-text);
+    background: color-mix(in srgb, var(--kr-panel-bg-strong) 86%, white 14%);
+    border-color: color-mix(in srgb, var(--kr-accent) 45%, var(--kr-border));
+  }
+
+  .utility-panel {
+    padding: 1rem;
+    color: var(--kr-muted);
+  }
+
+  .utility-panel p,
+  .inspector-shell p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .inspector-shell {
+    grid-area: inspector;
+    min-width: 18rem;
+    padding: 1rem;
+    background: linear-gradient(180deg, var(--kr-panel-bg), var(--kr-editor-bg));
+    border-left: 1px solid var(--kr-border);
+  }
+
+  @media (max-width: 1100px) {
+    .workspace {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas:
+        "center-handle center"
+        "inspector inspector";
+    }
+
+    .inspector-shell {
+      min-width: 0;
+      min-height: 10rem;
+      border-left: 0;
+      border-top: 1px solid var(--kr-border);
+    }
   }
 </style>

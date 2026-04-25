@@ -1,6 +1,8 @@
 <script lang="ts">
   import { base } from '$app/paths';
 
+  import type { CommandAction } from '$lib/playground/types';
+  import CommandSurface from './CommandSurface.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
 
   /**
@@ -22,7 +24,19 @@
    * not set it just leave the center column empty.
    */
 
-  let { centerTitle = '' }: { centerTitle?: string } = $props();
+  let {
+    centerTitle = '',
+    commandActions = [],
+    commandValue = '',
+    onCommandSubmit = () => {},
+    onCommandInput = () => {}
+  }: {
+    centerTitle?: string;
+    commandActions?: CommandAction[];
+    commandValue?: string;
+    onCommandSubmit?: (value: string) => void;
+    onCommandInput?: (value: string) => void;
+  } = $props();
 
   const siblingsRoot = base.replace(/\/try$/, '');
   const repoUrl = 'https://github.com/Eleven19/krueger';
@@ -49,7 +63,16 @@
     </a>
   </div>
 
-  {#if centerTitle}
+  {#if commandActions.length > 0}
+    <div class="center-command">
+      <CommandSurface
+        actions={commandActions}
+        value={commandValue}
+        onSubmit={onCommandSubmit}
+        onInput={onCommandInput}
+      />
+    </div>
+  {:else if centerTitle}
     <p class="center-title" aria-hidden="true">{centerTitle}</p>
   {/if}
 
@@ -133,6 +156,13 @@
     pointer-events: none;
   }
 
+  .center-command {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(40rem, calc(100vw - 14rem));
+  }
+
   .primary-nav {
     margin-inline-start: auto;
     display: flex;
@@ -189,5 +219,18 @@
   .social-link:hover {
     color: var(--kr-text);
     background: var(--kr-panel-bg);
+  }
+
+  @media (max-width: 1200px) {
+    .center-command {
+      width: min(28rem, calc(100vw - 12rem));
+    }
+  }
+
+  @media (max-width: 960px) {
+    .center-command,
+    .center-title {
+      display: none;
+    }
   }
 </style>
