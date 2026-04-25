@@ -51,6 +51,9 @@ jobs:
       - name: Run JVM tests
         run: ./mill krueger.core.jvm.test
 
+      - name: Stage webapp-wasm artifacts for itest
+        run: ./mill krueger.webapp-wasm.writeToWasmSite
+
       - name: Run BDD integration tests
         run: ./mill krueger.itest
 

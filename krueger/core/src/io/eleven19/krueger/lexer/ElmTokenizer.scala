@@ -14,16 +14,17 @@ final case class ElmTokenizerCtx(
 ) derives CanEqual
 
 enum ElmTokenKind derives CanEqual:
+
     case Keyword, LowerIdentifier, UpperIdentifier, Operator, Number, StringLiteral, CharLiteral, Comment, Whitespace,
         Newline, Punctuation, Unknown
 
 final case class ElmToken(kind: ElmTokenKind, lexeme: String, start: Int, end: Int) derives CanEqual
 
 object ElmTokenizer:
-    type TokenizeCtx = ElmTokenizerCtx
-    type TokenizeLog = String
-    type TokenizeErr = CompileError
-    type TokenizeEff[A] = QueryLogic.QueryEffect[TokenizeCtx, TokenizeLog, TokenizeErr, A]
+    type TokenizeCtx       = ElmTokenizerCtx
+    type TokenizeLog       = String
+    type TokenizeErr       = CompileError
+    type TokenizeEff[A]    = QueryLogic.QueryEffect[TokenizeCtx, TokenizeLog, TokenizeErr, A]
     type TokenizeResult[A] = QueryLogic.Result[TokenizeCtx, TokenizeLog, TokenizeErr, A]
 
     val defaultConfig: ElmTokenizerConfig = ElmTokenizerConfig(
@@ -34,8 +35,8 @@ object ElmTokenizer:
     val defaultContext: ElmTokenizerCtx = ElmTokenizerCtx(defaultConfig)
 
     private val hardOperators: Vector[String] = ElmLexer.operators.toVector.sortBy(op => (-op.length, op))
-    private val punctuation: Set[Char] = Set('(', ')', '[', ']', '{', '}', ',', ';')
-    private val operatorChars: Set[Char] = "+-*/<>=&|^!~%?:.\\".toSet
+    private val punctuation: Set[Char]        = Set('(', ')', '[', ']', '{', '}', ',', ';')
+    private val operatorChars: Set[Char]      = "+-*/<>=&|^!~%?:.\\".toSet
 
     def tokenize(source: String): TokenizeEff[Vector[ElmToken]] =
         val ctx = QueryLogic.readContext[TokenizeCtx, TokenizeLog, TokenizeErr]
@@ -52,10 +53,11 @@ object ElmTokenizer:
 
     private def scan(source: String, config: ElmTokenizerConfig): TokenizeEff[Vector[ElmToken]] =
         val tokens = Vector.newBuilder[ElmToken]
-        var index = 0
+        var index  = 0
 
         def add(kind: ElmTokenKind, start: Int, end: Int): Unit =
-            if config.includeTrivia || !isTrivia(kind) then tokens += ElmToken(kind, source.substring(start, end), start, end)
+            if config.includeTrivia || !isTrivia(kind) then
+                tokens += ElmToken(kind, source.substring(start, end), start, end)
 
         def recoverUnknown(start: Int): Unit =
             val lexeme = source.substring(start, start + 1)
@@ -71,7 +73,7 @@ object ElmTokenizer:
 
         while index < source.length do
             val start = index
-            val ch = source.charAt(index)
+            val ch    = source.charAt(index)
 
             if source.startsWith("\r\n", index) then
                 index += 2
@@ -143,7 +145,7 @@ object ElmTokenizer:
 
     private def consumeBlockComment(source: String, index: Int): Int =
         var cursor = index + 2
-        var depth = 1
+        var depth  = 1
         while cursor < source.length && depth > 0 do
             if source.startsWith("{-", cursor) then
                 depth += 1
@@ -155,7 +157,7 @@ object ElmTokenizer:
         cursor
 
     private def consumeQuoted(source: String, index: Int, quote: Char): Int =
-        var cursor = index + 1
+        var cursor  = index + 1
         var escaped = false
         while cursor < source.length do
             val ch = source.charAt(cursor)
