@@ -5,6 +5,8 @@ import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.annotation.JSExportTopLevel
 
+import io.eleven19.krueger.ast.AstNode
+import io.eleven19.krueger.ast.AstUnistProjection.given
 import io.eleven19.krueger.compiler.CapturedNode
 import io.eleven19.krueger.compiler.CompileError
 import io.eleven19.krueger.compiler.CompilerComponent
@@ -12,10 +14,15 @@ import io.eleven19.krueger.compiler.MatchView
 import io.eleven19.krueger.compiler.Span
 import io.eleven19.krueger.cst.CstModule
 import io.eleven19.krueger.cst.CstNode
+import io.eleven19.krueger.cst.CstUnistProjection.given
 import io.eleven19.krueger.lexer.ElmToken
 import io.eleven19.krueger.lexer.ElmTokenizer
 import io.eleven19.krueger.trees.query.Query
 import io.eleven19.krueger.trees.query.QueryLogic
+import io.eleven19.krueger.trees.unist.UnistNode
+import io.eleven19.krueger.trees.unist.UnistPoint
+import io.eleven19.krueger.trees.unist.UnistPosition
+import io.eleven19.krueger.trees.unist.UnistProjection
 
 /** Plain-JS FFI facade over the shared [[CompilerComponent]]. Exposed as the top-level `Krueger` binding in the emitted
   * ES module so a framework-agnostic front-end (in particular the SvelteKit `sites/try-wasm/` playground) can drive the
@@ -46,6 +53,14 @@ object KruegerJs:
     @JSExport
     def parseAst(src: String): js.Object =
         envelopeWithOpaqueValue(LinkedCompilerBackend.parseAst(src))
+
+    @JSExport
+    def parseCstUnist(src: String): js.Object =
+        envelopeWithCstUnist(LinkedCompilerBackend.parseCst(src), src)
+
+    @JSExport
+    def parseAstUnist(src: String): js.Object =
+        envelopeWithAstUnist(LinkedCompilerBackend.parseAst(src), src)
 
     @JSExport
     def parseQuery(q: String): js.Object =
@@ -84,6 +99,30 @@ object KruegerJs:
             case Right(v) =>
                 env.updateDynamic("ok")(true)
                 env.updateDynamic("value")(v.asInstanceOf[js.Any])
+            case Left(_) =>
+                env.updateDynamic("ok")(false)
+                env.updateDynamic("value")(null)
+        attachLogsAndErrors(env, r)
+        env.asInstanceOf[js.Object]
+
+    private def envelopeWithCstUnist(r: CompileResult[Unit, CstModule], src: String): js.Object =
+        val env = js.Dynamic.literal()
+        r.value match
+            case Right(v) =>
+                env.updateDynamic("ok")(true)
+                env.updateDynamic("value")(unistNodePojo(UnistProjection.project(v: CstNode, Some(src))))
+            case Left(_) =>
+                env.updateDynamic("ok")(false)
+                env.updateDynamic("value")(null)
+        attachLogsAndErrors(env, r)
+        env.asInstanceOf[js.Object]
+
+    private def envelopeWithAstUnist(r: CompileResult[Unit, io.eleven19.krueger.ast.Module], src: String): js.Object =
+        val env = js.Dynamic.literal()
+        r.value match
+            case Right(v) =>
+                env.updateDynamic("ok")(true)
+                env.updateDynamic("value")(unistNodePojo(UnistProjection.project(v: AstNode, Some(src))))
             case Left(_) =>
                 env.updateDynamic("ok")(false)
                 env.updateDynamic("value")(null)
@@ -161,4 +200,36 @@ object KruegerJs:
     private def capturedNodePojo(n: CapturedNode): js.Object =
         val o = js.Dynamic.literal(nodeType = n.nodeType, childCount = n.childCount)
         n.text.foreach(t => o.updateDynamic("text")(t))
+        o.asInstanceOf[js.Object]
+
+    private def unistNodePojo(node: UnistNode): js.Object =
+        val o = js.Dynamic.literal(
+            `type` = node.`type`,
+            data = unistDataPojo(node.data),
+            children = node.children.map(unistNodePojo).toJSArray.asInstanceOf[js.Any]
+        )
+        node.value.foreach(value => o.updateDynamic("value")(value))
+        node.position.foreach(position => o.updateDynamic("position")(positionPojo(position)))
+        o.asInstanceOf[js.Object]
+
+    private def unistDataPojo(data: io.eleven19.krueger.trees.unist.UnistData): js.Object =
+        val fields = js.Dynamic.literal()
+        data.fields.foreach((name, indexes) => fields.updateDynamic(name)(indexes.toJSArray.asInstanceOf[js.Any]))
+        js.Dynamic.literal(
+            childCount = data.childCount,
+            fields = fields.asInstanceOf[js.Object]
+        ).asInstanceOf[js.Object]
+
+    private def positionPojo(position: UnistPosition): js.Object =
+        js.Dynamic.literal(
+            start = pointPojo(position.start),
+            end = pointPojo(position.end)
+        ).asInstanceOf[js.Object]
+
+    private def pointPojo(point: UnistPoint): js.Object =
+        val o = js.Dynamic.literal(
+            line = point.line,
+            column = point.column
+        )
+        point.offset.foreach(offset => o.updateDynamic("offset")(offset))
         o.asInstanceOf[js.Object]

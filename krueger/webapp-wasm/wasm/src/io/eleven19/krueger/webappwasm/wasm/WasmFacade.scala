@@ -23,6 +23,8 @@ object WasmFacade:
         .literal(
             parseCst = ((src: String) => KruegerJs.parseCst(src)): js.Function1[String, js.Object],
             parseAst = ((src: String) => KruegerJs.parseAst(src)): js.Function1[String, js.Object],
+            parseCstUnist = ((src: String) => KruegerJs.parseCstUnist(src)): js.Function1[String, js.Object],
+            parseAstUnist = ((src: String) => KruegerJs.parseAstUnist(src)): js.Function1[String, js.Object],
             parseQuery = ((q: String) => KruegerJs.parseQuery(q)): js.Function1[String, js.Object],
             runQuery =
                 ((q: js.Any, root: js.Any) => KruegerJs.runQuery(q, root)): js.Function2[js.Any, js.Any, js.Object],
