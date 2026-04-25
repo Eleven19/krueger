@@ -77,6 +77,14 @@ object UnistProjectionSpec extends ZIOSpecDefault:
                 pairNode.data.fields == Map("name" -> IndexedSeq(0), "value" -> IndexedSeq(1))
             )
         },
+        test("maps duplicate equal field children to sequential direct child indexes") {
+            val duplicateRoot = ListExpr(Atom("call"), IndexedSeq(Atom("x"), Atom("x")))
+            val node = UnistProjection.project(duplicateRoot)
+            assertTrue(
+                node.children.map(_.value) == IndexedSeq(Some("call"), Some("x"), Some("x")),
+                node.data.fields == Map("head" -> IndexedSeq(0), "arguments" -> IndexedSeq(1, 2))
+            )
+        },
         test("omits position when source text is absent") {
             val node = UnistProjection.project(root)
             assertTrue(node.position.isEmpty)

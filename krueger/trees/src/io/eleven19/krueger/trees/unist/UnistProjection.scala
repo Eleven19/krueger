@@ -34,13 +34,28 @@ object UnistProjection:
         fields.toSeq
             .sortBy((field, _) => FieldName.unwrap(field))
             .map { (field, fieldChildren) =>
+                val usedIndexes = scala.collection.mutable.Set.empty[Int]
                 FieldName.unwrap(field) -> fieldChildren.toIndexedSeq.flatMap(fieldChild =>
-                    children.zipWithIndex.collectFirst {
-                        case (child, index) if sameNode(child, fieldChild) => index
-                    }
+                    val identityMatch = firstUnusedMatch(children, usedIndexes, fieldChild, sameReference)
+                    val matchedIndex  = identityMatch.orElse(firstUnusedMatch(children, usedIndexes, fieldChild, sameNode))
+                    matchedIndex.foreach(usedIndexes += _)
+                    matchedIndex
                 )
             }
             .toMap
+
+    private def firstUnusedMatch[T](
+        children: IndexedSeq[T],
+        usedIndexes: scala.collection.Set[Int],
+        fieldChild: T,
+        matches: (T, T) => Boolean
+    ): Option[Int] =
+        children.zipWithIndex.collectFirst {
+            case (child, index) if !usedIndexes.contains(index) && matches(child, fieldChild) => index
+        }
+
+    private def sameReference[T](left: T, right: T): Boolean =
+        left.asInstanceOf[AnyRef] eq right.asInstanceOf[AnyRef]
 
     private def sameNode[T](left: T, right: T): Boolean =
         java.util.Objects.equals(left, right)
