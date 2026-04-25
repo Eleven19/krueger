@@ -17,6 +17,28 @@ export type CompilerEnvelope<T> = {
   errors: CompilerError[];
 };
 
+export type UnistPoint = {
+  line: number;
+  column: number;
+  offset?: number;
+};
+
+export type UnistPosition = {
+  start: UnistPoint;
+  end: UnistPoint;
+};
+
+export type UnistNode = {
+  type: string;
+  value?: string;
+  position?: UnistPosition;
+  data: {
+    fields: Record<string, number[]>;
+    childCount: number;
+  };
+  children: UnistNode[];
+};
+
 export type CapturedNode = {
   nodeType: string;
   childCount: number;
@@ -41,6 +63,8 @@ export type KruegerClientOptions = {
 type RawKruegerFacade = {
   parseCst(source: string): unknown;
   parseAst(source: string): unknown;
+  parseCstUnist?(source: string): unknown;
+  parseAstUnist?(source: string): unknown;
   parseQuery(query: string): unknown;
   runQuery(query: unknown, root: unknown): unknown;
   prettyQuery(query: unknown): string;
@@ -52,11 +76,15 @@ export type KruegerClient = {
   readonly backend: BackendId;
   parseCst(source: string): CompilerEnvelope<unknown>;
   parseAst(source: string): CompilerEnvelope<unknown>;
+  parseCstUnist(source: string): CompilerEnvelope<UnistNode>;
+  parseAstUnist(source: string): CompilerEnvelope<UnistNode>;
   parseQuery(query: string): CompilerEnvelope<unknown>;
   runQuery(query: unknown, root: unknown): CompilerEnvelope<MatchView[]>;
   prettyQuery(query: unknown): string;
   tokenize(source: string): CompilerEnvelope<ElmToken[]>;
 };
+
+export const tokenizerReadyEvent = 'krueger:tokenizer-ready';
 
 const DEFAULT_FACADE_URLS: Record<BackendId, string> = {
   // JS-linked Scala.js facade (top-level export name: `Krueger`).
@@ -84,6 +112,18 @@ export async function createKruegerClient(
     },
     parseAst(source) {
       return invokeEnvelope(() => facade.parseAst(source));
+    },
+    parseCstUnist(source) {
+      return invokeEnvelope<UnistNode>(
+        () => invokeFacadeMethod(facade, 'parseCstUnist', source),
+        normalizeUnistNode
+      );
+    },
+    parseAstUnist(source) {
+      return invokeEnvelope<UnistNode>(
+        () => invokeFacadeMethod(facade, 'parseAstUnist', source),
+        normalizeUnistNode
+      );
     },
     parseQuery(query) {
       return invokeEnvelope(() => facade.parseQuery(query));
@@ -125,7 +165,18 @@ async function loadFacade(
   // identical at the call sites, so callers don't have to special-case
   // backend ids.
   (globalThis as Record<string, unknown>).Krueger = candidate;
+  notifyTokenizerReady();
   return candidate;
+}
+
+function notifyTokenizerReady(): void {
+  if (typeof globalThis.dispatchEvent !== 'function') return;
+
+  const event =
+    typeof Event === 'function'
+      ? new Event(tokenizerReadyEvent)
+      : ({ type: tokenizerReadyEvent } as Event);
+  globalThis.dispatchEvent(event);
 }
 
 function invokeEnvelope<T>(
@@ -147,6 +198,18 @@ function invokeEnvelope<T>(
       ]
     };
   }
+}
+
+function invokeFacadeMethod<TArgs extends unknown[]>(
+  facade: RawKruegerFacade,
+  methodName: string,
+  ...args: TArgs
+): unknown {
+  const method = facade[methodName as keyof RawKruegerFacade];
+  if (typeof method !== 'function') {
+    throw new Error(`Krueger facade method ${methodName} is unavailable`);
+  }
+  return method.apply(facade, args);
 }
 
 function normalizeEnvelope<T>(raw: unknown, normalizeValue: (value: unknown) => T): CompilerEnvelope<T> {
@@ -173,6 +236,48 @@ function normalizeMatches(value: unknown): MatchView[] {
       captures: normalizeCaptures(record.captures)
     };
   });
+}
+
+function normalizeUnistNode(value: unknown): UnistNode {
+  const record = asRecord(value);
+  return {
+    type: String(record.type ?? ''),
+    ...(record.value == null ? {} : { value: String(record.value) }),
+    ...(record.position == null ? {} : { position: normalizeUnistPosition(record.position) }),
+    data: normalizeUnistData(record.data),
+    children: Array.isArray(record.children) ? record.children.map(normalizeUnistNode) : []
+  };
+}
+
+function normalizeUnistData(value: unknown): UnistNode['data'] {
+  const record = asRecord(value);
+  const rawFields = asRecord(record.fields);
+  return {
+    childCount: Number(record.childCount ?? 0),
+    fields: Object.fromEntries(
+      Object.entries(rawFields).map(([name, indexes]) => [
+        name,
+        Array.isArray(indexes) ? indexes.map((index) => Number(index)) : []
+      ])
+    )
+  };
+}
+
+function normalizeUnistPosition(value: unknown): UnistPosition {
+  const record = asRecord(value);
+  return {
+    start: normalizeUnistPoint(record.start),
+    end: normalizeUnistPoint(record.end)
+  };
+}
+
+function normalizeUnistPoint(value: unknown): UnistPoint {
+  const record = asRecord(value);
+  return {
+    line: Number(record.line ?? 1),
+    column: Number(record.column ?? 1),
+    ...(record.offset == null ? {} : { offset: Number(record.offset) })
+  };
 }
 
 function normalizeTokens(value: unknown): ElmToken[] {

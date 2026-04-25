@@ -1,0 +1,15 @@
+---
+/**
+ * Explicit `/try/` route for Astro dev.
+ *
+ * The actual playground is the mirrored static SvelteKit build at
+ * `docs/public/try/index.html`, but in `astro dev` Starlight's dynamic docs
+ * route can claim `/try/` before the static public asset is served. Redirecting
+ * to `/try/index.html` makes the intent unambiguous and keeps local full-site
+ * navigation working.
+ */
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+return Astro.redirect(`${base}/try/index.html`);
+---

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,6 +66,12 @@ if (!docsPackage.scripts['dev:full']?.includes('npm run prepare:try-wasm')) {
 
 if (docsPackage.scripts['site:build'] !== 'npm run build:full') {
     fail('docs/package.json site:build must alias npm run build:full');
+}
+
+try {
+    await access(resolve(repoRoot, 'docs', 'src', 'pages', 'try', 'index.astro'));
+} catch {
+    fail('docs/src/pages/try/index.astro must exist so Astro dev serves /try/ instead of falling through to Starlight 404');
 }
 
 console.log('check-build-orchestration: OK - docs.site, prepareLocalDevSite, and npm scripts orchestrate full site.');

@@ -69,6 +69,33 @@ object KruegerJsSpec extends ZIOSpecDefault:
                     arrayLen(d.errors) == 0
                 )
             },
+            test("parseCstUnist returns ok=true with a plain JS unist root and childCount matching children.length") {
+                val env      = KruegerJs.parseCstUnist(validSource)
+                val d        = dyn(env)
+                val root     = d.value.asInstanceOf[js.Dynamic]
+                val children = root.children.asInstanceOf[js.Any]
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == true,
+                    arrayLen(d.errors) == 0,
+                    root.`type`.asInstanceOf[String] == "CstModule",
+                    js.Array.isArray(children),
+                    root.data.childCount.asInstanceOf[Int] == arrayLen(children)
+                )
+            },
+            test("parseAstUnist returns ok=true with a plain JS unist Module root and JS-array children") {
+                val env      = KruegerJs.parseAstUnist(validSource)
+                val d        = dyn(env)
+                val root     = d.value.asInstanceOf[js.Dynamic]
+                val children = root.children.asInstanceOf[js.Any]
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == true,
+                    arrayLen(d.errors) == 0,
+                    root.`type`.asInstanceOf[String] == "Module",
+                    js.Array.isArray(children)
+                )
+            },
             test("prettyQuery returns a non-empty canonical string for a parsed query") {
                 val parseEnv = KruegerJs.parseQuery(validQuery)
                 val q        = dyn(parseEnv).value.asInstanceOf[js.Any]
@@ -79,6 +106,16 @@ object KruegerJsSpec extends ZIOSpecDefault:
         suite("error envelope (REQ-webappwasm-002)")(
             test("parseCst on malformed source returns ok=false with errors; value is null") {
                 val env = KruegerJs.parseCst(malformedSource)
+                val d   = dyn(env)
+                assertTrue(
+                    hasEnvelopeShape(env),
+                    d.ok.asInstanceOf[Boolean] == false,
+                    arrayLen(d.errors) >= 1,
+                    d.value == null
+                )
+            },
+            test("parseCstUnist on malformed source preserves the error envelope with value=null") {
+                val env = KruegerJs.parseCstUnist(malformedSource)
                 val d   = dyn(env)
                 assertTrue(
                     hasEnvelopeShape(env),

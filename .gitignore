@@ -16,6 +16,9 @@ out/
 # Oh My Claude Code
 .omc/
 
+# Superpowers brainstorming visual companion cache
+.superpowers/
+
 # OS
 .DS_Store
 
