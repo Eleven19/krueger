@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Mill caches
+        uses: ./.github/actions/setup-mill-caches
+
       - name: Check formatting
         run: ./mill krueger.core.jvm.checkFormat
 
@@ -44,6 +47,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Setup Mill caches
+        uses: ./.github/actions/setup-mill-caches
 
       - name: Compile JVM modules
         run: ./mill krueger.core.jvm.compile
@@ -74,6 +80,9 @@ jobs:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: docs/package-lock.json
+
+      - name: Setup Mill caches
+        uses: ./.github/actions/setup-mill-caches
 
       - name: Compile JS modules
         run: ./mill krueger.core.js.compile
@@ -118,6 +127,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang libunwind-dev libgc-dev
+
+      - name: Setup Mill caches
+        uses: ./.github/actions/setup-mill-caches
 
       - name: Compile Native modules
         run: ./mill krueger.core.native.compile
