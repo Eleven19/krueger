@@ -53,20 +53,29 @@ object ChicorySupportedCompilerHarness:
     def invoke(op: String, inputJson: String): String =
         val opBytes    = op.getBytes(utf8)
         val inputBytes = inputJson.getBytes(utf8)
-        require(opBytes.length <= inputOffset - opOffset, s"operation name is too large for the Chicory test driver: ${opBytes.length} bytes")
-        require(inputBytes.length <= outputOffset - inputOffset, s"input JSON is too large for the Chicory test driver: ${inputBytes.length} bytes")
+        require(
+            opBytes.length <= inputOffset - opOffset,
+            s"operation name is too large for the Chicory test driver: ${opBytes.length} bytes"
+        )
+        require(
+            inputBytes.length <= outputOffset - inputOffset,
+            s"input JSON is too large for the Chicory test driver: ${inputBytes.length} bytes"
+        )
 
         val instance = instantiate()
         val memory   = instance.memory()
         memory.write(opOffset, opBytes)
         memory.write(inputOffset, inputBytes)
 
-        val outputLength = instance.`export`("invoke").apply(
-            opOffset,
-            opBytes.length,
-            inputOffset,
-            inputBytes.length
-        )(0).toInt
+        val outputLength = instance
+            .`export`("invoke")
+            .apply(
+                opOffset,
+                opBytes.length,
+                inputOffset,
+                inputBytes.length
+            )(0)
+            .toInt
 
         memory.readString(outputOffset, outputLength)
 

@@ -33,8 +33,8 @@ object TestDriver:
     def invoke(backend: String, op: String, inputJson: String): String =
         requireSupportedBackend(backend)
         backend match
-            case "jvm"               => InvokeCompiler.invoke(op, inputJson)
-            case "chicory"           => ChicorySupportedCompilerHarness.invoke(op, inputJson)
+            case "jvm"                => InvokeCompiler.invoke(op, inputJson)
+            case "chicory"            => ChicorySupportedCompilerHarness.invoke(op, inputJson)
             case `scalaJsNodeBackend` => invokeScalaJsNode(op, inputJson)
 
     private def invokeScalaJsNode(op: String, inputJson: String): String =
@@ -61,8 +61,7 @@ object TestDriver:
             ).redirectErrorStream(true).start()
             val output = String(process.getInputStream.readAllBytes(), StandardCharsets.UTF_8)
             val exit   = process.waitFor()
-            if exit != 0 then
-                throw AssertionError(s"Scala.js Node compiler backend failed with exit $exit:\n$output")
+            if exit != 0 then throw AssertionError(s"Scala.js Node compiler backend failed with exit $exit:\n$output")
             output.trim
         finally
             val _ = Files.deleteIfExists(script)

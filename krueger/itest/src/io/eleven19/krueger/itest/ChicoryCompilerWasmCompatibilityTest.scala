@@ -15,7 +15,7 @@ import com.dylibso.chicory.wasm.Parser
 import com.dylibso.chicory.wasm.UnlinkableException
 
 final class ChicoryCompilerWasmCompatibilityTest:
-    private val artifactDirProperty = "krueger.compiler-api.wasm.dir"
+    private val artifactDirProperty   = "krueger.compiler-api.wasm.dir"
     private val chicoryRuntimeVersion = "1.7.5"
 
     @Test
@@ -33,11 +33,16 @@ final class ChicoryCompilerWasmCompatibilityTest:
     @Test
     def `compiler-api wasm artifact exposes Scala js host imports and zero raw exports`(): Unit =
         val module = parseModule()
-        val imports = module.importSection().stream().iterator().asScala
+        val imports = module
+            .importSection()
+            .stream()
+            .iterator()
+            .asScala
             .map(i => s"${i.module()}:${i.name()}")
             .toVector
 
-        val context = s"artifact=${artifactPath()} chicory=$chicoryRuntimeVersion imports=${module.importSection().importCount()}"
+        val context =
+            s"artifact=${artifactPath()} chicory=$chicoryRuntimeVersion imports=${module.importSection().importCount()}"
         assertTrue(imports.contains("__scalaJSHelpers:JSTag"), s"$context\n${imports.mkString("\n")}")
         assertTrue(imports.exists(_.startsWith("wasm:js-string:")), s"$context\n${imports.mkString("\n")}")
         assertEquals(0, module.exportSection().exportCount(), context)
@@ -45,9 +50,11 @@ final class ChicoryCompilerWasmCompatibilityTest:
     @Test
     def `Chicory reports the missing Scala js host import when instantiation is attempted`(): Unit =
         val error =
-            org.junit.jupiter.api.Assertions.assertThrows(classOf[UnlinkableException], () =>
-                val _ = Instance.builder(parseModule()).build()
-                ()
+            org.junit.jupiter.api.Assertions.assertThrows(
+                classOf[UnlinkableException],
+                () =>
+                    val _ = Instance.builder(parseModule()).build()
+                    ()
             )
 
         val context = s"artifact=${artifactPath()} chicory=$chicoryRuntimeVersion"
@@ -70,7 +77,8 @@ final class ChicoryCompilerWasmCompatibilityTest:
 
     private def repoRoot(): Path =
         val start = Path.of("").toAbsolutePath
-        Iterator.iterate(start)(_.getParent)
+        Iterator
+            .iterate(start)(_.getParent)
             .takeWhile(_ != null)
             .find(path => Files.isDirectory(path.resolve("sites/try-wasm")))
             .getOrElse(fail(s"could not locate repo root from $start"))

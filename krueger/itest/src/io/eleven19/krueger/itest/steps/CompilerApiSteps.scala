@@ -11,10 +11,10 @@ class CompilerApiSteps extends ScalaDsl with EN:
     import InvokeJson.decode
     import InvokeJson.given
 
-    private var backend: Option[String]          = None
-    private var inputJson: Option[String]        = None
-    private var responses: Vector[String]        = Vector.empty
-    private var decoded: Option[InvokeResponse]  = None
+    private var backend: Option[String]         = None
+    private var inputJson: Option[String]       = None
+    private var responses: Vector[String]       = Vector.empty
+    private var decoded: Option[InvokeResponse] = None
 
     Given("the compiler backend {string}") { (name: String) =>
         val normalized = name.trim.toLowerCase
@@ -37,7 +37,7 @@ class CompilerApiSteps extends ScalaDsl with EN:
     }
 
     When("compiler operation {string} is invoked twice") { (op: String) =>
-        val first = invoke(op)
+        val first  = invoke(op)
         val second = invoke(op)
         responses = Vector(first, second)
         decoded = Some(decode[InvokeResponse](first))
@@ -50,12 +50,17 @@ class CompilerApiSteps extends ScalaDsl with EN:
 
     Then("the compiler response is not ok") { () =>
         val response = currentResponse()
-        assert(!response.ok, s"expected compiler response not to be ok, got: ${responses.headOption.getOrElse("<none>")}")
+        assert(
+            !response.ok,
+            s"expected compiler response not to be ok, got: ${responses.headOption.getOrElse("<none>")}"
+        )
     }
 
     Then("the compiler response value contains {string}") { (needle: String) =>
         val value = currentResponse().value.getOrElse(
-            throw new AssertionError(s"expected compiler response value, got: ${responses.headOption.getOrElse("<none>")}")
+            throw new AssertionError(
+                s"expected compiler response value, got: ${responses.headOption.getOrElse("<none>")}"
+            )
         )
         assert(value.contains(needle), s"expected compiler response value to contain [$needle], got: $value")
     }
@@ -98,6 +103,8 @@ class CompilerApiSteps extends ScalaDsl with EN:
         decoded.getOrElse(throw new AssertionError("compiler response not set - missing When step?"))
 
     private def compilerError(oneBasedIndex: Int) =
-        currentResponse().errors.lift(oneBasedIndex - 1).getOrElse(
-            throw new AssertionError(s"compiler error $oneBasedIndex not found in ${currentResponse().errors}")
-        )
+        currentResponse().errors
+            .lift(oneBasedIndex - 1)
+            .getOrElse(
+                throw new AssertionError(s"compiler error $oneBasedIndex not found in ${currentResponse().errors}")
+            )

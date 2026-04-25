@@ -29,7 +29,7 @@ final class ChicoryCompilerWasmBackendTest:
     @Test
     def `supported Chicory driver is deterministic for repeated compiler calls`(): Unit =
         val input = """{"source":"module Demo exposing (..)\n\nmain = 42\n"}"""
-        val a = ChicorySupportedCompilerHarness.invoke(op = "parseCst", inputJson = input)
-        val b = ChicorySupportedCompilerHarness.invoke(op = "parseCst", inputJson = input)
+        val a     = ChicorySupportedCompilerHarness.invoke(op = "parseCst", inputJson = input)
+        val b     = ChicorySupportedCompilerHarness.invoke(op = "parseCst", inputJson = input)
 
         assertEquals(a, b)
