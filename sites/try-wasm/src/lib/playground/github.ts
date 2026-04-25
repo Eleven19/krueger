@@ -5,6 +5,8 @@ import type { GithubTarget, ImportedGithubFile, PlaygroundDiagnostic } from './t
 export function parseGithubTarget(input: string): GithubTarget | null {
   try {
     const url = new URL(input);
+    const host = url.hostname.toLowerCase();
+    if (host !== 'github.com' && host !== 'www.github.com') return null;
     const parts = url.pathname.split('/').filter(Boolean);
     if (parts.length < 5 || parts[2] !== 'blob') return null;
     const [owner, repo, , ref, ...pathParts] = parts;

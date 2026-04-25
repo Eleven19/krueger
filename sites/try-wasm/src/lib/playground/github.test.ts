@@ -15,6 +15,10 @@ describe('github import service', () => {
     });
   });
 
+  it('rejects non-GitHub hosts even when the pathname looks like a blob URL', () => {
+    expect(parseGithubTarget('https://example.com/elm/core/blob/main/src/Basics.elm')).toBeNull();
+  });
+
   it('imports file content from the GitHub contents API', async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(

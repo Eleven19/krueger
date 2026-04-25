@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Effect } from "effect";
+  import { Effect, Either } from "effect";
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
@@ -174,22 +174,16 @@ main = 42
   }
 
   async function runCommand(value: string): Promise<void> {
-    const exit = await Effect.runPromiseExit(resolveCommandIntent(value));
-    if (exit._tag === 'Failure') {
-      problems = [
-        {
-          code: 'github/import-failed',
-          message: 'Could not complete the requested import.',
-          severity: 'error',
-          source: 'github'
-        },
-        ...problems
-      ];
-      logs = [{ message: `Command failed: ${value}`, kind: 'error' }, ...logs];
+    const result = await Effect.runPromise(Effect.either(resolveCommandIntent(value)));
+    if (Either.isLeft(result)) {
+      const diagnostic = result.left;
+      const detailSuffix = diagnostic.detail ? ` (${diagnostic.detail})` : '';
+      problems = [diagnostic, ...problems];
+      logs = [{ message: `${diagnostic.code}: ${diagnostic.message}${detailSuffix}`, kind: 'error' }, ...logs];
       return;
     }
 
-    const loaded = exit.value;
+    const loaded = result.right;
     if ('repoLabel' in loaded) {
       selection = null;
       selectionPanel = null;
