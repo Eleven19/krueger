@@ -39,6 +39,7 @@ main = 42
   let commandText = $state('');
   let editorPercent = $state(62);
   let utilityPercent = $state(76);
+  let inspectorIsStacked = $state(false);
 
   const cstResult = $derived(
     compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
@@ -71,6 +72,7 @@ main = 42
   onMount(() => {
     const supported = supportsWasmGc();
     wasmGcSupported = supported;
+    syncWorkspaceLayout();
 
     // Reconcile the initial backend choice with the just-resolved support
     // probe. If the page started in WASM mode but the host can't run it,
@@ -80,6 +82,12 @@ main = 42
     }
 
     void loadBackend(backend);
+
+    window.addEventListener('resize', syncWorkspaceLayout);
+
+    return () => {
+      window.removeEventListener('resize', syncWorkspaceLayout);
+    };
   });
 
   async function loadBackend(next: BackendId): Promise<void> {
@@ -130,6 +138,10 @@ main = 42
     client = null;
     void loadBackend(next);
   }
+
+  function syncWorkspaceLayout(): void {
+    inspectorIsStacked = window.innerWidth <= 1100;
+  }
 </script>
 
 <svelte:head>
@@ -154,16 +166,20 @@ main = 42
 <main class="playground-shell">
   <section
     class="workspace"
+    class:workspace-stacked={inspectorIsStacked}
     aria-label="Source workspace"
     style={`--editor-percent:${editorPercent}; --utility-percent:${utilityPercent};`}
   >
-    <PaneResizeHandle
-      value={editorPercent}
-      label="Resize workspace panels"
-      onAdjust={(next) => {
-        editorPercent = next;
-      }}
-    />
+    {#if !inspectorIsStacked}
+      <PaneResizeHandle
+        value={editorPercent}
+        label="Resize workspace panels"
+        orientation="vertical"
+        onAdjust={(next) => {
+          editorPercent = next;
+        }}
+      />
+    {/if}
 
     <div class="center-stack">
       <section class="editor-shell" aria-label="Editor workspace">
@@ -201,6 +217,7 @@ main = 42
       <PaneResizeHandle
         value={utilityPercent}
         label="Resize output panels"
+        orientation="horizontal"
         onAdjust={(next) => {
           utilityPercent = next;
         }}
@@ -208,11 +225,36 @@ main = 42
 
       <section class="utility-shell" aria-label="Output utility panel">
         <div class="utility-tablist" role="tablist" aria-label="Output panels">
-          <button type="button" class="utility-tab" role="tab" aria-selected="true">Logs</button>
-          <button type="button" class="utility-tab" role="tab" aria-selected="false">Problems</button>
+          <button
+            type="button"
+            id="utility-tab-logs"
+            class="utility-tab"
+            role="tab"
+            aria-controls="utility-panel-logs"
+            aria-selected="true"
+            tabindex="0"
+          >
+            Logs
+          </button>
+          <button
+            type="button"
+            id="utility-tab-problems"
+            class="utility-tab"
+            role="tab"
+            aria-controls="utility-panel-logs"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Problems
+          </button>
         </div>
 
-        <div class="utility-panel" role="tabpanel" aria-label="Logs">
+        <div
+          id="utility-panel-logs"
+          class="utility-panel"
+          role="tabpanel"
+          aria-labelledby="utility-tab-logs"
+        >
           <p>Logs and problems will wire into compiler diagnostics in later tasks.</p>
         </div>
       </section>
@@ -331,6 +373,13 @@ main = 42
     border-inline: 1px solid var(--kr-border);
   }
 
+  .workspace.workspace-stacked {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "center"
+      "inspector";
+  }
+
   .center-stack {
     grid-area: center;
     display: grid;
@@ -406,13 +455,6 @@ main = 42
   }
 
   @media (max-width: 1100px) {
-    .workspace {
-      grid-template-columns: auto minmax(0, 1fr);
-      grid-template-areas:
-        "center-handle center"
-        "inspector inspector";
-    }
-
     .inspector-shell {
       min-width: 0;
       min-height: 10rem;

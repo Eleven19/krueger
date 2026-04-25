@@ -26,12 +26,9 @@
   }}
 >
   <input
+    type="search"
     class="command-input"
-    role="combobox"
     aria-label="Playground command"
-    aria-controls="playground-command-suggestions"
-    aria-expanded="false"
-    aria-autocomplete="list"
     autocomplete="off"
     spellcheck="false"
     bind:value
@@ -40,12 +37,6 @@
   />
   <span class="command-hint">{actions[0]?.label} / {actions[1]?.label}</span>
 </form>
-
-<ul id="playground-command-suggestions" class="sr-only" role="listbox" aria-hidden="true">
-  {#each actions as action}
-    <li role="option" aria-selected="false">{action.label}</li>
-  {/each}
-</ul>
 
 <style>
   .command-surface {
@@ -77,6 +68,13 @@
     color: var(--kr-muted);
   }
 
+  .command-input::-webkit-search-decoration,
+  .command-input::-webkit-search-cancel-button,
+  .command-input::-webkit-search-results-button,
+  .command-input::-webkit-search-results-decoration {
+    appearance: none;
+  }
+
   .command-hint {
     color: var(--kr-muted);
     font-size: 0.73rem;
@@ -84,18 +82,6 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     white-space: nowrap;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
   }
 
   @media (max-width: 960px) {

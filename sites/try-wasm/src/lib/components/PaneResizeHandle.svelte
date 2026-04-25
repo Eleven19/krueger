@@ -6,12 +6,14 @@
     min = 20,
     max = 80,
     label,
+    orientation = 'horizontal',
     onAdjust
   }: {
     value: number;
     min?: number;
     max?: number;
     label: string;
+    orientation?: 'horizontal' | 'vertical';
     onAdjust: (next: number) => void;
   } = $props();
 
@@ -42,6 +44,7 @@
   role="separator"
   tabindex="0"
   aria-label={label}
+  aria-orientation={orientation}
   aria-valuemin={min}
   aria-valuemax={max}
   aria-valuenow={value}

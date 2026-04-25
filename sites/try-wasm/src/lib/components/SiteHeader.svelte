@@ -228,9 +228,27 @@
   }
 
   @media (max-width: 960px) {
-    .center-command,
+    .site-header {
+      flex-wrap: wrap;
+      height: auto;
+      padding-block: 0.75rem;
+      row-gap: 0.75rem;
+    }
+
+    .center-command {
+      position: static;
+      order: 4;
+      transform: none;
+      flex: 1 0 100%;
+      width: 100%;
+    }
+
     .center-title {
       display: none;
+    }
+
+    .primary-nav {
+      margin-inline-start: auto;
     }
   }
 </style>
