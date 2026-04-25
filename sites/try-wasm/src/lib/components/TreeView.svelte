@@ -14,12 +14,14 @@
     result,
     label = 'Tree',
     errorTitle = 'Parse errors:',
-    onSelectNode
+    onSelectNode,
+    selectedSelection = null
   }: {
     result: CompilerEnvelope<unknown>;
     label?: string;
     errorTitle?: string;
     onSelectNode?: (selection: TreeSelection) => void;
+    selectedSelection?: TreeSelection | null;
   } = $props();
 
   let filter = $state('');
@@ -136,6 +138,16 @@
       return String(value);
     }
   }
+
+  function isSelected(entry: TreeEntry): boolean {
+    if (selectedSelection == null) return false;
+    if (selectedSelection.nodeType !== entry.node.type) return false;
+    if (selectedSelection.text !== entry.node.value) return false;
+    if (selectedSelection.childCount !== entry.node.data.childCount) return false;
+    if (selectedSelection.path.length !== entry.path.length) return false;
+
+    return selectedSelection.path.every((segment, index) => segment === entry.path[index]);
+  }
 </script>
 
 <section class="tree-view">
@@ -237,13 +249,14 @@
 {#snippet renderNode(entry: TreeEntry, level: number)}
   {@const hasChildren = entry.children.length > 0}
   {@const expanded = filterActive || !collapsedSet.has(entry.id)}
+  {@const selected = isSelected(entry)}
 
   <div
     class="tree-item"
     role="treeitem"
     aria-level={level}
     aria-expanded={hasChildren ? expanded : undefined}
-    aria-selected={false}
+    aria-selected={selected ? 'true' : undefined}
   >
     <div class="tree-row" style={`--tree-level:${level - 1};`}>
       {#if hasChildren}
@@ -263,6 +276,7 @@
 
       <button
         type="button"
+        class:selected
         class="node-button"
         aria-label={`Select ${entry.node.type}`}
         onclick={() =>
@@ -437,6 +451,10 @@
 
   .node-button:hover {
     background: color-mix(in srgb, var(--kr-accent) 10%, transparent);
+  }
+
+  .node-button.selected {
+    background: color-mix(in srgb, var(--kr-accent) 18%, transparent);
   }
 
   .disclosure-spacer {

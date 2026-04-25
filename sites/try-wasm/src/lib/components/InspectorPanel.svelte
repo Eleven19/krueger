@@ -9,7 +9,7 @@
     <h2>{selection.nodeType}</h2>
     <p>{selection.text ?? 'No text value'}</p>
     <dl>
-      <div><dt>Path</dt><dd>{selection.path.join('.')}</dd></div>
+      <div><dt>Path</dt><dd>{selection.path.length === 0 ? 'root' : selection.path.join('.')}</dd></div>
       <div><dt>Children</dt><dd>{selection.childCount}</dd></div>
     </dl>
   {:else}

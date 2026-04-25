@@ -46,6 +46,7 @@ main = 42
   let editorPercent = $state(62);
   let utilityPercent = $state(76);
   let selection = $state<TreeSelection | null>(null);
+  let selectionPanel = $state<Panel | null>(null);
   let logs = $state<PlaygroundLog[]>([{ message: 'Playground ready.', kind: 'info' }]);
   let problems = $state<PlaygroundDiagnostic[]>([]);
 
@@ -76,6 +77,27 @@ main = 42
       ? client.prettyQuery(queryResult.value)
       : ""
   );
+  const activeTreeInspectable = $derived(
+    selectedPanel === 'cst'
+      ? cstUnistResult.ok || cstResult.ok
+      : selectedPanel === 'ast'
+        ? astUnistResult.ok || astResult.ok
+        : false
+  );
+
+  $effect(() => {
+    if (selection == null) return;
+    if (selectionPanel == null) return;
+    if (selectedPanel !== selectionPanel) {
+      selection = null;
+      selectionPanel = null;
+      return;
+    }
+    if (!activeTreeInspectable) {
+      selection = null;
+      selectionPanel = null;
+    }
+  });
 
   onMount(() => {
     const supported = supportsWasmGc();
@@ -133,6 +155,8 @@ main = 42
   function handleBackendChange(next: BackendId): void {
     if (next === backend) return;
     if (!isAvailable(next, wasmGcSupported)) return;
+    selection = null;
+    selectionPanel = null;
     backend = next;
     // Drop the current client so panels show the "Compiler loading..."
     // placeholder while the new backend's facade is dynamic-imported.
@@ -142,6 +166,8 @@ main = 42
 
   async function applyExample(exampleId: string): Promise<void> {
     const example = await Effect.runPromise(loadExample(exampleId));
+    selection = null;
+    selectionPanel = null;
     source = example.source;
     query = example.query;
     logs = [{ message: `Loaded example ${example.label}.`, kind: 'success' }, ...logs];
@@ -165,11 +191,15 @@ main = 42
 
     const loaded = exit.value;
     if ('repoLabel' in loaded) {
+      selection = null;
+      selectionPanel = null;
       source = loaded.source;
       logs = [{ message: `Imported ${loaded.path} from ${loaded.repoLabel}.`, kind: 'success' }, ...logs];
       return;
     }
 
+    selection = null;
+    selectionPanel = null;
     source = loaded.source;
     query = loaded.query;
     logs = [{ message: `Loaded example ${loaded.label}.`, kind: 'success' }, ...logs];
@@ -223,9 +253,13 @@ main = 42
           {source}
           {query}
           onSourceChange={(next) => {
+            selection = null;
+            selectionPanel = null;
             source = next;
           }}
           onQueryChange={(next) => {
+            selection = null;
+            selectionPanel = null;
             query = next;
           }}
         />
@@ -249,8 +283,11 @@ main = 42
             {backend}
             {wasmGcSupported}
             onBackendChange={handleBackendChange}
+            {selection}
+            {selectionPanel}
             onSelectNode={(next) => {
               selection = next;
+              selectionPanel = selectedPanel;
             }}
           />
         </div>

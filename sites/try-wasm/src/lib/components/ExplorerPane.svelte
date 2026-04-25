@@ -20,7 +20,9 @@
     backend,
     wasmGcSupported,
     onBackendChange,
-    onSelectNode
+    onSelectNode,
+    selection,
+    selectionPanel
   }: {
     selectedPanel: Panel;
     cstResult: CompilerEnvelope<unknown>;
@@ -34,6 +36,8 @@
     wasmGcSupported: boolean | null;
     onBackendChange: (next: BackendId) => void;
     onSelectNode?: (selection: TreeSelection) => void;
+    selection?: TreeSelection | null;
+    selectionPanel?: Panel | null;
   } = $props();
 
   const label = $derived(panelLabel(selectedPanel));
@@ -60,13 +64,19 @@
     {#if selectedPanel === 'matches'}
       <MatchesView result={matchResult} />
     {:else if selectedPanel === 'cst'}
-      <TreeView result={cstDisplayResult} label="CST" {onSelectNode} />
+      <TreeView
+        result={cstDisplayResult}
+        label="CST"
+        {onSelectNode}
+        selectedSelection={selectionPanel === 'cst' ? selection : null}
+      />
     {:else if selectedPanel === 'ast'}
       <TreeView
         result={astDisplayResult}
         label="AST"
         errorTitle="AST errors:"
         {onSelectNode}
+        selectedSelection={selectionPanel === 'ast' ? selection : null}
       />
     {:else if selectedPanel === 'settings'}
       <SettingsPanel {backend} {wasmGcSupported} {onBackendChange} />

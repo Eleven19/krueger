@@ -340,6 +340,13 @@ describe('try-wasm page explorer composition', () => {
     expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
       'CstModule'
     );
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'root'
+    );
+    expect(document.querySelector('[role="treeitem"][aria-selected="true"]')?.textContent).toContain(
+      'CstModule'
+    );
+    expect(document.querySelectorAll('[role="treeitem"][aria-selected="false"]')).toHaveLength(0);
     expect(screen.getByRole('tab', { name: 'Logs' })).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Problems' })).not.toBeNull();
   });
@@ -349,5 +356,35 @@ describe('try-wasm page explorer composition', () => {
 
     expect(screen.getByRole('tab', { name: 'CST' }).getAttribute('title')).toBe('CST');
     expect(screen.getByRole('tab', { name: 'AST' }).getAttribute('title')).toBe('AST');
+  });
+
+  it('clears stale selection when the active pane or source changes', async () => {
+    render(Page);
+
+    await fireEvent.click(await screen.findByRole('button', { name: 'Select CstModule' }));
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'CstModule'
+    );
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Matches' }));
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'Select a node to inspect its structure.'
+    );
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'CST' }));
+    await fireEvent.click(await screen.findByRole('button', { name: 'Select CstModule' }));
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Elm source' }), {
+      target: {
+        value: `module Demo exposing (..)
+
+main = 43
+`
+      }
+    });
+
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'Select a node to inspect its structure.'
+    );
+    expect(document.querySelector('[role="treeitem"][aria-selected="true"]')).toBeNull();
   });
 });
