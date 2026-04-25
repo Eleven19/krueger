@@ -45,24 +45,55 @@ describe('playground workspace shell', () => {
     window.innerWidth = 1280;
     render(Page);
 
-    const splitter = screen.getAllByRole('separator')[0] as HTMLElement;
+    const splitter = screen.getByRole('separator', { name: 'Resize workspace panels' }) as HTMLElement;
     expect(splitter.getAttribute('aria-valuenow')).toBe('62');
     expect(splitter.getAttribute('aria-orientation')).toBe('vertical');
 
     await fireEvent.keyDown(splitter, { key: 'ArrowLeft' });
 
     expect(splitter.getAttribute('aria-valuenow')).toBe('60');
+
+    const utilitySplitter = screen.getByRole('separator', { name: 'Resize output panels' });
+    expect(utilitySplitter.getAttribute('aria-valuenow')).toBe('76');
+    expect(utilitySplitter.getAttribute('aria-orientation')).toBe('horizontal');
+
+    await fireEvent.keyDown(utilitySplitter, { key: 'ArrowLeft' });
+
+    expect(utilitySplitter.getAttribute('aria-valuenow')).toBe('76');
+
+    await fireEvent.keyDown(utilitySplitter, { key: 'ArrowUp' });
+
+    expect(utilitySplitter.getAttribute('aria-valuenow')).toBe('74');
   });
 
-  it('keeps the command search field available while removing the primary splitter in stacked layout', async () => {
+  it('keeps the command search field available without a JS resize dependency for stacked layout', () => {
     window.innerWidth = 900;
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     render(Page);
-    await fireEvent(window, new Event('resize'));
 
     expect(screen.getByRole('searchbox', { name: 'Playground command' })).not.toBeNull();
-    expect(screen.queryByRole('separator', { name: 'Resize workspace panels' })).toBeNull();
+    expect(addEventListenerSpy).not.toHaveBeenCalledWith('resize', expect.any(Function));
 
     const utilitySplitter = screen.getByRole('separator', { name: 'Resize output panels' });
     expect(utilitySplitter.getAttribute('aria-orientation')).toBe('horizontal');
+
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('switches the placeholder output panel tabs cleanly', async () => {
+    window.innerWidth = 1280;
+    render(Page);
+
+    const logsTab = screen.getByRole('tab', { name: 'Logs' });
+    const problemsTab = screen.getByRole('tab', { name: 'Problems' });
+
+    expect(logsTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tabpanel', { name: 'Logs' })).not.toBeNull();
+
+    await fireEvent.click(problemsTab);
+
+    expect(problemsTab.getAttribute('aria-selected')).toBe('true');
+    expect(logsTab.getAttribute('aria-selected')).toBe('false');
+    expect(screen.getByRole('tabpanel', { name: 'Problems' })).not.toBeNull();
   });
 });

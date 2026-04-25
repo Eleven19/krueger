@@ -19,6 +19,7 @@
     type MatchView
   } from "$lib/krueger";
   import { commandSurfaceActions } from "$lib/playground/catalog";
+  import type { UtilityTab } from "$lib/playground/types";
   import { defaultPanel, type Panel } from "$lib/panels";
   import { supportsWasmGc } from "$lib/wasm-gc";
 
@@ -39,7 +40,7 @@ main = 42
   let commandText = $state('');
   let editorPercent = $state(62);
   let utilityPercent = $state(76);
-  let inspectorIsStacked = $state(false);
+  let activeUtilityTab = $state<UtilityTab>('logs');
 
   const cstResult = $derived(
     compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
@@ -72,7 +73,6 @@ main = 42
   onMount(() => {
     const supported = supportsWasmGc();
     wasmGcSupported = supported;
-    syncWorkspaceLayout();
 
     // Reconcile the initial backend choice with the just-resolved support
     // probe. If the page started in WASM mode but the host can't run it,
@@ -82,12 +82,6 @@ main = 42
     }
 
     void loadBackend(backend);
-
-    window.addEventListener('resize', syncWorkspaceLayout);
-
-    return () => {
-      window.removeEventListener('resize', syncWorkspaceLayout);
-    };
   });
 
   async function loadBackend(next: BackendId): Promise<void> {
@@ -138,10 +132,6 @@ main = 42
     client = null;
     void loadBackend(next);
   }
-
-  function syncWorkspaceLayout(): void {
-    inspectorIsStacked = window.innerWidth <= 1100;
-  }
 </script>
 
 <svelte:head>
@@ -166,20 +156,17 @@ main = 42
 <main class="playground-shell">
   <section
     class="workspace"
-    class:workspace-stacked={inspectorIsStacked}
     aria-label="Source workspace"
     style={`--editor-percent:${editorPercent}; --utility-percent:${utilityPercent};`}
   >
-    {#if !inspectorIsStacked}
-      <PaneResizeHandle
-        value={editorPercent}
-        label="Resize workspace panels"
-        orientation="vertical"
-        onAdjust={(next) => {
-          editorPercent = next;
-        }}
-      />
-    {/if}
+    <PaneResizeHandle
+      value={editorPercent}
+      label="Resize workspace panels"
+      orientation="vertical"
+      onAdjust={(next) => {
+        editorPercent = next;
+      }}
+    />
 
     <div class="center-stack">
       <section class="editor-shell" aria-label="Editor workspace">
@@ -231,8 +218,11 @@ main = 42
             class="utility-tab"
             role="tab"
             aria-controls="utility-panel-logs"
-            aria-selected="true"
-            tabindex="0"
+            aria-selected={activeUtilityTab === 'logs'}
+            tabindex={activeUtilityTab === 'logs' ? '0' : '-1'}
+            onclick={() => {
+              activeUtilityTab = 'logs';
+            }}
           >
             Logs
           </button>
@@ -241,9 +231,12 @@ main = 42
             id="utility-tab-problems"
             class="utility-tab"
             role="tab"
-            aria-controls="utility-panel-logs"
-            aria-selected="false"
-            tabindex="-1"
+            aria-controls="utility-panel-problems"
+            aria-selected={activeUtilityTab === 'problems'}
+            tabindex={activeUtilityTab === 'problems' ? '0' : '-1'}
+            onclick={() => {
+              activeUtilityTab = 'problems';
+            }}
           >
             Problems
           </button>
@@ -254,8 +247,19 @@ main = 42
           class="utility-panel"
           role="tabpanel"
           aria-labelledby="utility-tab-logs"
+          hidden={activeUtilityTab !== 'logs'}
         >
-          <p>Logs and problems will wire into compiler diagnostics in later tasks.</p>
+          <p>Logs will wire into compiler diagnostics in later tasks.</p>
+        </div>
+
+        <div
+          id="utility-panel-problems"
+          class="utility-panel"
+          role="tabpanel"
+          aria-labelledby="utility-tab-problems"
+          hidden={activeUtilityTab !== 'problems'}
+        >
+          <p>Problems will appear here when diagnostic grouping ships in later tasks.</p>
         </div>
       </section>
     </div>
@@ -373,13 +377,6 @@ main = 42
     border-inline: 1px solid var(--kr-border);
   }
 
-  .workspace.workspace-stacked {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "center"
-      "inspector";
-  }
-
   .center-stack {
     grid-area: center;
     display: grid;
@@ -455,6 +452,17 @@ main = 42
   }
 
   @media (max-width: 1100px) {
+    .workspace {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "center"
+        "inspector";
+    }
+
+    .workspace > :global(.resize-handle) {
+      display: none;
+    }
+
     .inspector-shell {
       min-width: 0;
       min-height: 10rem;

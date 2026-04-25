@@ -24,8 +24,14 @@
   let element = $state<HTMLDivElement | null>(null);
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') bump(-2);
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') bump(2);
+    if (orientation === 'vertical') {
+      if (event.key === 'ArrowLeft') bump(-2);
+      if (event.key === 'ArrowRight') bump(2);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') bump(-2);
+    if (event.key === 'ArrowDown') bump(2);
   }
 
   onMount(() => {
