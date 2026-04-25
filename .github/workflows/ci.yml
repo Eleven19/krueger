@@ -92,10 +92,15 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: docs
 
-      - name: Run headless browser compiler facade parity check
+      - name: Run headless browser compiler facade parity check (JS-linked)
         run: |
           ./mill krueger.webapp-wasm.fullLinkJS
           npm --prefix docs run test:webapp-wasm-browser -- -- out/krueger/webapp-wasm/fullLinkJS.dest
+
+      - name: Run Wasm-linked compiler facade smoke
+        run: |
+          ./mill krueger.webapp-wasm.wasm.fullLinkJS
+          npm --prefix docs run test:wasm-facade-smoke
 
   build-native:
     name: Build & Test (Scala Native)

@@ -20,6 +20,7 @@
     "test:playground-e2e": "node scripts/check-playground-e2e.mjs",
     "test:try-wasm-deploy-workflow": "node scripts/check-try-wasm-deploy-workflow.mjs",
     "test:webapp-wasm-browser": "node scripts/check-webapp-wasm-browser.mjs",
+    "test:wasm-facade-smoke": "node --experimental-wasm-exnref scripts/check-wasm-facade-smoke.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

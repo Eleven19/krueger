@@ -85,6 +85,10 @@ console.log('check-playground-e2e: OK - /try-wasm/ smoke tests passed for both w
 
 async function runBackendSmoke(browser, baseUrl, backendId) {
   const page = await browser.newPage();
+  const wasmRequests = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('.wasm')) wasmRequests.push(request.url());
+  });
   try {
     await page.goto(`${baseUrl}/try-wasm/`, { waitUntil: 'domcontentloaded' });
 
@@ -107,7 +111,29 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
       `/try-wasm/ (${backendId}) matches panel`
     );
     const matchRoot = await page.locator('.krueger-match-root').first().textContent();
-    return { matchRoot };
+
+    // Per-backend network expectations: the WASM pass MUST fetch main.wasm;
+    // the JS pass MUST NOT (it loads only `wasm/facade/main.js`). This is
+    // what proves the runtime path actually diverges between the two
+    // selectors — without this assertion, both passes could share the JS
+    // facade and the e2e would still go green.
+    if (backendId === 'webgc') {
+      const fetchedWasm = wasmRequests.some((url) => url.includes('/webgc/main.wasm'));
+      if (!fetchedWasm) {
+        fail(
+          `/try-wasm/ (webgc): expected the page to fetch wasm/webgc/main.wasm, ` +
+            `but observed wasm requests: ${JSON.stringify(wasmRequests)}`
+        );
+      }
+    } else {
+      if (wasmRequests.length > 0) {
+        fail(
+          `/try-wasm/ (js): expected zero .wasm requests, observed: ${JSON.stringify(wasmRequests)}`
+        );
+      }
+    }
+
+    return { matchRoot, wasmRequests };
   } finally {
     await page.close();
   }
