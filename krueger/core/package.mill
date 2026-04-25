@@ -9,7 +9,10 @@ trait CoreModule extends _root_.build.CommonScalaModule
     override def artifactName = "krueger-core"
 
     def mvnDeps = Seq(
-        mvn"com.github.j-mie6::parsley::4.6.2"
+        mvn"com.github.j-mie6::parsley::4.6.2",
+        mvn"io.getkyo::kyo-prelude::${_root_.build.KruegerVersions.Kyo}",
+        mvn"io.getkyo::kyo-core::${_root_.build.KruegerVersions.Kyo}",
+        mvn"com.outr::scribe::${_root_.build.KruegerVersions.Scribe}"
     )
 }
 

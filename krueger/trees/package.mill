@@ -12,7 +12,9 @@ trait TreesModule extends _root_.build.CommonScalaModule
         mvn"com.github.j-mie6::parsley::4.6.2",
         mvn"io.github.kitlangton::neotype::0.4.10",
         mvn"com.kubuszok::kindlings-fast-show-pretty::0.1.0",
-        mvn"com.github.ghostdogpr::purelogic::0.1.0"
+        mvn"com.github.ghostdogpr::purelogic::0.1.0",
+        mvn"io.getkyo::kyo-prelude::${_root_.build.KruegerVersions.Kyo}",
+        mvn"io.getkyo::kyo-core::${_root_.build.KruegerVersions.Kyo}"
     )
 }
 
