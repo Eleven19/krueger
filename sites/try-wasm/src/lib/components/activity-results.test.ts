@@ -205,6 +205,37 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     expect(quotedValue.getAttribute('style')).toContain('var(--kr-tree-value)');
   });
 
+  it('renders raw mode through the monaco-backed read-only viewer for JSON payloads', async () => {
+    render(ResultsPanel, resultProps({ selectedPanel: 'cst' }));
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Raw' }));
+
+    const rawView = screen.getByRole('textbox', { name: 'CST raw view' }) as HTMLTextAreaElement;
+    const search = screen.getByRole('searchbox', { name: 'Filter nodes' }) as HTMLInputElement;
+
+    expect(screen.queryByRole('tree', { name: 'CST tree' })).toBeNull();
+    expect(search.disabled).toBe(false);
+    expect(rawView.readOnly).toBe(true);
+    expect(rawView.value).toContain('"type": "CstModule"');
+    expect(rawView.value).toContain('"childCount": 1');
+  });
+
+  it('uses raw-mode search as find input for monaco-backed raw output', async () => {
+    render(ResultsPanel, resultProps({ selectedPanel: 'cst' }));
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Raw' }));
+
+    const search = screen.getByRole('searchbox', { name: 'Filter nodes' });
+    const rawView = screen.getByRole('textbox', { name: 'CST raw view' }) as HTMLTextAreaElement;
+    const expectedIndex = rawView.value.indexOf('childCount');
+
+    await fireEvent.input(search, { target: { value: 'childCount' } });
+
+    expect(search.hasAttribute('disabled')).toBe(false);
+    expect(rawView.selectionStart).toBe(expectedIndex);
+    expect(rawView.selectionEnd).toBe(expectedIndex + 'childCount'.length);
+  });
+
   it('filters visible nodes and shows a no-match state when the search misses', async () => {
     render(ResultsPanel, resultProps({ selectedPanel: 'cst' }));
 
@@ -229,9 +260,12 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
       })
     );
 
+    const rawView = screen.getByRole('textbox', { name: 'CST raw view' }) as HTMLTextAreaElement;
+
     expect(screen.queryByRole('tree', { name: 'CST tree' })).toBeNull();
-    expect(screen.getByText(/"kind": "pending"/)).not.toBeNull();
-    expect(screen.getByText(/"detail": "opaque cst payload"/)).not.toBeNull();
+    expect(rawView.readOnly).toBe(true);
+    expect(rawView.value).toContain('"kind": "pending"');
+    expect(rawView.value).toContain('"detail": "opaque cst payload"');
   });
 
   it('falls back to raw CST and AST output when unist parsing fails but opaque parsing succeeds', () => {
@@ -244,8 +278,10 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
       })
     );
 
+    const cstRawView = screen.getByRole('textbox', { name: 'CST raw view' }) as HTMLTextAreaElement;
+
     expect(screen.queryByRole('tree', { name: 'CST tree' })).toBeNull();
-    expect(screen.getByText('CstModule(raw opaque fallback)')).not.toBeNull();
+    expect(cstRawView.value).toBe('CstModule(raw opaque fallback)');
     expect(screen.queryByText('unist bridge unavailable')).toBeNull();
 
     unmount();
@@ -259,8 +295,10 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
       })
     );
 
+    const astRawView = screen.getByRole('textbox', { name: 'AST raw view' }) as HTMLTextAreaElement;
+
     expect(screen.queryByRole('tree', { name: 'AST tree' })).toBeNull();
-    expect(screen.getByText('Module(raw opaque fallback)')).not.toBeNull();
+    expect(astRawView.value).toBe('Module(raw opaque fallback)');
     expect(screen.queryByText('unist bridge unavailable')).toBeNull();
   });
 });

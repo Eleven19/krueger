@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MonacoEditor from './MonacoEditor.svelte';
   import type { CompilerEnvelope, UnistNode } from '$lib/krueger';
 
   type TreeEntry = {
@@ -20,6 +21,11 @@
   let filter = $state('');
   let rawPreferred = $state(false);
   let collapsedIds = $state<string[]>([]);
+  const rawViewerControls = {
+    expandAll: () => {},
+    collapseAll: () => {},
+    find: (_query: string) => {}
+  };
 
   const treeRoot = $derived(result.ok && isUnistNode(result.value) ? result.value : null);
   const filterQuery = $derived(filter.trim().toLowerCase());
@@ -29,6 +35,7 @@
   const showTree = $derived(treeAvailable && !rawPreferred);
   const collapsedSet = $derived(new Set(collapsedIds));
   const rawText = $derived(stringifyValue(result.value));
+  const rawLanguage = $derived(typeof result.value === 'string' ? 'plaintext' : 'json');
 
   function toggleNode(id: string): void {
     const next = new Set(collapsedIds);
@@ -41,15 +48,26 @@
   }
 
   function expandAll(): void {
-    collapsedIds = [];
+    if (showTree) {
+      collapsedIds = [];
+      return;
+    }
+
+    rawViewerControls.expandAll();
   }
 
   function collapseAll(): void {
-    collapsedIds = treeRoot ? collectCollapsibleIds(treeRoot) : [];
+    if (showTree) {
+      collapsedIds = treeRoot ? collectCollapsibleIds(treeRoot) : [];
+      return;
+    }
+
+    rawViewerControls.collapseAll();
   }
 
   function setMode(next: 'tree' | 'raw'): void {
     rawPreferred = next === 'raw';
+    filter = '';
   }
 
   function isUnistNode(value: unknown): value is UnistNode {
@@ -134,10 +152,13 @@
           <input
             type="search"
             aria-label="Filter nodes"
-            placeholder="Filter nodes"
+            placeholder={showTree ? 'Filter nodes' : 'Find in raw view'}
             value={filter}
             oninput={(event) => {
               filter = (event.currentTarget as HTMLInputElement).value;
+              if (!showTree) {
+                rawViewerControls.find(filter);
+              }
             }}
           />
         </label>
@@ -184,11 +205,28 @@
           <p class="empty-state">No matching nodes.</p>
         {/if}
       {:else}
-        <pre class="tree-body">{rawText}</pre>
+        <div class="tree-body tree-editor">
+          <MonacoEditor
+            value={rawText}
+            language={rawLanguage}
+            ariaLabel={`${label} raw view`}
+            readOnly={true}
+            controls={rawViewerControls}
+            onChange={() => {}}
+          />
+        </div>
       {/if}
     </div>
   {:else}
-    <pre class="tree-body">{rawText}</pre>
+    <div class="tree-body tree-editor">
+      <MonacoEditor
+        value={rawText}
+        language={rawLanguage}
+        ariaLabel={`${label} raw view`}
+        readOnly={true}
+        onChange={() => {}}
+      />
+    </div>
   {/if}
 </section>
 
@@ -243,6 +281,7 @@
 <style>
   .tree-view {
     display: grid;
+    height: 100%;
     min-height: 16rem;
   }
 
@@ -258,6 +297,7 @@
 
   .tree-surface {
     display: grid;
+    height: 100%;
     min-height: 16rem;
     grid-template-rows: auto minmax(0, 1fr);
   }
@@ -396,6 +436,13 @@
     padding: 0.875rem;
     color: var(--kr-text);
     white-space: pre-wrap;
+  }
+
+  .tree-editor {
+    display: grid;
+    height: 100%;
+    padding: 0;
+    white-space: normal;
   }
 
   .empty-state {

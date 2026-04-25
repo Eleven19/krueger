@@ -1,10 +1,10 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createElmTokensProvider } from './elm-language';
-import { createKruegerClient, type CompilerEnvelope } from './krueger';
+import { createKruegerClient, tokenizerReadyEvent, type CompilerEnvelope } from './krueger';
 
 const wasmRoot = resolve(process.cwd(), 'static', 'wasm');
 const facadeUrl = pathToFileURL(resolve(wasmRoot, 'facade', 'main.js')).href;
@@ -244,5 +244,19 @@ describe('krueger.ts real compiler facade wrapper', () => {
       { startIndex: 12, scopes: 'operator' },
       { startIndex: 14, scopes: 'number' }
     ]);
+  });
+
+  it('dispatches a tokenizer-ready event when the facade finishes loading', async () => {
+    const originalDispatchEvent = globalThis.dispatchEvent;
+    const dispatchEvent = vi.fn(() => true);
+    Object.assign(globalThis, { dispatchEvent });
+    try {
+      await createKruegerClient('js', { facadeUrl: legacyFacadeUrl });
+    } finally {
+      Object.assign(globalThis, { dispatchEvent: originalDispatchEvent });
+    }
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0]?.[0]).toMatchObject({ type: tokenizerReadyEvent });
   });
 });

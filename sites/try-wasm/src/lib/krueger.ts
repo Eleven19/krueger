@@ -84,6 +84,8 @@ export type KruegerClient = {
   tokenize(source: string): CompilerEnvelope<ElmToken[]>;
 };
 
+export const tokenizerReadyEvent = 'krueger:tokenizer-ready';
+
 const DEFAULT_FACADE_URLS: Record<BackendId, string> = {
   // JS-linked Scala.js facade (top-level export name: `Krueger`).
   js: 'wasm/facade/main.js',
@@ -163,7 +165,18 @@ async function loadFacade(
   // identical at the call sites, so callers don't have to special-case
   // backend ids.
   (globalThis as Record<string, unknown>).Krueger = candidate;
+  notifyTokenizerReady();
   return candidate;
+}
+
+function notifyTokenizerReady(): void {
+  if (typeof globalThis.dispatchEvent !== 'function') return;
+
+  const event =
+    typeof Event === 'function'
+      ? new Event(tokenizerReadyEvent)
+      : ({ type: tokenizerReadyEvent } as Event);
+  globalThis.dispatchEvent(event);
 }
 
 function invokeEnvelope<T>(
