@@ -63,8 +63,8 @@ export type KruegerClientOptions = {
 type RawKruegerFacade = {
   parseCst(source: string): unknown;
   parseAst(source: string): unknown;
-  parseCstUnist(source: string): unknown;
-  parseAstUnist(source: string): unknown;
+  parseCstUnist?(source: string): unknown;
+  parseAstUnist?(source: string): unknown;
   parseQuery(query: string): unknown;
   runQuery(query: unknown, root: unknown): unknown;
   prettyQuery(query: unknown): string;
@@ -112,10 +112,16 @@ export async function createKruegerClient(
       return invokeEnvelope(() => facade.parseAst(source));
     },
     parseCstUnist(source) {
-      return invokeEnvelope<UnistNode>(() => facade.parseCstUnist(source), normalizeUnistNode);
+      return invokeEnvelope<UnistNode>(
+        () => invokeFacadeMethod(facade, 'parseCstUnist', source),
+        normalizeUnistNode
+      );
     },
     parseAstUnist(source) {
-      return invokeEnvelope<UnistNode>(() => facade.parseAstUnist(source), normalizeUnistNode);
+      return invokeEnvelope<UnistNode>(
+        () => invokeFacadeMethod(facade, 'parseAstUnist', source),
+        normalizeUnistNode
+      );
     },
     parseQuery(query) {
       return invokeEnvelope(() => facade.parseQuery(query));
@@ -179,6 +185,18 @@ function invokeEnvelope<T>(
       ]
     };
   }
+}
+
+function invokeFacadeMethod<TArgs extends unknown[]>(
+  facade: RawKruegerFacade,
+  methodName: string,
+  ...args: TArgs
+): unknown {
+  const method = facade[methodName as keyof RawKruegerFacade];
+  if (typeof method !== 'function') {
+    throw new Error(`Krueger facade method ${methodName} is unavailable`);
+  }
+  return method.apply(facade, args);
 }
 
 function normalizeEnvelope<T>(raw: unknown, normalizeValue: (value: unknown) => T): CompilerEnvelope<T> {
@@ -335,8 +353,6 @@ function isKruegerFacade(value: unknown): value is RawKruegerFacade {
   return (
     typeof record.parseCst === 'function' &&
     typeof record.parseAst === 'function' &&
-    typeof record.parseCstUnist === 'function' &&
-    typeof record.parseAstUnist === 'function' &&
     typeof record.parseQuery === 'function' &&
     typeof record.runQuery === 'function' &&
     typeof record.prettyQuery === 'function' &&

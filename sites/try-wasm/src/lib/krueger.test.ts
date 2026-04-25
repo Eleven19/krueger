@@ -21,6 +21,39 @@ main =
 
 const validQuery = '(CstValueDeclaration) @decl';
 
+const legacyFacadeUrl = `data:text/javascript,${encodeURIComponent(`
+  export const Krueger = {
+    parseCst(source) {
+      return { ok: true, value: { kind: 'cst', source }, logs: ['legacy-cst'], errors: [] };
+    },
+    parseAst(source) {
+      return { ok: true, value: { kind: 'ast', source }, logs: ['legacy-ast'], errors: [] };
+    },
+    parseQuery(query) {
+      return { ok: true, value: { query }, logs: ['legacy-query'], errors: [] };
+    },
+    runQuery(query, root) {
+      return {
+        ok: true,
+        value: [{ rootNodeType: root.kind ?? 'legacy-root', rootText: query.query ?? '', captures: {} }],
+        logs: ['legacy-runQuery'],
+        errors: []
+      };
+    },
+    prettyQuery(query) {
+      return \`legacy:\${query.query ?? ''}\`;
+    },
+    tokenize(source) {
+      return {
+        ok: true,
+        value: [{ kind: 'Keyword', lexeme: source, start: 0, end: source.length }],
+        logs: ['legacy-tokenize'],
+        errors: []
+      };
+    }
+  };
+`)}`;
+
 function expectEnvelope(env: CompilerEnvelope<unknown>) {
   expect(typeof env.ok).toBe('boolean');
   expect(Array.isArray(env.logs)).toBe(true);
@@ -90,6 +123,45 @@ describe('krueger.ts real compiler facade wrapper', () => {
     expect(cst.errors[0]?.phase).toBe('cst');
     expect(ast.errors[0]?.phase).toBe('ast');
     expect(ast.errors[0]?.message).toContain('unexpected end of input');
+  });
+
+  it('supports stale facades without unist methods while degrading unist calls to internal error envelopes', async () => {
+    const krueger = await createKruegerClient('js', { facadeUrl: legacyFacadeUrl });
+
+    const cst = krueger.parseCst(validSource);
+    const ast = krueger.parseAst(validSource);
+    const query = krueger.parseQuery(validQuery);
+    const matches = krueger.runQuery(query.value, cst.value);
+    const tokens = krueger.tokenize('module');
+    const cstUnist = krueger.parseCstUnist(validSource);
+    const astUnist = krueger.parseAstUnist(validSource);
+
+    expect(cst).toMatchObject({ ok: true, value: { kind: 'cst', source: validSource }, logs: ['legacy-cst'] });
+    expect(ast).toMatchObject({ ok: true, value: { kind: 'ast', source: validSource }, logs: ['legacy-ast'] });
+    expect(query).toMatchObject({ ok: true, value: { query: validQuery }, logs: ['legacy-query'] });
+    expect(matches).toMatchObject({
+      ok: true,
+      value: [{ rootNodeType: 'cst', rootText: validQuery, captures: {} }],
+      logs: ['legacy-runQuery']
+    });
+    expect(krueger.prettyQuery(query.value)).toBe(`legacy:${validQuery}`);
+    expect(tokens).toMatchObject({
+      ok: true,
+      value: [{ kind: 'Keyword', lexeme: 'module', start: 0, end: 6 }],
+      logs: ['legacy-tokenize']
+    });
+    expect(cstUnist).toMatchObject({
+      ok: false,
+      value: null,
+      logs: [],
+      errors: [{ phase: 'internal', message: 'Krueger facade method parseCstUnist is unavailable' }]
+    });
+    expect(astUnist).toMatchObject({
+      ok: false,
+      value: null,
+      logs: [],
+      errors: [{ phase: 'internal', message: 'Krueger facade method parseAstUnist is unavailable' }]
+    });
   });
 
   it('runs a valid query and preserves deterministic match order', async () => {
