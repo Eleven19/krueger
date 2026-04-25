@@ -251,6 +251,64 @@ object `package` extends Module {
     os.proc("npm", "run", "build").call(cwd = tryWasmDir, stdout = os.Inherit, stderr = os.Inherit)
   }
 
+  /** Copy the Scala.js link output from `linkDir` into
+    * `docs/src/playground/generated/app/` so Vite can bundle it during
+    * `astro build`. Mirrors `krueger.webapp.writeToDocsSrc`, but inlined here
+    * because Mill 1.x does not allow invoking `Task.Command`s from inside
+    * another task body (the body silently does not execute). The enclosing
+    * `docs.site` / `docs.prepareLocalDevSite` are themselves Commands so they
+    * are permitted to write outside `Task.dest`.
+    */
+  private def copyWebappBundleToDocsSrc(linkDir: os.Path, logInfo: String => Unit): Unit = {
+    val target = repoRoot / "docs" / "src" / "playground" / "generated" / "app"
+    if (os.exists(target)) os.remove.all(target)
+    os.makeDir.all(target)
+    var copied = 0
+    for (child <- os.list(linkDir)) {
+      os.copy.into(child, target, replaceExisting = true)
+      copied += 1
+    }
+    logInfo(s"docs: copied $copied Laminar bundle files from $linkDir -> $target")
+  }
+
+  /** Copy the webapp-wasm facade + compiler-api wasm link outputs into
+    * `sites/try-wasm/static/wasm/{facade,webgc}/`. Mirrors
+    * `krueger.webapp-wasm.writeToWasmSite`, inlined for the same reason as
+    * `copyWebappBundleToDocsSrc`. Strips `//# sourceMappingURL=` references
+    * from copied `.js` files (the corresponding `.map` files are skipped).
+    */
+  private def copyWasmArtifactsToTryWasm(
+      facadeDir: os.Path,
+      webgcDir: os.Path,
+      logInfo: String => Unit
+  ): Unit = {
+    val target = repoRoot / "sites" / "try-wasm" / "static" / "wasm"
+    if (os.exists(target)) os.remove.all(target)
+    os.makeDir.all(target / "facade")
+    os.makeDir.all(target / "webgc")
+    os.write.over(target / ".gitkeep", "")
+
+    def stripSourceMapReference(source: String): String =
+      source.linesIterator.filterNot(_.startsWith("//# sourceMappingURL=")).mkString("\n") + "\n"
+
+    def copyChildren(from: os.Path, to: os.Path): Int = {
+      var copied = 0
+      for (child <- os.list(from) if !child.last.endsWith(".map")) {
+        val out = to / child.last
+        if (child.last.endsWith(".js")) os.write.over(out, stripSourceMapReference(os.read(child)))
+        else os.copy.over(child, out)
+        copied += 1
+      }
+      copied
+    }
+
+    val facadeCount = copyChildren(facadeDir, target / "facade")
+    val webgcCount  = copyChildren(webgcDir, target / "webgc")
+    logInfo(
+      s"docs: copied facade=$facadeCount from $facadeDir and webgc=$webgcCount from $webgcDir -> $target"
+    )
+  }
+
   /** Copy `sites/try-wasm/build/` into `destRoot` (wiping `destRoot` first). */
   private def copyTryWasmBuildInto(destRoot: os.Path, logInfo: String => Unit): Unit = {
     val buildDir = repoRoot / "sites" / "try-wasm" / "build"
@@ -284,10 +342,14 @@ object `package` extends Module {
     )
 
     Task.log.info("docs.prepareLocalDevSite: writing Laminar playground bundle")
-    build.krueger.webapp.writeToDocsSrc()
+    copyWebappBundleToDocsSrc(build.krueger.webapp.fullLinkJS().dest.path, Task.log.info(_))
 
     Task.log.info("docs.prepareLocalDevSite: writing webapp-wasm compiler artifacts")
-    build.krueger.`webapp-wasm`.writeToWasmSite()
+    copyWasmArtifactsToTryWasm(
+      facadeDir = build.krueger.`webapp-wasm`.fullLinkJS().dest.path,
+      webgcDir  = build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path,
+      logInfo   = Task.log.info(_)
+    )
 
     runTryWasmNpmBuild(Task.log.info(_))
 
@@ -336,10 +398,14 @@ object `package` extends Module {
     )
 
     Task.log.info("docs.site: writing Laminar playground bundle")
-    build.krueger.webapp.writeToDocsSrc()
+    copyWebappBundleToDocsSrc(build.krueger.webapp.fullLinkJS().dest.path, Task.log.info(_))
 
     Task.log.info("docs.site: writing webapp-wasm compiler artifacts")
-    build.krueger.`webapp-wasm`.writeToWasmSite()
+    copyWasmArtifactsToTryWasm(
+      facadeDir = build.krueger.`webapp-wasm`.fullLinkJS().dest.path,
+      webgcDir  = build.krueger.`compiler-api`.wasm.fullLinkJS().dest.path,
+      logInfo   = Task.log.info(_)
+    )
 
     runTryWasmNpmBuild(Task.log.info(_))
 
