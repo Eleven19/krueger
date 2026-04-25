@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
 
   import { elmLanguageId, registerElmLanguage } from '$lib/elm-language';
+  import { subscribeToResolvedTheme } from '$lib/theme';
 
   let {
     value,
@@ -24,6 +25,7 @@
 
     let disposed = false;
     let subscription: { dispose: () => void } | null = null;
+    let themeUnsubscribe: (() => void) | null = null;
 
     void import('monaco-editor/esm/vs/editor/editor.api').then((monaco) => {
       if (disposed) return;
@@ -42,6 +44,15 @@
       });
       enhanced = true;
 
+      // Bridge Monaco's theme to the page-level `data-theme` attribute the
+      // shared bootstrap in app.html stamps on <html>. Monaco's setTheme
+      // is global — calling it on every theme transition keeps both the
+      // source and query editors in lockstep, and tracks user preference
+      // changes from any ThemeToggle on this page or another tab.
+      themeUnsubscribe = subscribeToResolvedTheme((resolved) => {
+        monaco.editor.setTheme(resolved === 'light' ? 'vs' : 'vs-dark');
+      });
+
       subscription = editor.onDidChangeModelContent(() => {
         const next = editor?.getValue() ?? '';
         if (next !== value) onChange(next);
@@ -51,6 +62,7 @@
     return () => {
       disposed = true;
       subscription?.dispose();
+      themeUnsubscribe?.();
       editor?.dispose();
     };
   });

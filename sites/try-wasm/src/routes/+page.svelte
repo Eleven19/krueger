@@ -2,12 +2,10 @@
   import { onMount } from "svelte";
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
-  import BackendSelect from "$lib/components/BackendSelect.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
   import ResultsPanel from "$lib/components/ResultsPanel.svelte";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
   import {
-    backendInfo,
     fallbackBackend,
     isAvailable,
     pickInitialBackend,
@@ -20,11 +18,7 @@
     type MatchView
   } from "$lib/krueger";
   import { defaultPanel, type Panel } from "$lib/panels";
-  import {
-    shouldLoadWasmCompiler,
-    supportsWasmGc,
-    wasmGcRequirementsText
-  } from "$lib/wasm-gc";
+  import { supportsWasmGc } from "$lib/wasm-gc";
 
   const defaultSource = `module Demo exposing (..)
 
@@ -41,7 +35,6 @@ main = 42
   let query = $state(defaultQuery);
   let backend = $state<BackendId>(pickInitialBackend(null));
 
-  const canInitializeCompiler = $derived(shouldLoadWasmCompiler(wasmGcSupported));
   const cstResult = $derived(
     compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
   );
@@ -57,7 +50,6 @@ main = 42
       ? client.prettyQuery(queryResult.value)
       : ""
   );
-  const activeBackendInfo = $derived(backendInfo(backend));
 
   onMount(() => {
     const supported = supportsWasmGc();
@@ -73,16 +65,15 @@ main = 42
     void loadBackend(backend);
   });
 
-  function loadBackend(next: BackendId): Promise<void> {
-    return createKruegerClient(next)
-      .then((loaded) => {
-        client = loaded;
-        compilerLoadError = null;
-      })
-      .catch((error: unknown) => {
-        client = null;
-        compilerLoadError = error instanceof Error ? error.message : String(error);
-      });
+  async function loadBackend(next: BackendId): Promise<void> {
+    try {
+      const loaded = await createKruegerClient(next);
+      client = loaded;
+      compilerLoadError = null;
+    } catch (error: unknown) {
+      client = null;
+      compilerLoadError = error instanceof Error ? error.message : String(error);
+    }
   }
 
   function compilerEnvelope<T>(
@@ -132,41 +123,9 @@ main = 42
   />
 </svelte:head>
 
-<SiteHeader />
+<SiteHeader centerTitle="Try Krueger" />
 
 <main class="playground-shell">
-  {#if wasmGcSupported === false}
-    <aside class="fallback" role="status" aria-live="polite">
-      <strong>This browser does not support WebAssembly GC.</strong>
-      <span>
-        Krueger needs {wasmGcRequirementsText} for the WASM backend. The
-        JavaScript backend is selected automatically and works in every
-        modern browser.
-      </span>
-    </aside>
-  {/if}
-
-  <header class="app-header">
-    <div>
-      <p class="eyebrow">Try Krueger</p>
-      <h1>Compiler playground</h1>
-    </div>
-    <div class="app-header-trail">
-      <p>
-        Paste Elm source, write a Krueger query, and inspect matches, CST,
-        AST, and the canonical query echo. Pick a compiler backend below.
-      </p>
-      <div class="backend-row">
-        <BackendSelect
-          selected={backend}
-          {wasmGcSupported}
-          onSelect={handleBackendChange}
-        />
-        <span class="backend-hint">{activeBackendInfo.description}</span>
-      </div>
-    </div>
-  </header>
-
   <section class="workspace" aria-label="Try Krueger workspace">
     <ActivityBar
       {selectedPanel}
@@ -191,6 +150,9 @@ main = 42
       {matchResult}
       {queryResult}
       {prettyQuery}
+      {backend}
+      {wasmGcSupported}
+      onBackendChange={handleBackendChange}
     />
   </section>
 </main>
@@ -209,129 +171,83 @@ main = 42
      `.playground-shell`) can read the same variables. The `data-theme`
      attribute is set by the inline bootstrap in `app.html` before paint,
      using the same `starlight-theme` localStorage key the Astro pages
-     write — so dark/light tracks the rest of the docs site. */
+     write — so dark/light tracks the rest of the docs site.
+
+     HSL values mirror Starlight's `--sl-color-*` palette (extracted from
+     `_astro/common.*.css`) so the playground reads as the same site as
+     the surrounding docs and `/krueger/api/`. Hue 224 is Starlight's
+     default slate-blue gray. */
   :global(:root) {
     color-scheme: dark;
 
-    --kr-bg: #0f172a;
-    --kr-panel-bg: #111827;
-    --kr-panel-bg-strong: #1f2937;
-    --kr-editor-bg: #020617;
-    --kr-border: #334155;
-    --kr-text: #e5e7eb;
-    --kr-muted: #94a3b8;
-    --kr-accent: #60a5fa;
-    --kr-accent-soft: #bfdbfe;
-    --kr-error-bg: #451a1a;
-    --kr-error-border: #ef4444;
-    --kr-error-text: #fecaca;
+    /* Starlight: --sl-color-black (page bg in dark mode) */
+    --kr-bg: hsl(224, 10%, 10%);
+    /* Starlight: --sl-color-gray-6 (used as bg-nav / bg-sidebar) */
+    --kr-panel-bg: hsl(224, 14%, 16%);
+    /* One step darker for the inner activity rail / strip */
+    --kr-panel-bg-strong: hsl(224, 12%, 13%);
+    /* Editor surface: slightly darker than the page bg for visual depth */
+    --kr-editor-bg: hsl(224, 10%, 8%);
+    /* Starlight: --sl-color-gray-5 (hairline shade) */
+    --kr-border: hsl(224, 10%, 23%);
+    /* Starlight: --sl-color-gray-2 (= --sl-color-text) */
+    --kr-text: hsl(224, 6%, 77%);
+    /* Starlight: --sl-color-gray-3 / gray-4 mid-tone for de-emphasised UI */
+    --kr-muted: hsl(224, 6%, 56%);
+    /* Starlight default accent (--sl-color-accent in dark mode) */
+    --kr-accent: hsl(224, 100%, 60%);
+    --kr-accent-soft: hsl(224, 100%, 85%);
+    /* Brand text color — mirrors Starlight's `--sl-color-text-accent`,
+       which resolves to the soft lavender on dark and the saturated
+       accent on light. Drives the `Krueger` wordmark in SiteHeader. */
+    --kr-brand: var(--kr-accent-soft);
+    --kr-error-bg: hsl(0, 60%, 18%);
+    --kr-error-border: hsl(0, 84%, 60%);
+    --kr-error-text: hsl(0, 92%, 86%);
     --kr-header-h: 3.75rem;
   }
 
   :global(:root[data-theme='light']) {
     color-scheme: light;
 
-    --kr-bg: #ffffff;
-    --kr-panel-bg: #f8fafc;
-    --kr-panel-bg-strong: #f1f5f9;
-    --kr-editor-bg: #ffffff;
-    --kr-border: #e2e8f0;
-    --kr-text: #0f172a;
-    --kr-muted: #64748b;
-    --kr-accent: #4338ca;
-    --kr-accent-soft: #c7d2fe;
-    --kr-error-bg: #fef2f2;
-    --kr-error-border: #ef4444;
-    --kr-error-text: #b91c1c;
+    /* Starlight light: --sl-color-black = white = page bg */
+    --kr-bg: hsl(0, 0%, 100%);
+    /* Starlight light: --sl-color-gray-7 (lightest panel) */
+    --kr-panel-bg: hsl(224, 19%, 97%);
+    /* Starlight light: --sl-color-gray-6 (slightly stronger panel) */
+    --kr-panel-bg-strong: hsl(224, 20%, 94%);
+    --kr-editor-bg: hsl(0, 0%, 100%);
+    /* Starlight light: --sl-color-gray-5 hairline */
+    --kr-border: hsl(224, 6%, 77%);
+    /* Starlight light: --sl-color-gray-2 (text) */
+    --kr-text: hsl(224, 10%, 23%);
+    --kr-muted: hsl(224, 7%, 36%);
+    --kr-accent: hsl(234, 90%, 60%);
+    --kr-accent-soft: hsl(234, 88%, 90%);
+    /* In light mode the soft variant is too pale on white; pull from the
+       saturated accent instead so the brand stays readable. */
+    --kr-brand: var(--kr-accent);
+    --kr-error-bg: hsl(0, 86%, 97%);
+    --kr-error-border: hsl(0, 84%, 60%);
+    --kr-error-text: hsl(0, 70%, 35%);
   }
 
   .playground-shell {
+    /* Page-level chrome lives in SiteHeader; the playground itself fills
+       the remainder of the viewport edge-to-edge — no inner heading or
+       padding band on top of the workspace. */
     min-height: calc(100vh - var(--kr-header-h));
     display: grid;
-    gap: 1rem;
-    padding: 2rem;
+    padding: 0;
     background: var(--kr-bg);
-  }
-
-  .fallback {
-    display: grid;
-    gap: 0.75rem;
-    padding: 1rem;
-    color: #111827;
-    background: #fef3c7;
-    border: 1px solid #f59e0b;
-    border-radius: 0.75rem;
-  }
-
-  .fallback span {
-    color: #374151;
-    line-height: 1.5;
-  }
-
-  .app-header {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 2rem;
-    flex-wrap: wrap;
-  }
-
-  .app-header > div:first-child {
-    display: grid;
-    gap: 0.35rem;
-  }
-
-  .app-header-trail {
-    display: grid;
-    gap: 0.75rem;
-    justify-items: end;
-    max-width: 36rem;
-  }
-
-  .backend-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .backend-hint {
-    color: var(--kr-muted);
-    font-size: 0.8rem;
-    line-height: 1.4;
-  }
-
-  .eyebrow {
-    margin: 0;
-    color: var(--kr-accent);
-    font-size: 0.875rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    line-height: 0.95;
-  }
-
-  p {
-    margin: 0;
-    max-width: 42rem;
-    color: var(--kr-muted);
-    font-size: 1rem;
-    line-height: 1.7;
   }
 
   .workspace {
     display: grid;
     grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
-    min-height: calc(100vh - 12rem);
+    min-height: calc(100vh - var(--kr-header-h));
     overflow: hidden;
-    border: 1px solid var(--kr-border);
-    border-radius: 0.875rem;
-    box-shadow: 0 24px 80px rgb(0 0 0 / 0.24);
+    border-top: 0;
+    border-bottom: 1px solid var(--kr-border);
   }
 </style>

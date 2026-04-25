@@ -58,26 +58,103 @@ const repoUrl = 'https://github.com/Eleven19/krueger';
                 <img class="api-logo" src={`${base}/favicon.svg`} alt="" width="28" height="28" />
                 <span>Krueger</span>
             </a>
+            <p class="api-center-title" aria-hidden="true">API Reference</p>
             <NavLinks />
-            <a
-                class="api-github"
-                href={repoUrl}
-                rel="noopener"
-                aria-label="Krueger on GitHub"
-            >
-                <svg
-                    aria-hidden="true"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
+            <div class="api-right-group">
+                <a
+                    class="api-github"
+                    href={repoUrl}
+                    rel="noopener"
+                    aria-label="Krueger on GitHub"
                 >
-                    <path
-                        d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"
-                    />
-                </svg>
-            </a>
+                    <svg
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"
+                        />
+                    </svg>
+                </a>
+                <label class="api-theme-toggle">
+                    <span class="sr-only">Theme</span>
+                    <svg
+                        aria-hidden="true"
+                        class="api-theme-icon"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"
+                        />
+                    </svg>
+                    <select id="api-theme-select" aria-label="Select theme">
+                        <option value="auto">Auto</option>
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                    </select>
+                </label>
+            </div>
         </header>
+
+        <script is:inline>
+            // Bridge to the same `starlight-theme` localStorage key the
+            // Astro/Starlight pages use, so the toggle stays in sync with
+            // the docs site (and with the SvelteKit playground).
+            (() => {
+                const select = document.getElementById('api-theme-select');
+                if (!select) return;
+
+                const STORAGE_KEY = 'starlight-theme';
+
+                const resolve = (preference) => {
+                    if (preference === 'dark' || preference === 'light') return preference;
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches
+                        ? 'dark'
+                        : 'light';
+                };
+
+                const apply = (preference) => {
+                    document.documentElement.dataset.theme = resolve(preference);
+                };
+
+                const read = () => {
+                    try {
+                        const raw = localStorage.getItem(STORAGE_KEY);
+                        return raw === 'dark' || raw === 'light' ? raw : 'auto';
+                    } catch (_) {
+                        return 'auto';
+                    }
+                };
+
+                select.value = read();
+
+                select.addEventListener('change', (event) => {
+                    const next = event.currentTarget.value;
+                    try {
+                        if (next === 'auto') localStorage.removeItem(STORAGE_KEY);
+                        else localStorage.setItem(STORAGE_KEY, next);
+                    } catch (_) {
+                        /* private browsing — apply the choice anyway */
+                    }
+                    apply(next);
+                });
+
+                window.addEventListener('storage', (event) => {
+                    if (event.key !== STORAGE_KEY) return;
+                    const next = event.newValue === 'dark' || event.newValue === 'light'
+                        ? event.newValue
+                        : 'auto';
+                    select.value = next;
+                    apply(next);
+                });
+            })();
+        </script>
 
         <main class="api-main">
             <h1>API Reference</h1>
@@ -115,33 +192,68 @@ const repoUrl = 'https://github.com/Eleven19/krueger';
         </main>
 
         <style is:global>
+            /*
+             * Token values mirror Starlight's `--sl-color-*` palette so
+             * `/api/` reads as part of the same site. Hue 224 is the
+             * Starlight default slate-blue gray; the per-mode lightness
+             * stops match the values in `_astro/common.*.css`.
+             */
             :root {
-                color-scheme: light dark;
+                color-scheme: dark;
 
-                --api-bg: #0f172a;
-                --api-fg: #f8fafc;
-                --api-muted: #a4acbd;
-                --api-card-bg: #1c1e24;
-                --api-card-bg-hover: #23262d;
-                --api-border: #2a2d35;
-                --api-accent: #818cf8;
+                /* --sl-color-black (page bg) */
+                --api-bg: hsl(224, 10%, 10%);
+                /* --sl-color-gray-2 (= text) */
+                --api-fg: hsl(224, 6%, 77%);
+                /* --sl-color-white (strong text) */
+                --api-fg-strong: hsl(0, 0%, 100%);
+                --api-muted: hsl(224, 6%, 56%);
+                /* --sl-color-gray-6 (nav / sidebar bg) */
+                --api-card-bg: hsl(224, 14%, 16%);
+                /* one notch lighter for hover state */
+                --api-card-bg-hover: hsl(224, 16%, 19%);
+                /* --sl-color-gray-5 (hairline) */
+                --api-border: hsl(224, 10%, 23%);
+                /* --sl-color-accent in dark */
+                --api-accent: hsl(224, 100%, 60%);
+                --api-accent-soft: hsl(224, 100%, 85%);
+                /* Brand wordmark color — soft lavender on dark, matches
+                   Starlight's `--sl-color-text-accent`. */
+                --api-brand: var(--api-accent-soft);
+
+                /* Re-export the SL token names NavLinks falls back to so
+                   the nav cluster picks up the right contrast in our
+                   standalone Astro page (which doesn't load Starlight's
+                   stylesheet). */
+                --sl-color-white: var(--api-fg-strong);
+                --sl-color-gray-2: var(--api-fg);
+                --sl-color-gray-3: var(--api-muted);
+                --sl-color-gray-5: var(--api-border);
+                --sl-color-gray-6: var(--api-card-bg-hover);
+                --sl-color-bg-nav: var(--api-card-bg);
             }
 
             :root[data-theme='light'] {
-                --api-bg: #ffffff;
-                --api-fg: #0f172a;
-                --api-muted: #4b5563;
-                --api-card-bg: #f8fafc;
-                --api-card-bg-hover: #eef2ff;
-                --api-border: #e2e8f0;
-                --api-accent: #4338ca;
+                color-scheme: light;
 
-                --sl-color-white: var(--api-fg);
-                --sl-color-gray-1: #1f2937;
-                --sl-color-gray-2: var(--api-muted);
-                --sl-color-gray-3: #6b7280;
+                --api-bg: hsl(0, 0%, 100%);
+                --api-fg: hsl(224, 10%, 23%);
+                --api-fg-strong: hsl(224, 14%, 16%);
+                --api-muted: hsl(224, 7%, 36%);
+                --api-card-bg: hsl(224, 19%, 97%);
+                --api-card-bg-hover: hsl(224, 20%, 94%);
+                --api-border: hsl(224, 6%, 77%);
+                --api-accent: hsl(234, 90%, 60%);
+                --api-accent-soft: hsl(234, 88%, 90%);
+                /* Saturated accent reads on white; the soft variant
+                   would disappear in light mode. */
+                --api-brand: var(--api-accent);
+
+                --sl-color-white: var(--api-fg-strong);
+                --sl-color-gray-2: var(--api-fg);
+                --sl-color-gray-3: var(--api-muted);
                 --sl-color-gray-5: var(--api-border);
-                --sl-color-gray-6: #f1f5f9;
+                --sl-color-gray-6: var(--api-card-bg-hover);
                 --sl-color-bg-nav: var(--api-card-bg);
             }
 
@@ -175,18 +287,80 @@ const repoUrl = 'https://github.com/Eleven19/krueger';
                 border-bottom: 1px solid var(--api-border);
             }
 
+            .api-center-title {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                margin: 0;
+                color: var(--api-muted);
+                font-size: 0.85rem;
+                font-weight: 700;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                pointer-events: none;
+            }
+
+            .api-right-group {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding-inline-start: 1rem;
+                border-inline-start: 1px solid var(--api-border);
+            }
+
+            .api-theme-toggle {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.25rem 0.5rem;
+                color: var(--api-muted);
+                border-radius: 0.375rem;
+                cursor: pointer;
+            }
+            .api-theme-toggle:hover,
+            .api-theme-toggle:focus-within {
+                color: var(--api-fg-strong);
+                background: var(--api-card-bg-hover);
+            }
+            .api-theme-toggle select {
+                appearance: none;
+                border: 0;
+                padding: 0 0.25rem;
+                color: inherit;
+                background: transparent;
+                font-size: 0.85rem;
+                font-family: inherit;
+                cursor: pointer;
+            }
+            .api-theme-toggle select:focus-visible {
+                outline: none;
+            }
+
+            .sr-only {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                margin: -1px;
+                padding: 0;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+
             .api-brand {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.625rem;
-                color: var(--api-fg);
+                gap: 0.5rem;
+                color: var(--api-brand);
                 font-weight: 600;
-                font-size: 1.05rem;
+                font-size: 1.25rem;
+                line-height: 1;
                 text-decoration: none;
             }
             .api-logo {
-                width: 1.75rem;
-                height: 1.75rem;
+                width: 2rem;
+                height: 2rem;
                 border-radius: 0.375rem;
             }
 
@@ -202,12 +376,10 @@ const repoUrl = 'https://github.com/Eleven19/krueger';
                 height: 2rem;
                 color: var(--api-muted);
                 border-radius: 0.25rem;
-                padding-inline-start: 1rem;
-                border-inline-start: 1px solid var(--api-border);
-                box-sizing: content-box;
             }
             .api-github:hover {
-                color: var(--api-fg);
+                color: var(--api-fg-strong);
+                background: var(--api-card-bg-hover);
             }
 
             .api-main {

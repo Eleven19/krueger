@@ -1,11 +1,13 @@
 <script lang="ts">
   import { base } from '$app/paths';
 
+  import ThemeToggle from './ThemeToggle.svelte';
+
   /**
    * Companion to `docs/src/components/Header.astro` — same visual layout
-   * (logo + title at left, nav pushed right with a vertical separator
-   * before the GitHub link), minus the search input which doesn't belong
-   * on a playground surface.
+   * (logo + title at left, optional center title, nav pushed right with a
+   * vertical separator before the GitHub link and theme toggle), minus
+   * the search input which doesn't belong on a playground surface.
    *
    * Cross-app URLs derive from SvelteKit's `base` so they resolve under
    * `/krueger/...` in the production GitHub Pages tree:
@@ -14,7 +16,13 @@
    * (cross-app links won't resolve in `vite dev` of try-wasm in isolation
    * — Astro is the canonical host. Run `mill docs.prepareLocalDevSite`
    * + `astro dev` for a local mirror.)
+   *
+   * `centerTitle` is an optional page-specific eyebrow that the playground
+   * renders ("Try Krueger") in place of the body-level h1; pages that do
+   * not set it just leave the center column empty.
    */
+
+  let { centerTitle = '' }: { centerTitle?: string } = $props();
 
   const siblingsRoot = base.replace(/\/try$/, '');
   const repoUrl = 'https://github.com/Eleven19/krueger';
@@ -41,6 +49,10 @@
     </a>
   </div>
 
+  {#if centerTitle}
+    <p class="center-title" aria-hidden="true">{centerTitle}</p>
+  {/if}
+
   <nav class="primary-nav" aria-label="Primary">
     <a class="nav-link" href={docsHref} data-sveltekit-reload>Docs</a>
     <a class="nav-link" data-active="true" href={tryHref}>Try</a>
@@ -66,11 +78,13 @@
         />
       </svg>
     </a>
+    <ThemeToggle />
   </div>
 </header>
 
 <style>
   .site-header {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 1.5rem;
@@ -87,17 +101,36 @@
   .site-title {
     display: inline-flex;
     align-items: center;
-    gap: 0.625rem;
-    color: var(--kr-text);
+    gap: 0.5rem;
+    /* Brand wordmark uses the same accent color Starlight applies via
+       `--sl-color-text-accent` so the playground header reads as the
+       same site as the Astro pages. */
+    color: var(--kr-brand);
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 1.25rem;
+    line-height: 1;
     text-decoration: none;
   }
 
   .site-logo {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 0.375rem;
+  }
+
+  /* Absolute-positioned center label so it stays visually centered
+     regardless of the brand / nav widths on either side. */
+  .center-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    color: var(--kr-muted);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    pointer-events: none;
   }
 
   .primary-nav {
@@ -120,7 +153,7 @@
 
   .nav-link:hover {
     color: var(--kr-text);
-    background: var(--kr-border);
+    background: var(--kr-panel-bg);
   }
 
   .nav-link[data-active='true'] {
@@ -131,11 +164,11 @@
   .right-group {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
-  /* Vertical separator between the primary nav and the trailing GitHub
-     icon — matches the Starlight Header override on the docs site. */
+  /* Vertical separator between the primary nav and the trailing GitHub +
+     theme cluster — matches the Starlight Header override on the docs site. */
   .right-group::before {
     content: '';
     align-self: center;
@@ -155,6 +188,6 @@
 
   .social-link:hover {
     color: var(--kr-text);
-    background: var(--kr-border);
+    background: var(--kr-panel-bg);
   }
 </style>

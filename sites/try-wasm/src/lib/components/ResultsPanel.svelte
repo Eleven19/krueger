@@ -1,7 +1,9 @@
 <script lang="ts">
   import MatchesView from './MatchesView.svelte';
   import PrettyQueryView from './PrettyQueryView.svelte';
+  import SettingsPanel from './SettingsPanel.svelte';
   import TreeView from './TreeView.svelte';
+  import { type BackendId } from '$lib/backend';
   import type { CompilerEnvelope, MatchView } from '$lib/krueger';
   import { panelLabel, type Panel } from '$lib/panels';
 
@@ -11,7 +13,10 @@
     astResult,
     matchResult,
     queryResult,
-    prettyQuery
+    prettyQuery,
+    backend,
+    wasmGcSupported,
+    onBackendChange
   }: {
     selectedPanel: Panel;
     cstResult: CompilerEnvelope<unknown>;
@@ -19,6 +24,9 @@
     matchResult: CompilerEnvelope<MatchView[]>;
     queryResult: CompilerEnvelope<unknown>;
     prettyQuery: string;
+    backend: BackendId;
+    wasmGcSupported: boolean | null;
+    onBackendChange: (next: BackendId) => void;
   } = $props();
 
   const label = $derived(panelLabel(selectedPanel));
@@ -36,6 +44,8 @@
       <TreeView result={cstResult} />
     {:else if selectedPanel === 'ast'}
       <TreeView result={astResult} errorTitle="AST errors:" />
+    {:else if selectedPanel === 'settings'}
+      <SettingsPanel {backend} {wasmGcSupported} {onBackendChange} />
     {:else}
       <PrettyQueryView {queryResult} {prettyQuery} />
     {/if}
