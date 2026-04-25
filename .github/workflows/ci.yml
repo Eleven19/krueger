@@ -119,3 +119,71 @@ jobs:
 
       - name: Run Native tests
         run: ./mill krueger.core.native.test
+
+  build-docs:
+    name: Build Docs Site (Scaladoc + playgrounds + Astro)
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: |
+            docs/package-lock.json
+            sites/try-wasm/package-lock.json
+
+      - name: Cache Coursier
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/coursier
+          key: ${{ runner.os }}-coursier-${{ hashFiles('build.mill.yaml', 'krueger/**/package.mill', 'krueger/**/package.mill.yaml', 'docs/package.mill', 'mill-build/**') }}
+          restore-keys: |
+            ${{ runner.os }}-coursier-
+
+      - name: Cache Mill out
+        uses: actions/cache@v4
+        with:
+          path: out
+          key: ${{ runner.os }}-mill-docs-${{ hashFiles('build.mill.yaml', 'krueger/**/package.mill', 'krueger/**/package.mill.yaml', 'docs/package.mill', 'mill-build/**', 'VERSION') }}
+          restore-keys: |
+            ${{ runner.os }}-mill-docs-
+
+      - name: Build full site (Scaladoc, playgrounds, Astro, try-wasm stitch)
+        run: ./mill docs.site
+
+      - name: Verify docs.site outputs
+        run: |
+          set -euo pipefail
+          missing=0
+          for path in \
+            docs/dist/index.html \
+            docs/dist/api/index.html \
+            docs/dist/api/jvm/index.html \
+            docs/dist/api/js/index.html \
+            docs/dist/api/native/index.html \
+            docs/dist/try-wasm/index.html \
+            docs/src/playground/generated/app/main.js \
+            sites/try-wasm/static/wasm/facade \
+            sites/try-wasm/static/wasm/webgc; do
+            if [ ! -e "$path" ]; then
+              echo "MISSING: $path"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Upload docs/dist as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-dist
+          path: docs/dist
+          retention-days: 7
+          if-no-files-found: error
