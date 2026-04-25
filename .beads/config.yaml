@@ -56,3 +56,5 @@
 sync.remote: "git+ssh://git@github.com/Eleven19/krueger.git"
 
 dolt.port: 43318
+
+export.auto: false
