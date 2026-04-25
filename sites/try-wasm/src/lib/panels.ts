@@ -1,4 +1,4 @@
-export type Panel = 'matches' | 'cst' | 'ast' | 'prettyQuery' | 'settings';
+export type Panel = 'cst' | 'ast' | 'matches' | 'prettyQuery' | 'settings';
 
 export type PanelInfo = {
   id: Panel;
@@ -14,9 +14,9 @@ export type PanelInfo = {
  * activity-bar layout, where Settings lives at the bottom rail).
  */
 export const panels: PanelInfo[] = [
-  { id: 'matches', label: 'Matches', icon: '⇢' },
   { id: 'cst', label: 'CST', icon: '◇' },
   { id: 'ast', label: 'AST', icon: '◆' },
+  { id: 'matches', label: 'Matches', icon: '⇢' },
   { id: 'prettyQuery', label: 'Canonical Query', icon: '≡' }
 ];
 
@@ -28,7 +28,7 @@ export const settingsPanel: PanelInfo = {
 
 export const allPanels: PanelInfo[] = [...panels, settingsPanel];
 
-export const defaultPanel: Panel = 'matches';
+export const defaultPanel: Panel = 'cst';
 
 export function panelLabel(panel: Panel): string {
   return allPanels.find((candidate) => candidate.id === panel)?.label ?? panel;

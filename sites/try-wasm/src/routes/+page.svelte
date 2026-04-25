@@ -1,10 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { Effect, Either } from "effect";
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
-  import ResultsPanel from "$lib/components/ResultsPanel.svelte";
+  import ExplorerPane from "$lib/components/ExplorerPane.svelte";
+  import ExplorerToolbar from "$lib/components/ExplorerToolbar.svelte";
+  import InspectorPanel from "$lib/components/InspectorPanel.svelte";
+  import PaneResizeHandle from "$lib/components/PaneResizeHandle.svelte";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
+  import UtilityPanel from "$lib/components/UtilityPanel.svelte";
   import {
     fallbackBackend,
     isAvailable,
@@ -17,6 +22,9 @@
     type KruegerClient,
     type MatchView
   } from "$lib/krueger";
+  import { commandSurfaceActions, playgroundExamples } from "$lib/playground/catalog";
+  import { loadExample, resolveCommandIntent } from "$lib/playground/actions";
+  import type { PlaygroundDiagnostic, PlaygroundLog, TreeSelection } from "$lib/playground/types";
   import { defaultPanel, type Panel } from "$lib/panels";
   import { supportsWasmGc } from "$lib/wasm-gc";
 
@@ -34,6 +42,13 @@ main = 42
   let source = $state(defaultSource);
   let query = $state(defaultQuery);
   let backend = $state<BackendId>(pickInitialBackend(null));
+  let commandText = $state('');
+  let editorPercent = $state(62);
+  let utilityPercent = $state(76);
+  let selection = $state<TreeSelection | null>(null);
+  let selectionPanel = $state<Panel | null>(null);
+  let logs = $state<PlaygroundLog[]>([{ message: 'Playground ready.', kind: 'info' }]);
+  let problems = $state<PlaygroundDiagnostic[]>([]);
 
   const cstResult = $derived(
     compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
@@ -43,13 +58,13 @@ main = 42
   );
   const cstUnistResult = $derived(
     compilerEnvelope(
-      () => client?.parseCstUnist(source) as CompilerEnvelope<unknown> | undefined,
+      () => client?.parseCstUnist?.(source) as CompilerEnvelope<unknown> | undefined,
       "Compiler loading..."
     )
   );
   const astUnistResult = $derived(
     compilerEnvelope(
-      () => client?.parseAstUnist(source) as CompilerEnvelope<unknown> | undefined,
+      () => client?.parseAstUnist?.(source) as CompilerEnvelope<unknown> | undefined,
       "Compiler loading..."
     )
   );
@@ -62,6 +77,38 @@ main = 42
       ? client.prettyQuery(queryResult.value)
       : ""
   );
+  const activeTreeInspectable = $derived(
+    selectedPanel === 'cst'
+      ? cstUnistResult.ok || cstResult.ok
+      : selectedPanel === 'ast'
+        ? astUnistResult.ok || astResult.ok
+        : false
+  );
+
+  $effect(() => {
+    if (!cstResult.ok) {
+      problems = cstResult.errors.map((error) => ({
+        code: `compiler/${error.phase}`,
+        message: error.message,
+        severity: 'error',
+        source: 'compiler'
+      }));
+    }
+  });
+
+  $effect(() => {
+    if (selection == null) return;
+    if (selectionPanel == null) return;
+    if (selectedPanel !== selectionPanel) {
+      selection = null;
+      selectionPanel = null;
+      return;
+    }
+    if (!activeTreeInspectable) {
+      selection = null;
+      selectionPanel = null;
+    }
+  });
 
   onMount(() => {
     const supported = supportsWasmGc();
@@ -119,11 +166,48 @@ main = 42
   function handleBackendChange(next: BackendId): void {
     if (next === backend) return;
     if (!isAvailable(next, wasmGcSupported)) return;
+    selection = null;
+    selectionPanel = null;
     backend = next;
     // Drop the current client so panels show the "Compiler loading..."
     // placeholder while the new backend's facade is dynamic-imported.
     client = null;
     void loadBackend(next);
+  }
+
+  async function applyExample(exampleId: string): Promise<void> {
+    const example = await Effect.runPromise(loadExample(exampleId));
+    selection = null;
+    selectionPanel = null;
+    source = example.source;
+    query = example.query;
+    logs = [{ message: `Loaded example ${example.label}.`, kind: 'success' }, ...logs];
+  }
+
+  async function runCommand(value: string): Promise<void> {
+    const result = await Effect.runPromise(Effect.either(resolveCommandIntent(value)));
+    if (Either.isLeft(result)) {
+      const diagnostic = result.left;
+      const detailSuffix = diagnostic.detail ? ` (${diagnostic.detail})` : '';
+      problems = [diagnostic, ...problems];
+      logs = [{ message: `${diagnostic.code}: ${diagnostic.message}${detailSuffix}`, kind: 'error' }, ...logs];
+      return;
+    }
+
+    const loaded = result.right;
+    if ('repoLabel' in loaded) {
+      selection = null;
+      selectionPanel = null;
+      source = loaded.source;
+      logs = [{ message: `Imported ${loaded.path} from ${loaded.repoLabel}.`, kind: 'success' }, ...logs];
+      return;
+    }
+
+    selection = null;
+    selectionPanel = null;
+    source = loaded.source;
+    query = loaded.query;
+    logs = [{ message: `Loaded example ${loaded.label}.`, kind: 'success' }, ...logs];
   }
 </script>
 
@@ -135,39 +219,100 @@ main = 42
   />
 </svelte:head>
 
-<SiteHeader centerTitle="Try Krueger" />
+<SiteHeader
+  commandActions={commandSurfaceActions}
+  commandValue={commandText}
+  onCommandInput={(next) => {
+    commandText = next;
+  }}
+  onCommandSubmit={async (value) => {
+    await runCommand(value);
+    commandText = value;
+  }}
+/>
 
 <main class="playground-shell">
-  <section class="workspace" aria-label="Try Krueger workspace">
-    <ActivityBar
-      {selectedPanel}
-      onSelect={(panel) => {
-        selectedPanel = panel;
+  <section
+    class="workspace"
+    aria-label="Source workspace"
+    style={`--editor-percent:${editorPercent}; --utility-percent:${utilityPercent};`}
+  >
+    <PaneResizeHandle
+      value={editorPercent}
+      label="Resize workspace panels"
+      orientation="vertical"
+      onAdjust={(next) => {
+        editorPercent = next;
       }}
     />
-    <EditorGroup
-      {source}
-      {query}
-      onSourceChange={(next) => {
-        source = next;
-      }}
-      onQueryChange={(next) => {
-        query = next;
-      }}
-    />
-    <ResultsPanel
-      {selectedPanel}
-      {cstResult}
-      {astResult}
-      {cstUnistResult}
-      {astUnistResult}
-      {matchResult}
-      {queryResult}
-      {prettyQuery}
-      {backend}
-      {wasmGcSupported}
-      onBackendChange={handleBackendChange}
-    />
+
+    <div class="center-stack">
+      <div class="editor-explorer-grid">
+        <ActivityBar
+          {selectedPanel}
+          onSelect={(panel) => {
+            selectedPanel = panel;
+          }}
+        />
+        <EditorGroup
+          {source}
+          {query}
+          onSourceChange={(next) => {
+            selection = null;
+            selectionPanel = null;
+            source = next;
+          }}
+          onQueryChange={(next) => {
+            selection = null;
+            selectionPanel = null;
+            query = next;
+          }}
+        />
+        <div class="explorer-column">
+          <ExplorerToolbar
+            examples={[...playgroundExamples]}
+            onExampleClick={applyExample}
+            onGithubClick={() => {
+              commandText = 'github https://github.com/owner/repo';
+            }}
+          />
+          <ExplorerPane
+            {selectedPanel}
+            {cstResult}
+            {astResult}
+            {cstUnistResult}
+            {astUnistResult}
+            {matchResult}
+            {queryResult}
+            {prettyQuery}
+            {backend}
+            {wasmGcSupported}
+            onBackendChange={handleBackendChange}
+            {selection}
+            {selectionPanel}
+            onSelectNode={(next) => {
+              selection = next;
+              selectionPanel = selectedPanel;
+            }}
+          />
+        </div>
+      </div>
+
+      <PaneResizeHandle
+        value={utilityPercent}
+        label="Resize output panels"
+        orientation="horizontal"
+        onAdjust={(next) => {
+          utilityPercent = next;
+        }}
+      />
+
+      <section class="utility-shell" aria-label="Output utility panel">
+        <UtilityPanel {logs} {problems} />
+      </section>
+    </div>
+
+    <InspectorPanel {selection} />
   </section>
 </main>
 
@@ -260,10 +405,81 @@ main = 42
 
   .workspace {
     display: grid;
-    grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
+    grid-template-columns:
+      auto
+      minmax(0, calc(var(--editor-percent) * 1%))
+      minmax(18rem, calc(100% - (var(--editor-percent) * 1%)));
+    grid-template-areas: "center-handle center inspector";
     min-height: calc(100vh - var(--kr-header-h));
     overflow: hidden;
     border-top: 0;
     border-bottom: 1px solid var(--kr-border);
+  }
+
+  .workspace > :global(.resize-handle) {
+    grid-area: center-handle;
+    min-height: 100%;
+    cursor: col-resize;
+    border-inline: 1px solid var(--kr-border);
+  }
+
+  .center-stack {
+    grid-area: center;
+    display: grid;
+    grid-template-rows:
+      minmax(0, calc(var(--utility-percent) * 1%))
+      auto
+      minmax(9rem, calc(100% - (var(--utility-percent) * 1%)));
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .center-stack > :global(.resize-handle) {
+    min-width: 100%;
+    cursor: row-resize;
+    border-block: 1px solid var(--kr-border);
+  }
+
+  .editor-explorer-grid {
+    display: grid;
+    grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .explorer-column {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .utility-shell {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :global(.inspector-panel) {
+    grid-area: inspector;
+  }
+
+  @media (max-width: 1100px) {
+    .workspace {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "center"
+        "inspector";
+    }
+
+    .workspace > :global(.resize-handle) {
+      display: none;
+    }
+
+    :global(.inspector-panel) {
+      min-width: 0;
+    }
   }
 </style>

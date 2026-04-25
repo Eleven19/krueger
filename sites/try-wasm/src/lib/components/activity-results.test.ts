@@ -7,6 +7,29 @@ import ActivityBar from './ActivityBar.svelte';
 import ResultsPanel from './ResultsPanel.svelte';
 import type { CompilerEnvelope, MatchView, UnistNode } from '$lib/krueger';
 import type { Panel } from '$lib/panels';
+import Page from '../../routes/+page.svelte';
+
+vi.mock('$lib/krueger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('$lib/krueger')>();
+  const ok = (value: unknown) => ({ ok: true, value, logs: [], errors: [] });
+
+  return {
+    ...actual,
+    createKruegerClient: vi.fn(async () => ({
+      backend: 'js',
+      parseCst: () => ok({}),
+      parseAst: () => ok({}),
+      parseCstUnist: () =>
+        ok({ type: 'CstModule', data: { fields: {}, childCount: 1 }, children: [] }),
+      parseAstUnist: () =>
+        ok({ type: 'Module', data: { fields: {}, childCount: 1 }, children: [] }),
+      parseQuery: () => ok({}),
+      runQuery: () => ok([]),
+      prettyQuery: () => '(CstValueDeclaration) @decl',
+      tokenize: () => ok([])
+    }))
+  };
+});
 
 const ok = <T>(value: T): CompilerEnvelope<T> => ({ ok: true, value, logs: [], errors: [] });
 const error = (message: string, phase = 'cst'): CompilerEnvelope<unknown> => ({
@@ -147,6 +170,13 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     await fireEvent.click(screen.getByRole('tab', { name: 'CST' }));
 
     expect(onSelect).toHaveBeenCalledWith('cst');
+  });
+
+  it('keeps explicit text labels available alongside activity icons', () => {
+    render(ActivityBar, { selectedPanel: 'matches', onSelect: vi.fn() });
+
+    expect(screen.getByText('CST')).not.toBeNull();
+    expect(screen.getByText('AST')).not.toBeNull();
   });
 
   it('renders matches by default and shows a no-match placeholder for empty results', () => {
@@ -300,5 +330,68 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
     expect(screen.queryByRole('tree', { name: 'AST tree' })).toBeNull();
     expect(astRawView.value).toBe('Module(raw opaque fallback)');
     expect(screen.queryByText('unist bridge unavailable')).toBeNull();
+  });
+});
+
+describe('try-wasm page explorer composition', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('sends tree selection into the inspector and keeps logs/problems in a bottom tabset', async () => {
+    render(Page);
+
+    const treeToggle = await screen.findByRole('button', { name: 'Select CstModule' });
+    await fireEvent.click(treeToggle);
+
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'CstModule'
+    );
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'root'
+    );
+    expect(document.querySelector('[role="treeitem"][aria-selected="true"]')?.textContent).toContain(
+      'CstModule'
+    );
+    expect(document.querySelectorAll('[role="treeitem"][aria-selected="false"]')).toHaveLength(0);
+    expect(screen.getByRole('tab', { name: 'Logs' })).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Problems' })).not.toBeNull();
+  });
+
+  it('keeps CST and AST as explorer-facing activity rail labels with explicit tooltips', () => {
+    render(Page);
+
+    expect(screen.getByRole('tab', { name: 'CST' }).getAttribute('title')).toBe('CST');
+    expect(screen.getByRole('tab', { name: 'AST' }).getAttribute('title')).toBe('AST');
+  });
+
+  it('clears stale selection when the active pane or source changes', async () => {
+    render(Page);
+
+    await fireEvent.click(await screen.findByRole('button', { name: 'Select CstModule' }));
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'CstModule'
+    );
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Matches' }));
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'Select a node to inspect its structure.'
+    );
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'CST' }));
+    await fireEvent.click(await screen.findByRole('button', { name: 'Select CstModule' }));
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Elm source' }), {
+      target: {
+        value: `module Demo exposing (..)
+
+main = 43
+`
+      }
+    });
+
+    expect(screen.getByRole('region', { name: 'Selection inspector' }).textContent).toContain(
+      'Select a node to inspect its structure.'
+    );
+    expect(document.querySelector('[role="treeitem"][aria-selected="true"]')).toBeNull();
   });
 });

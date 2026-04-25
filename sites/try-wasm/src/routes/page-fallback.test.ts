@@ -49,7 +49,7 @@ describe('/try Wasm GC fallback banner', () => {
 
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.getByRole('tablist', { name: 'Try Krueger results' })).not.toBeNull();
-    expect(screen.getByRole('tabpanel', { name: 'Matches' })).not.toBeNull();
+    expect(screen.getByRole('tabpanel', { name: 'CST' })).not.toBeNull();
     // The Settings tab is the gear at the bottom of the activity bar.
     expect(screen.getByRole('tab', { name: 'Settings' })).not.toBeNull();
   });

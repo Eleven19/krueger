@@ -93,6 +93,21 @@ async function runBackendSmoke(browser, baseUrl, backendId) {
   try {
     await page.goto(`${baseUrl}/try/`, { waitUntil: 'domcontentloaded' });
 
+    await page.getByRole('combobox', { name: 'Playground command' }).waitFor();
+    await expectText(
+      page,
+      '[aria-label="Selection inspector"]',
+      'Select a node',
+      '/try/ inspector placeholder'
+    );
+    await page.getByRole('tab', { name: 'Logs' }).click();
+    await expectText(page, '.utility-root [role="tabpanel"]', 'Playground ready.', '/try/ logs tab');
+
+    const command = page.getByRole('combobox', { name: 'Playground command' });
+    await command.fill('example elm/type-alias');
+    await command.press('Enter');
+    await expectText(page, '.utility-root [role="tabpanel"]', 'Loaded example Elm: Type Alias.', '/try/ loaded example');
+
     // The backend selector lives inside the Settings panel, not on the
     // default Matches view. Follow the actual activity-bar flow before
     // returning to Matches for the existing assertions.

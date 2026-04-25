@@ -1,9 +1,11 @@
 <script lang="ts">
   import MonacoEditor from './MonacoEditor.svelte';
   import type { CompilerEnvelope, UnistNode } from '$lib/krueger';
+  import type { TreeSelection } from '$lib/playground/types';
 
   type TreeEntry = {
     id: string;
+    path: number[];
     node: UnistNode;
     children: TreeEntry[];
   };
@@ -11,11 +13,15 @@
   let {
     result,
     label = 'Tree',
-    errorTitle = 'Parse errors:'
+    errorTitle = 'Parse errors:',
+    onSelectNode,
+    selectedSelection = null
   }: {
     result: CompilerEnvelope<unknown>;
     label?: string;
     errorTitle?: string;
+    onSelectNode?: (selection: TreeSelection) => void;
+    selectedSelection?: TreeSelection | null;
   } = $props();
 
   let filter = $state('');
@@ -88,16 +94,16 @@
     );
   }
 
-  function filterTree(node: UnistNode, query: string, id: string): TreeEntry | null {
+  function filterTree(node: UnistNode, query: string, id: string, path: number[] = []): TreeEntry | null {
     const children = node.children
-      .map((child, index) => filterTree(child, query, `${id}.${index}`))
+      .map((child, index) => filterTree(child, query, `${id}.${index}`, [...path, index]))
       .filter((child): child is TreeEntry => child !== null);
 
     if (query.length > 0 && !matchesNode(node, query) && children.length === 0) {
       return null;
     }
 
-    return { id, node, children };
+    return { id, path, node, children };
   }
 
   function matchesNode(node: UnistNode, query: string): boolean {
@@ -131,6 +137,16 @@
     } catch {
       return String(value);
     }
+  }
+
+  function isSelected(entry: TreeEntry): boolean {
+    if (selectedSelection == null) return false;
+    if (selectedSelection.nodeType !== entry.node.type) return false;
+    if (selectedSelection.text !== entry.node.value) return false;
+    if (selectedSelection.childCount !== entry.node.data.childCount) return false;
+    if (selectedSelection.path.length !== entry.path.length) return false;
+
+    return selectedSelection.path.every((segment, index) => segment === entry.path[index]);
   }
 </script>
 
@@ -233,13 +249,14 @@
 {#snippet renderNode(entry: TreeEntry, level: number)}
   {@const hasChildren = entry.children.length > 0}
   {@const expanded = filterActive || !collapsedSet.has(entry.id)}
+  {@const selected = isSelected(entry)}
 
   <div
     class="tree-item"
     role="treeitem"
     aria-level={level}
     aria-expanded={hasChildren ? expanded : undefined}
-    aria-selected={false}
+    aria-selected={selected ? 'true' : undefined}
   >
     <div class="tree-row" style={`--tree-level:${level - 1};`}>
       {#if hasChildren}
@@ -257,15 +274,29 @@
         <span class="disclosure-spacer" aria-hidden="true"></span>
       {/if}
 
-      <span class="node-type">{entry.node.type}</span>
+      <button
+        type="button"
+        class:selected
+        class="node-button"
+        aria-label={`Select ${entry.node.type}`}
+        onclick={() =>
+          onSelectNode?.({
+            path: entry.path,
+            nodeType: entry.node.type,
+            text: entry.node.value,
+            childCount: entry.node.data.childCount
+          })}
+      >
+        <span class="node-type">{entry.node.type}</span>
 
-      {#if entry.node.value != null}
-        <span class="node-value" style:color="var(--kr-tree-value)">
-          {JSON.stringify(entry.node.value)}
-        </span>
-      {/if}
+        {#if entry.node.value != null}
+          <span class="node-value" style:color="var(--kr-tree-value)">
+            {JSON.stringify(entry.node.value)}
+          </span>
+        {/if}
 
-      <span class="node-count">{childCountLabel(entry.node)}</span>
+        <span class="node-count">{childCountLabel(entry.node)}</span>
+      </button>
     </div>
 
     {#if hasChildren && expanded}
@@ -380,15 +411,11 @@
 
   .tree-row {
     display: grid;
-    grid-template-columns: 1.5rem minmax(0, auto) minmax(0, 1fr) auto;
+    grid-template-columns: 1.5rem minmax(0, 1fr);
     gap: 0.5rem;
     align-items: center;
     min-height: 2rem;
     padding: 0 0.75rem 0 calc(0.75rem + (var(--tree-level) * 1rem));
-  }
-
-  .tree-row:hover {
-    background: color-mix(in srgb, var(--kr-accent) 10%, transparent);
   }
 
   .disclosure,
@@ -402,6 +429,32 @@
   .disclosure {
     padding: 0;
     cursor: pointer;
+  }
+
+  .node-button {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 2rem;
+    padding: 0;
+    color: inherit;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-radius: 0.375rem;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .node-button:hover {
+    background: color-mix(in srgb, var(--kr-accent) 10%, transparent);
+  }
+
+  .node-button.selected {
+    background: color-mix(in srgb, var(--kr-accent) 18%, transparent);
   }
 
   .disclosure-spacer {
