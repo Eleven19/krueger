@@ -34,8 +34,7 @@ describe('playground workspace shell', () => {
     window.innerWidth = 1280;
     render(Page);
 
-    expect(screen.getByRole('searchbox', { name: 'Playground command' })).not.toBeNull();
-    expect(screen.queryByRole('combobox', { name: 'Playground command' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Playground command' })).not.toBeNull();
     expect(screen.getByRole('region', { name: 'Source workspace' })).not.toBeNull();
     expect(screen.getByRole('region', { name: 'Selection inspector' })).not.toBeNull();
     expect(screen.getByRole('tablist', { name: 'Output panels' })).not.toBeNull();
@@ -71,7 +70,7 @@ describe('playground workspace shell', () => {
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     render(Page);
 
-    expect(screen.getByRole('searchbox', { name: 'Playground command' })).not.toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Playground command' })).not.toBeNull();
     expect(addEventListenerSpy).not.toHaveBeenCalledWith('resize', expect.any(Function));
 
     const utilitySplitter = screen.getByRole('separator', { name: 'Resize output panels' });
@@ -95,5 +94,30 @@ describe('playground workspace shell', () => {
     expect(problemsTab.getAttribute('aria-selected')).toBe('true');
     expect(logsTab.getAttribute('aria-selected')).toBe('false');
     expect(screen.getByRole('tabpanel', { name: 'Problems' })).not.toBeNull();
+  });
+
+  it('loads a curated example from the command surface', async () => {
+    render(Page);
+
+    const command = screen.getByRole('combobox', { name: 'Playground command' });
+    await fireEvent.input(command, { target: { value: 'example elm/type-alias' } });
+    await fireEvent.keyDown(command, { key: 'Enter' });
+    await screen.findByText('Loaded example Elm: Type Alias.');
+
+    expect((screen.getByRole('textbox', { name: 'Elm source' }) as HTMLTextAreaElement).value).toContain(
+      'type alias User'
+    );
+    expect(screen.getByText('Loaded example Elm: Type Alias.')).not.toBeNull();
+  });
+
+  it('loads the same curated example from the explorer toolbar', async () => {
+    render(Page);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Load Elm: Basic Module' }));
+    await screen.findByText('Loaded example Elm: Basic Module.');
+
+    expect((screen.getByRole('textbox', { name: 'Elm source' }) as HTMLTextAreaElement).value).toContain(
+      'main = 42'
+    );
   });
 });

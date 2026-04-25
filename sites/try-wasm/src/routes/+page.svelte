@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { Effect } from "effect";
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
   import ExplorerPane from "$lib/components/ExplorerPane.svelte";
+  import ExplorerToolbar from "$lib/components/ExplorerToolbar.svelte";
   import InspectorPanel from "$lib/components/InspectorPanel.svelte";
   import PaneResizeHandle from "$lib/components/PaneResizeHandle.svelte";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
@@ -20,7 +22,8 @@
     type KruegerClient,
     type MatchView
   } from "$lib/krueger";
-  import { commandSurfaceActions } from "$lib/playground/catalog";
+  import { commandSurfaceActions, playgroundExamples } from "$lib/playground/catalog";
+  import { loadExample, resolveExampleIntent } from "$lib/playground/actions";
   import type { PlaygroundDiagnostic, PlaygroundLog, TreeSelection } from "$lib/playground/types";
   import { defaultPanel, type Panel } from "$lib/panels";
   import { supportsWasmGc } from "$lib/wasm-gc";
@@ -136,6 +139,13 @@ main = 42
     client = null;
     void loadBackend(next);
   }
+
+  async function applyExample(exampleId: string): Promise<void> {
+    const example = await Effect.runPromise(loadExample(exampleId));
+    source = example.source;
+    query = example.query;
+    logs = [{ message: `Loaded example ${example.label}.`, kind: 'success' }, ...logs];
+  }
 </script>
 
 <svelte:head>
@@ -152,7 +162,11 @@ main = 42
   onCommandInput={(next) => {
     commandText = next;
   }}
-  onCommandSubmit={(value) => {
+  onCommandSubmit={async (value) => {
+    const example = await Effect.runPromise(resolveExampleIntent(value));
+    source = example.source;
+    query = example.query;
+    logs = [{ message: `Loaded example ${example.label}.`, kind: 'success' }, ...logs];
     commandText = value;
   }}
 />
@@ -190,22 +204,31 @@ main = 42
             query = next;
           }}
         />
-        <ExplorerPane
-          {selectedPanel}
-          {cstResult}
-          {astResult}
-          {cstUnistResult}
-          {astUnistResult}
-          {matchResult}
-          {queryResult}
-          {prettyQuery}
-          {backend}
-          {wasmGcSupported}
-          onBackendChange={handleBackendChange}
-          onSelectNode={(next) => {
-            selection = next;
-          }}
-        />
+        <div class="explorer-column">
+          <ExplorerToolbar
+            examples={[...playgroundExamples]}
+            onExampleClick={applyExample}
+            onGithubClick={() => {
+              commandText = 'github https://github.com/owner/repo';
+            }}
+          />
+          <ExplorerPane
+            {selectedPanel}
+            {cstResult}
+            {astResult}
+            {cstUnistResult}
+            {astUnistResult}
+            {matchResult}
+            {queryResult}
+            {prettyQuery}
+            {backend}
+            {wasmGcSupported}
+            onBackendChange={handleBackendChange}
+            onSelectNode={(next) => {
+              selection = next;
+            }}
+          />
+        </div>
       </div>
 
       <PaneResizeHandle
@@ -354,6 +377,14 @@ main = 42
   .editor-explorer-grid {
     display: grid;
     grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .explorer-column {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
     overflow: hidden;

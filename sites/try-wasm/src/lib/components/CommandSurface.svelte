@@ -26,7 +26,11 @@
   }}
 >
   <input
-    type="search"
+    type="text"
+    role="combobox"
+    aria-autocomplete="list"
+    aria-controls="playground-command-list"
+    aria-expanded="false"
     class="command-input"
     aria-label="Playground command"
     autocomplete="off"
@@ -34,8 +38,15 @@
     bind:value
     placeholder={placeholder}
     oninput={(event) => onInput((event.currentTarget as HTMLInputElement).value)}
+    onkeydown={(event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        onSubmit(value);
+      }
+    }}
   />
   <span class="command-hint">{actions[0]?.label} / {actions[1]?.label}</span>
+  <div id="playground-command-list" hidden aria-hidden="true"></div>
 </form>
 
 <style>
@@ -66,13 +77,6 @@
 
   .command-input::placeholder {
     color: var(--kr-muted);
-  }
-
-  .command-input::-webkit-search-decoration,
-  .command-input::-webkit-search-cancel-button,
-  .command-input::-webkit-search-results-button,
-  .command-input::-webkit-search-results-decoration {
-    appearance: none;
   }
 
   .command-hint {
