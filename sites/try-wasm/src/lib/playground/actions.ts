@@ -1,8 +1,10 @@
 import { Effect } from 'effect';
 
 import { playgroundExamples } from './catalog';
+import { importGithubFile } from './github';
 import type {
   ExampleNotFoundDiagnostic,
+  ImportedGithubFile,
   PlaygroundDiagnostic,
   PlaygroundExample
 } from './types';
@@ -56,5 +58,21 @@ export const resolveExampleIntent = (
         ? loadExample(intent.exampleId)
         : Effect.fail(unsupportedCommand(intent.type))
     ),
+    Effect.mapError((error) => error)
+  );
+
+export const resolveCommandIntent = (
+  input: string,
+  fetchImpl: typeof fetch = fetch
+): Effect.Effect<PlaygroundExample | ImportedGithubFile, PlaygroundDiagnostic> =>
+  Effect.fromNullable(parseCommandIntent(input)).pipe(
+    Effect.flatMap((intent) => {
+      switch (intent.type) {
+        case 'example.open':
+          return loadExample(intent.exampleId);
+        case 'github.import':
+          return importGithubFile(intent.target, fetchImpl);
+      }
+    }),
     Effect.mapError((error) => error)
   );

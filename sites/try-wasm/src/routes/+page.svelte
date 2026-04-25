@@ -23,7 +23,7 @@
     type MatchView
   } from "$lib/krueger";
   import { commandSurfaceActions, playgroundExamples } from "$lib/playground/catalog";
-  import { loadExample, resolveExampleIntent } from "$lib/playground/actions";
+  import { loadExample, resolveCommandIntent } from "$lib/playground/actions";
   import type { PlaygroundDiagnostic, PlaygroundLog, TreeSelection } from "$lib/playground/types";
   import { defaultPanel, type Panel } from "$lib/panels";
   import { supportsWasmGc } from "$lib/wasm-gc";
@@ -146,6 +146,34 @@ main = 42
     query = example.query;
     logs = [{ message: `Loaded example ${example.label}.`, kind: 'success' }, ...logs];
   }
+
+  async function runCommand(value: string): Promise<void> {
+    const exit = await Effect.runPromiseExit(resolveCommandIntent(value));
+    if (exit._tag === 'Failure') {
+      problems = [
+        {
+          code: 'github/import-failed',
+          message: 'Could not complete the requested import.',
+          severity: 'error',
+          source: 'github'
+        },
+        ...problems
+      ];
+      logs = [{ message: `Command failed: ${value}`, kind: 'error' }, ...logs];
+      return;
+    }
+
+    const loaded = exit.value;
+    if ('repoLabel' in loaded) {
+      source = loaded.source;
+      logs = [{ message: `Imported ${loaded.path} from ${loaded.repoLabel}.`, kind: 'success' }, ...logs];
+      return;
+    }
+
+    source = loaded.source;
+    query = loaded.query;
+    logs = [{ message: `Loaded example ${loaded.label}.`, kind: 'success' }, ...logs];
+  }
 </script>
 
 <svelte:head>
@@ -163,10 +191,7 @@ main = 42
     commandText = next;
   }}
   onCommandSubmit={async (value) => {
-    const example = await Effect.runPromise(resolveExampleIntent(value));
-    source = example.source;
-    query = example.query;
-    logs = [{ message: `Loaded example ${example.label}.`, kind: 'success' }, ...logs];
+    await runCommand(value);
     commandText = value;
   }}
 />

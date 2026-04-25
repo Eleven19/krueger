@@ -43,3 +43,16 @@ export type TreeSelection = {
   childCount: number;
   span?: { start: number; end: number };
 };
+
+export type GithubTarget = {
+  owner: string;
+  repo: string;
+  ref: string;
+  path: string;
+};
+
+export type ImportedGithubFile = {
+  path: string;
+  source: string;
+  repoLabel: string;
+};

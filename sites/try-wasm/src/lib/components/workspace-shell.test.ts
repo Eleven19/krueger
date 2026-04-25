@@ -27,6 +27,7 @@ describe('playground workspace shell', () => {
 
   afterEach(() => {
     window.innerWidth = defaultInnerWidth;
+    vi.restoreAllMocks();
     cleanup();
   });
 
@@ -119,5 +120,22 @@ describe('playground workspace shell', () => {
     expect((screen.getByRole('textbox', { name: 'Elm source' }) as HTMLTextAreaElement).value).toContain(
       'main = 42'
     );
+  });
+
+  it('preserves the current editor content when a GitHub import fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('missing', { status: 404 }));
+
+    render(Page);
+
+    const command = screen.getByRole('combobox', { name: 'Playground command' });
+    await fireEvent.input(command, {
+      target: { value: 'github https://github.com/elm/core/blob/main/src/Missing.elm' }
+    });
+    await fireEvent.keyDown(command, { key: 'Enter' });
+
+    expect((screen.getByRole('textbox', { name: 'Elm source' }) as HTMLTextAreaElement).value).toContain(
+      'main = 42'
+    );
+    expect(screen.getByRole('tab', { name: 'Problems' })).not.toBeNull();
   });
 });
