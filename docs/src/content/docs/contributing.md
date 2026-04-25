@@ -30,13 +30,12 @@ mill krueger.itest
 
 ## Docs site
 
-The handbook under `docs/` is **Starlight / Astro** with a **Laminar** playground
-at [`/krueger/try/`](https://eleven19.github.io/krueger/try/) and a **SvelteKit +
-WASM** playground at
+The handbook under `docs/` is **Starlight / Astro** alongside a single
+**SvelteKit** playground at
 [`/krueger/try-wasm/`](https://eleven19.github.io/krueger/try-wasm/). GitHub
-Pages runs the same pipeline as `./mill docs.site`: Scaladoc, Laminar bundle,
-WASM artifacts for try-wasm, SvelteKit production build, Astro build, then a
-copy of `sites/try-wasm/build/` into `docs/dist/try-wasm/`.
+Pages runs the same pipeline as `./mill docs.site`: Scaladoc, WASM artifacts for
+try-wasm, SvelteKit production build, Astro build, then a copy of
+`sites/try-wasm/build/` into `docs/dist/try-wasm/`.
 
 ### Local dev (full site, including `/try-wasm/`)
 
@@ -49,7 +48,7 @@ npm ci
 npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
 ```
 
-Open `http://localhost:4321/krueger/`, `/krueger/try/`, and `/krueger/try-wasm/`.
+Open `http://localhost:4321/krueger/` and `/krueger/try-wasm/`.
 
 ### Production-sized artifact / GitHub Pages parity
 
@@ -83,13 +82,11 @@ cd docs && npm run preview   # serves docs/dist/
    ./mill docs.apiNative
    ```
 
-2. **Laminar playground** — `./mill krueger.webapp.writeToDocsSrc` writes the
-   Scala.js bundle consumed by `docs/src/pages/try.astro`.
+2. **try-wasm** — `./mill krueger.webapp-wasm.writeToWasmSite` populates
+   `sites/try-wasm/static/wasm/` (both the WASM-compiled compiler artifact and
+   the Scala.js facade JS module) before `npm run build` in `sites/try-wasm`.
 
-3. **try-wasm** — `./mill krueger.webapp-wasm.writeToWasmSite` populates
-   `sites/try-wasm/static/wasm/` before `npm run build` in `sites/try-wasm`.
-
-4. **Astro** — `docs/public/` (API HTML, optional `try-wasm/` mirror during dev)
+3. **Astro** — `docs/public/` (API HTML, optional `try-wasm/` mirror during dev)
    is copied into `docs/dist/` on `npm run build`.
 
 ### Playwright checks

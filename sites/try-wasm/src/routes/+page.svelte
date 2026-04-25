@@ -1,10 +1,17 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { onMount } from "svelte";
 
   import ActivityBar from "$lib/components/ActivityBar.svelte";
+  import BackendSelect from "$lib/components/BackendSelect.svelte";
   import EditorGroup from "$lib/components/EditorGroup.svelte";
   import ResultsPanel from "$lib/components/ResultsPanel.svelte";
+  import {
+    backendInfo,
+    fallbackBackend,
+    isAvailable,
+    pickInitialBackend,
+    type BackendId
+  } from "$lib/backend";
   import {
     createKruegerClient,
     type CompilerEnvelope,
@@ -31,16 +38,27 @@ main = 42
   let selectedPanel = $state<Panel>(defaultPanel);
   let source = $state(defaultSource);
   let query = $state(defaultQuery);
+  let backend = $state<BackendId>(pickInitialBackend(null));
+  let backendSwitchTick = $state(0);
 
   const canInitializeCompiler = $derived(shouldLoadWasmCompiler(wasmGcSupported));
   const cstResult = $derived(
-    compilerEnvelope(() => client?.parseCst(source), "Compiler loading...")
+    compilerEnvelope(() => {
+      void backendSwitchTick;
+      return client?.parseCst(source);
+    }, "Compiler loading...")
   );
   const astResult = $derived(
-    compilerEnvelope(() => client?.parseAst(source), "Compiler loading...")
+    compilerEnvelope(() => {
+      void backendSwitchTick;
+      return client?.parseAst(source);
+    }, "Compiler loading...")
   );
   const queryResult = $derived(
-    compilerEnvelope(() => client?.parseQuery(query), "Compiler loading...")
+    compilerEnvelope(() => {
+      void backendSwitchTick;
+      return client?.parseQuery(query);
+    }, "Compiler loading...")
   );
   const matchResult = $derived(computeMatches(client, cstResult, queryResult));
   const prettyQuery = $derived(
@@ -48,20 +66,27 @@ main = 42
       ? client.prettyQuery(queryResult.value)
       : ""
   );
+  const activeBackendInfo = $derived(backendInfo(backend));
 
   onMount(() => {
     const supported = supportsWasmGc();
     wasmGcSupported = supported;
 
-    if (shouldLoadWasmCompiler(supported)) {
-      void createKruegerClient()
-        .then((loaded) => {
-          client = loaded;
-        })
-        .catch((error: unknown) => {
-          compilerLoadError = error instanceof Error ? error.message : String(error);
-        });
+    // Reconcile the initial backend choice with the just-resolved support
+    // probe. If the page started in WASM mode but the host can't run it,
+    // fall back to the JS backend before any compile call goes through.
+    if (!isAvailable(backend, supported)) {
+      backend = fallbackBackend;
     }
+
+    void createKruegerClient()
+      .then((loaded) => {
+        client = loaded;
+        loaded.setBackend(backend);
+      })
+      .catch((error: unknown) => {
+        compilerLoadError = error instanceof Error ? error.message : String(error);
+      });
   });
 
   function compilerEnvelope<T>(
@@ -91,40 +116,67 @@ main = 42
   function errorEnvelope<T>(phase: string, message: string): CompilerEnvelope<T> {
     return { ok: false, value: null, logs: [], errors: [{ phase, message }] };
   }
+
+  function handleBackendChange(next: BackendId): void {
+    if (next === backend) return;
+    if (!isAvailable(next, wasmGcSupported)) return;
+    backend = next;
+    if (client !== null) {
+      const accepted = client.setBackend(next);
+      if (!accepted) {
+        compilerLoadError = `Backend "${next}" rejected by the loaded compiler facade.`;
+        return;
+      }
+    }
+    // Bump the recompute key so $derived expressions re-run their reads
+    // even when the editor inputs are unchanged — a backend swap should
+    // refresh every panel.
+    backendSwitchTick += 1;
+  }
 </script>
 
 <svelte:head>
-  <title>Try Krueger WASM</title>
+  <title>Try Krueger</title>
   <meta
     name="description"
-    content="Static shell for the Krueger WebAssembly playground."
+    content="Static shell for the Krueger compiler playground (WASM and JavaScript backends)."
   />
 </svelte:head>
 
 <main class="playground-shell">
-  {#if wasmGcSupported === false && !canInitializeCompiler}
+  {#if wasmGcSupported === false}
     <aside class="fallback" role="status" aria-live="polite">
       <strong>This browser does not support WebAssembly GC.</strong>
       <span>
-        Try Krueger WASM needs {wasmGcRequirementsText}. You can still use the
-        Scala.js playground instead.
+        Krueger needs {wasmGcRequirementsText} for the WASM backend. The
+        JavaScript backend is selected automatically and works in every
+        modern browser.
       </span>
-      <a href="/try/">Open Try Krueger</a>
     </aside>
   {/if}
 
   <header class="app-header">
     <div>
       <p class="eyebrow">Try Krueger</p>
-      <h1>WASM playground</h1>
+      <h1>Compiler playground</h1>
     </div>
-    <p>
-      Paste Elm source, write a Krueger query, and inspect matches, CST, AST,
-      and the canonical query echo from the shared compiler facade.
-    </p>
+    <div class="app-header-trail">
+      <p>
+        Paste Elm source, write a Krueger query, and inspect matches, CST,
+        AST, and the canonical query echo. Pick a compiler backend below.
+      </p>
+      <div class="backend-row">
+        <BackendSelect
+          selected={backend}
+          {wasmGcSupported}
+          onSelect={handleBackendChange}
+        />
+        <span class="backend-hint">{activeBackendInfo.description}</span>
+      </div>
+    </div>
   </header>
 
-  <section class="workspace" aria-label="Try Krueger WASM workspace">
+  <section class="workspace" aria-label="Try Krueger workspace">
     <ActivityBar
       {selectedPanel}
       onSelect={(panel) => {
@@ -198,21 +250,38 @@ main = 42
     line-height: 1.5;
   }
 
-  .fallback a {
-    color: #1d4ed8;
-    font-weight: 700;
-  }
-
   .app-header {
     display: flex;
     align-items: end;
     justify-content: space-between;
     gap: 2rem;
+    flex-wrap: wrap;
   }
 
-  .app-header div {
+  .app-header > div:first-child {
     display: grid;
     gap: 0.35rem;
+  }
+
+  .app-header-trail {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: end;
+    max-width: 36rem;
+  }
+
+  .backend-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .backend-hint {
+    color: var(--kr-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
 
   .eyebrow {
@@ -241,7 +310,7 @@ main = 42
   .workspace {
     display: grid;
     grid-template-columns: auto minmax(28rem, 1.15fr) minmax(22rem, 0.85fr);
-    min-height: calc(100vh - 10rem);
+    min-height: calc(100vh - 12rem);
     overflow: hidden;
     border: 1px solid var(--kr-border);
     border-radius: 0.875rem;

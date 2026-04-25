@@ -115,12 +115,11 @@ mill krueger.itest
 To add new scenarios, drop a `.feature` file into `resources/features/` and
 add or extend a step-definition class in `steps/`.
 
-## Documentation site and playgrounds
+## Documentation site and playground
 
-The published handbook and API reference live on [GitHub Pages](https://eleven19.github.io/krueger/) (Starlight + generated Scaladoc). Two browser playgrounds ship with that site:
+The published handbook and API reference live on [GitHub Pages](https://eleven19.github.io/krueger/) (Starlight + generated Scaladoc). One browser playground ships with that site:
 
-- **`/krueger/try/`** — Laminar + Scala.js bundle embedded in the Astro app
-- **`/krueger/try-wasm/`** — SvelteKit static app that loads the Scala.js WASM facade
+- **`/krueger/try-wasm/`** — SvelteKit static app that loads the Scala.js compiler facade and lets the user toggle between WASM and JavaScript compiler backends at runtime.
 
 **Production-sized artifact (same shape CI deploys):**
 
@@ -128,7 +127,7 @@ The published handbook and API reference live on [GitHub Pages](https://eleven19
 ./mill docs.site   # writes docs/dist/, including dist/try-wasm/
 ```
 
-**Local dev with both playgrounds** (Mill prepares Scaladoc, bundles, WASM artifacts, builds try-wasm, and copies it into `docs/public/try-wasm/` for Astro):
+**Local dev with the playground** (Mill prepares Scaladoc, WASM artifacts, builds try-wasm, and copies it into `docs/public/try-wasm/` for Astro):
 
 ```sh
 cd docs
@@ -136,7 +135,7 @@ npm ci
 npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
 ```
 
-Then open `http://localhost:4321/krueger/` (and `/krueger/try/`, `/krueger/try-wasm/`).
+Then open `http://localhost:4321/krueger/` and `/krueger/try-wasm/`.
 
 **Playwright regression** for the playgrounds (from `docs/` after `npm ci`):
 

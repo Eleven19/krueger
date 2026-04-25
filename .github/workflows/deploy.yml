@@ -8,7 +8,6 @@ on:
       - 'krueger/core/**'
       - 'krueger/trees/**'
       - 'krueger/compiler-api/**'
-      - 'krueger/webapp/**'
       - 'krueger/webapp-wasm/**'
       - 'sites/try-wasm/**'
       - 'mill-build/**'
@@ -62,7 +61,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mill-docs-
 
-      - name: Build full site (Scaladoc, playgrounds, Astro, try-wasm stitch)
+      - name: Build full site (Scaladoc, playground, Astro, try-wasm stitch)
         run: ./mill docs.site
 
       - name: Upload Pages artifact

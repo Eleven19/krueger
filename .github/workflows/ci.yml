@@ -121,7 +121,7 @@ jobs:
         run: ./mill krueger.core.native.test
 
   build-docs:
-    name: Build Docs Site (Scaladoc + playgrounds + Astro)
+    name: Build Docs Site (Scaladoc + playground + Astro)
     needs: [build]
     runs-on: ubuntu-latest
     steps:
@@ -156,7 +156,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mill-docs-
 
-      - name: Build full site (Scaladoc, playgrounds, Astro, try-wasm stitch)
+      - name: Build full site (Scaladoc, playground, Astro, try-wasm stitch)
         run: ./mill docs.site
 
       - name: Verify docs.site outputs
@@ -170,7 +170,6 @@ jobs:
             docs/dist/api/js/index.html \
             docs/dist/api/native/index.html \
             docs/dist/try-wasm/index.html \
-            docs/src/playground/generated/app/main.js \
             sites/try-wasm/static/wasm/facade \
             sites/try-wasm/static/wasm/webgc; do
             if [ ! -e "$path" ]; then

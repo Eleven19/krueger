@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import Page from './+page.svelte';
 import { supportsWasmGc } from '$lib/wasm-gc';
@@ -14,7 +14,9 @@ vi.mock('$lib/krueger', async () => {
       parseAst: () => ok('Module(...)'),
       parseQuery: () => ok({}),
       runQuery: () => ok([]),
-      prettyQuery: () => '(CstValueDeclaration) @decl'
+      prettyQuery: () => '(CstValueDeclaration) @decl',
+      currentBackend: () => 'webgc',
+      setBackend: () => true
     }))
   };
 });
@@ -30,6 +32,10 @@ vi.mock('$lib/wasm-gc', async () => {
 const mockedSupportsWasmGc = vi.mocked(supportsWasmGc);
 
 describe('/try-wasm Wasm GC fallback banner', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders no fallback banner when the browser supports Wasm GC', () => {
     mockedSupportsWasmGc.mockReturnValue(true);
 
@@ -38,9 +44,10 @@ describe('/try-wasm Wasm GC fallback banner', () => {
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.getByRole('tablist', { name: 'Try Krueger results' })).not.toBeNull();
     expect(screen.getByRole('tabpanel', { name: 'Matches' })).not.toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Compiler backend' })).not.toBeNull();
   });
 
-  it('renders an accessible fallback banner with a Laminar playground link when unsupported', () => {
+  it('renders an accessible fallback banner pointing at the JS backend when WASM-GC is unsupported', () => {
     mockedSupportsWasmGc.mockReturnValue(false);
 
     render(Page);
@@ -48,6 +55,14 @@ describe('/try-wasm Wasm GC fallback banner', () => {
     const banner = screen.getByRole('status');
     expect(banner.textContent).toContain('This browser does not support WebAssembly GC');
     expect(banner.textContent).toContain('Chrome 119+, Firefox 120+, or Safari 18.2+');
-    expect(screen.getByRole('link', { name: /Open Try Krueger/i }).getAttribute('href')).toBe('/try/');
+    // The banner no longer links to the legacy Laminar /try/ playground.
+    expect(banner.querySelector('a')).toBeNull();
+
+    const select = screen.getByRole<HTMLSelectElement>('combobox', {
+      name: 'Compiler backend'
+    });
+    expect(select.value).toBe('js');
+    const wasmOption = Array.from(select.options).find((o) => o.value === 'webgc');
+    expect(wasmOption?.disabled).toBe(true);
   });
 });

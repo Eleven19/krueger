@@ -1,3 +1,4 @@
+import type { BackendId } from './backend';
 import type { ElmToken } from './elm-language';
 
 export type CompilerError = {
@@ -39,6 +40,12 @@ type RawKruegerFacade = {
   runQuery(query: unknown, root: unknown): unknown;
   prettyQuery(query: unknown): string;
   tokenize(source: string): unknown;
+  /** Optional — present only when the deployed facade was built after the
+   *  backend selector was wired up. The client treats absence as "no
+   *  switching support" and reports a structured error. */
+  setBackend?(id: string): boolean;
+  /** Optional — same compatibility caveat as `setBackend`. */
+  currentBackend?(): string;
 };
 
 export type KruegerClient = {
@@ -48,6 +55,12 @@ export type KruegerClient = {
   runQuery(query: unknown, root: unknown): CompilerEnvelope<MatchView[]>;
   prettyQuery(query: unknown): string;
   tokenize(source: string): CompilerEnvelope<ElmToken[]>;
+  /** Currently active backend id (best-effort: returns "unknown" if the
+   *  loaded facade is too old to expose the accessor). */
+  currentBackend(): string;
+  /** Switch the active backend. Resolves to `true` when the facade accepted
+   *  the id, `false` otherwise. */
+  setBackend(id: BackendId): boolean;
 };
 
 export async function createKruegerClient(options: KruegerClientOptions = {}): Promise<KruegerClient> {
@@ -71,6 +84,12 @@ export async function createKruegerClient(options: KruegerClientOptions = {}): P
     },
     tokenize(source) {
       return invokeEnvelope<ElmToken[]>(() => facade.tokenize(source), normalizeTokens);
+    },
+    currentBackend() {
+      return typeof facade.currentBackend === 'function' ? facade.currentBackend() : 'unknown';
+    },
+    setBackend(id) {
+      return typeof facade.setBackend === 'function' ? facade.setBackend(id) : false;
     }
   };
 }
@@ -219,6 +238,10 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function isKruegerFacade(value: unknown): value is RawKruegerFacade {
   const record = asRecord(value);
+  // `setBackend` / `currentBackend` are intentionally optional — older
+  // deployed facades may predate the backend selector. The loader still
+  // accepts them so the playground keeps working against a facade that has
+  // not been re-linked yet, just without the toggle.
   return (
     typeof record.parseCst === 'function' &&
     typeof record.parseAst === 'function' &&

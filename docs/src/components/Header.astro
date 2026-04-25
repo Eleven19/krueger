@@ -6,16 +6,11 @@
  * ThemeSelect, LanguageSelect) via `virtual:starlight/components/*` so the
  * default ergonomics (search shortcut, theme toggle, GitHub link) keep
  * working, and inserts a middle nav group via the shared
- * [NavLinks](./NavLinks.astro) component that adds links to the Try Krueger
- * playgrounds (Docs / Try ▾ / API).
+ * [NavLinks](./NavLinks.astro) component (Docs / Try / API).
  *
- * The middle nav is factored into its own component because the
- * `/try/` playground page (src/pages/try.astro) is a plain Astro page
- * that does not flow through Starlight's layout pipeline, and therefore
- * cannot render SiteTitle/Search/ThemeSelect/LanguageSelect (those read
- * `Astro.locals.starlightRoute`, which is only populated on Starlight
- * routes). The shared nav links themselves are framework-inert and used
- * in both places.
+ * The middle nav lives in its own component so the SvelteKit playground
+ * shipped under `/krueger/try-wasm/` and any other non-Starlight surface
+ * can render the same nav without depending on `Astro.locals.starlightRoute`.
  */
 
 import LanguageSelect from 'virtual:starlight/components/LanguageSelect';

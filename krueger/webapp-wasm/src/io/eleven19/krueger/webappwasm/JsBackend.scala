@@ -6,11 +6,16 @@ import io.eleven19.krueger.compiler.MatchView
 import io.eleven19.krueger.cst.CstNode
 import io.eleven19.krueger.trees.query.Query
 
-final class WebGcBackend private (compiler: CompilerComponent[Unit]) extends CompilerBackend:
+/** Pure Scala.js compiler backend.
+  *
+  * Routes every compile call through [[Krueger.compiler]] linked from the `krueger.compiler-api.js` module — i.e. the
+  * Scala.js JavaScript output. Used when the host browser cannot (or chooses not to) run the WebAssembly GC artifact.
+  */
+final class JsBackend private (compiler: CompilerComponent[Unit]) extends CompilerBackend:
 
     import io.eleven19.krueger.cst.CstQueryableTree.given
 
-    override val id: String = "webgc"
+    override val id: String = "js"
 
     override def parseCst(src: String) =
         CompilerComponent.runUnit(compiler.parseCst(src))
@@ -27,7 +32,7 @@ final class WebGcBackend private (compiler: CompilerComponent[Unit]) extends Com
     override def prettyQuery(query: Query): String =
         compiler.prettyQuery(query)
 
-object WebGcBackend:
+object JsBackend:
 
     def load(): CompilerBackend =
-        WebGcBackend(Krueger.compiler[Unit])
+        JsBackend(Krueger.compiler[Unit])
