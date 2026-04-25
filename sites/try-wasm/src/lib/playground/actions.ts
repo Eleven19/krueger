@@ -1,0 +1,18 @@
+import { Effect } from 'effect';
+
+import { playgroundExamples } from './catalog';
+import type { PlaygroundDiagnostic, PlaygroundExample } from './types';
+
+function exampleNotFound(id: string): PlaygroundDiagnostic {
+  return {
+    code: 'example/not-found',
+    message: `Unknown example: ${id}`,
+    severity: 'error',
+    source: 'example'
+  };
+}
+
+export const loadExample = (id: string): Effect.Effect<PlaygroundExample, PlaygroundDiagnostic> =>
+  Effect.fromNullable(playgroundExamples.find((example) => example.id === id)).pipe(
+    Effect.mapError(() => exampleNotFound(id))
+  );
