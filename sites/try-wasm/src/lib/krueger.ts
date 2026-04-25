@@ -17,6 +17,28 @@ export type CompilerEnvelope<T> = {
   errors: CompilerError[];
 };
 
+export type UnistPoint = {
+  line: number;
+  column: number;
+  offset?: number;
+};
+
+export type UnistPosition = {
+  start: UnistPoint;
+  end: UnistPoint;
+};
+
+export type UnistNode = {
+  type: string;
+  value?: string;
+  position?: UnistPosition;
+  data: {
+    fields: Record<string, number[]>;
+    childCount: number;
+  };
+  children: UnistNode[];
+};
+
 export type CapturedNode = {
   nodeType: string;
   childCount: number;
@@ -41,6 +63,8 @@ export type KruegerClientOptions = {
 type RawKruegerFacade = {
   parseCst(source: string): unknown;
   parseAst(source: string): unknown;
+  parseCstUnist(source: string): unknown;
+  parseAstUnist(source: string): unknown;
   parseQuery(query: string): unknown;
   runQuery(query: unknown, root: unknown): unknown;
   prettyQuery(query: unknown): string;
@@ -52,6 +76,8 @@ export type KruegerClient = {
   readonly backend: BackendId;
   parseCst(source: string): CompilerEnvelope<unknown>;
   parseAst(source: string): CompilerEnvelope<unknown>;
+  parseCstUnist(source: string): CompilerEnvelope<UnistNode>;
+  parseAstUnist(source: string): CompilerEnvelope<UnistNode>;
   parseQuery(query: string): CompilerEnvelope<unknown>;
   runQuery(query: unknown, root: unknown): CompilerEnvelope<MatchView[]>;
   prettyQuery(query: unknown): string;
@@ -84,6 +110,12 @@ export async function createKruegerClient(
     },
     parseAst(source) {
       return invokeEnvelope(() => facade.parseAst(source));
+    },
+    parseCstUnist(source) {
+      return invokeEnvelope<UnistNode>(() => facade.parseCstUnist(source), normalizeUnistNode);
+    },
+    parseAstUnist(source) {
+      return invokeEnvelope<UnistNode>(() => facade.parseAstUnist(source), normalizeUnistNode);
     },
     parseQuery(query) {
       return invokeEnvelope(() => facade.parseQuery(query));
@@ -175,6 +207,48 @@ function normalizeMatches(value: unknown): MatchView[] {
   });
 }
 
+function normalizeUnistNode(value: unknown): UnistNode {
+  const record = asRecord(value);
+  return {
+    type: String(record.type ?? ''),
+    ...(record.value == null ? {} : { value: String(record.value) }),
+    ...(record.position == null ? {} : { position: normalizeUnistPosition(record.position) }),
+    data: normalizeUnistData(record.data),
+    children: Array.isArray(record.children) ? record.children.map(normalizeUnistNode) : []
+  };
+}
+
+function normalizeUnistData(value: unknown): UnistNode['data'] {
+  const record = asRecord(value);
+  const rawFields = asRecord(record.fields);
+  return {
+    childCount: Number(record.childCount ?? 0),
+    fields: Object.fromEntries(
+      Object.entries(rawFields).map(([name, indexes]) => [
+        name,
+        Array.isArray(indexes) ? indexes.map((index) => Number(index)) : []
+      ])
+    )
+  };
+}
+
+function normalizeUnistPosition(value: unknown): UnistPosition {
+  const record = asRecord(value);
+  return {
+    start: normalizeUnistPoint(record.start),
+    end: normalizeUnistPoint(record.end)
+  };
+}
+
+function normalizeUnistPoint(value: unknown): UnistPoint {
+  const record = asRecord(value);
+  return {
+    line: Number(record.line ?? 1),
+    column: Number(record.column ?? 1),
+    ...(record.offset == null ? {} : { offset: Number(record.offset) })
+  };
+}
+
 function normalizeTokens(value: unknown): ElmToken[] {
   if (!Array.isArray(value)) return [];
 
@@ -261,6 +335,8 @@ function isKruegerFacade(value: unknown): value is RawKruegerFacade {
   return (
     typeof record.parseCst === 'function' &&
     typeof record.parseAst === 'function' &&
+    typeof record.parseCstUnist === 'function' &&
+    typeof record.parseAstUnist === 'function' &&
     typeof record.parseQuery === 'function' &&
     typeof record.runQuery === 'function' &&
     typeof record.prettyQuery === 'function' &&

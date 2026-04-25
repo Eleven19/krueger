@@ -46,6 +46,22 @@ describe('krueger.ts real compiler facade wrapper', () => {
     expect(query.value).toBeTruthy();
   });
 
+  it('parses CST and AST unist trees through the linked facade artifact', async () => {
+    const krueger = await createKruegerClient('js', { facadeUrl });
+
+    const cst = krueger.parseCstUnist(validSource);
+    const ast = krueger.parseAstUnist(validSource);
+
+    expectEnvelope(cst);
+    expectEnvelope(ast);
+    expect(cst.ok).toBe(true);
+    expect(ast.ok).toBe(true);
+    expect(cst.value?.type).toBe('CstModule');
+    expect(ast.value?.type).toBe('Module');
+    expect(cst.value?.data.childCount).toBe(cst.value?.children.length);
+    expect(cst.value?.position?.start).toMatchObject({ line: 1, column: 1, offset: 0 });
+  });
+
   it('returns structured errors for malformed source without throwing', async () => {
     const krueger = await createKruegerClient('js', { facadeUrl });
 
@@ -58,6 +74,16 @@ describe('krueger.ts real compiler facade wrapper', () => {
     expect(cst.errors.length).toBeGreaterThan(0);
     expect(cst.errors[0]?.phase).toBe('cst');
     expect(cst.errors[0]?.message).toContain('unexpected end of input');
+  });
+
+  it('returns existing error envelopes for malformed unist parses', async () => {
+    const krueger = await createKruegerClient('js', { facadeUrl });
+    const cst = krueger.parseCstUnist(malformedSource);
+
+    expectEnvelope(cst);
+    expect(cst.ok).toBe(false);
+    expect(cst.value).toBeNull();
+    expect(cst.errors[0]?.phase).toBe('cst');
   });
 
   it('runs a valid query and preserves deterministic match order', async () => {
