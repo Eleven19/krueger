@@ -46,6 +46,9 @@ jobs:
           distribution: temurin
           java-version: "25"
 
+      - name: Setup Mill caches
+        uses: ./.github/actions/setup-mill-caches
+
       - name: Install Scala Native toolchain
         run: |
           sudo apt-get update
