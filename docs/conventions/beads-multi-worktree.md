@@ -84,9 +84,11 @@ This is a one-time rename. Tracked as a follow-up issue and PR.
 
 ## Status
 
-- **Current**: prefix is `musing-chaum-7e7242` (auto-derived from a
-  worktree directory). 111 issues exist under that prefix.
-- **Target**: prefix `krueger`. Migration tracked as a separate task.
+- **Current**: prefix is `krueger`. Migrated 2026-04-26 via
+  `bd rename-prefix krueger-` plus `bd config set issue-prefix krueger`.
+  All 111 issues renamed in place from `musing-chaum-7e7242-*` to
+  `krueger-*` (e.g., `krueger-9h0`, `krueger-070`). Pre-migration backup
+  retained at `.beads/backup-pre-migration.jsonl`.
 - **Open known issue**: `bd create` fails with
   `database not initialized: issue_prefix config is missing` when the
   shared server is restarted or when a new worktree is added without
