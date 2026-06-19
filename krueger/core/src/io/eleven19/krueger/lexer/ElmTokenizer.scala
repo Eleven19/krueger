@@ -68,9 +68,19 @@ object ElmTokenizer:
             val ch    = source.charAt(index)
 
             if source.startsWith("\r\n", index) then
-                scanLoop(source, config, index + 2, appendToken(source, config, acc, ElmTokenKind.Newline, start, index + 2))
+                scanLoop(
+                    source,
+                    config,
+                    index + 2,
+                    appendToken(source, config, acc, ElmTokenKind.Newline, start, index + 2)
+                )
             else if ch == '\n' || ch == '\r' then
-                scanLoop(source, config, index + 1, appendToken(source, config, acc, ElmTokenKind.Newline, start, index + 1))
+                scanLoop(
+                    source,
+                    config,
+                    index + 1,
+                    appendToken(source, config, acc, ElmTokenKind.Newline, start, index + 1)
+                )
             else if ch == ' ' || ch == '\t' then
                 val end = consumeWhile(source, index)(c => c == ' ' || c == '\t')
                 scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Whitespace, start, end))
@@ -101,12 +111,27 @@ object ElmTokenizer:
                 hardOperators.find(source.startsWith(_, index)) match
                     case Some(op) =>
                         val end = index + op.length
-                        scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Operator, start, end))
+                        scanLoop(
+                            source,
+                            config,
+                            end,
+                            appendToken(source, config, acc, ElmTokenKind.Operator, start, end)
+                        )
                     case None if operatorChars.contains(ch) =>
                         val end = consumeWhile(source, index)(operatorChars.contains)
-                        scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Operator, start, end))
+                        scanLoop(
+                            source,
+                            config,
+                            end,
+                            appendToken(source, config, acc, ElmTokenKind.Operator, start, end)
+                        )
                     case None if punctuation.contains(ch) =>
-                        scanLoop(source, config, index + 1, appendToken(source, config, acc, ElmTokenKind.Punctuation, start, index + 1))
+                        scanLoop(
+                            source,
+                            config,
+                            index + 1,
+                            appendToken(source, config, acc, ElmTokenKind.Punctuation, start, index + 1)
+                        )
                     case None =>
                         for
                             recovered <- recoverUnknown(source, start, config)
@@ -121,8 +146,7 @@ object ElmTokenizer:
         start: Int,
         end: Int
     ): Vector[ElmToken] =
-        if config.includeTrivia || !isTrivia(kind) then
-            acc :+ ElmToken(kind, source.substring(start, end), start, end)
+        if config.includeTrivia || !isTrivia(kind) then acc :+ ElmToken(kind, source.substring(start, end), start, end)
         else acc
 
     private def recoverUnknown(source: String, start: Int, config: ElmTokenizerConfig): TokenizeEff[Vector[ElmToken]] =
@@ -133,11 +157,11 @@ object ElmTokenizer:
             span = Some(Span(start, start + 1))
         )
         if config.recoverUnknown then
-            for
-                _ <- QueryLogic.log[TokenizeCtx, TokenizeLog, TokenizeErr](s"Recovered unknown token '$lexeme' at $start")
+            for _ <- QueryLogic.log[TokenizeCtx, TokenizeLog, TokenizeErr](
+                    s"Recovered unknown token '$lexeme' at $start"
+                )
             yield Vector(ElmToken(ElmTokenKind.Unknown, lexeme, start, start + 1))
-        else
-            QueryLogic.failFast[TokenizeCtx, TokenizeLog, TokenizeErr](err)
+        else QueryLogic.failFast[TokenizeCtx, TokenizeLog, TokenizeErr](err)
 
     private def isTrivia(kind: ElmTokenKind): Boolean =
         kind == ElmTokenKind.Whitespace || kind == ElmTokenKind.Newline || kind == ElmTokenKind.Comment
