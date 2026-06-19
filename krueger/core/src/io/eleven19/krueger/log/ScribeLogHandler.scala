@@ -9,32 +9,32 @@ final class ScribeLogHandler(logger: Logger):
         Log(new Log.Unsafe:
             def level: Log.Level = Log.Level.trace
 
-            def trace(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.trace(msg.toString)
+            def trace(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.trace(msg)
 
-            def trace(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.trace(msg.toString, t)
+            def trace(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.trace(msg, t)
 
-            def debug(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.debug(msg.toString)
+            def debug(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.debug(msg)
 
-            def debug(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.debug(msg.toString, t)
+            def debug(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.debug(msg, t)
 
-            def info(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.info(msg.toString)
+            def info(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.info(msg)
 
-            def info(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.info(msg.toString, t)
+            def info(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.info(msg, t)
 
-            def warn(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.warn(msg.toString)
+            def warn(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.warn(msg)
 
-            def warn(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.warn(msg.toString, t)
+            def warn(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.warn(msg, t)
 
-            def error(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.error(msg.toString)
+            def error(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.error(msg)
 
-            def error(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.error(msg.toString, t))
+            def error(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                logger.error(msg, t))
