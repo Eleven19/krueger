@@ -27,7 +27,7 @@ object Krueger:
         def parseCst(source: String): CompileEff[Ctx, CstModule] =
             CoreKrueger.parseCst(source) match
                 case parsley.Success(m) => m
-                case parsley.Failure(diagnostic) =>
+                case parsley.Failure(diagnostic: ParseDiagnostic) =>
                     QueryLogic.failFast[Ctx, String, CompileError](
                         CompileError.ParseError(phase = "cst", diagnostic = diagnostic)
                     )
@@ -35,7 +35,7 @@ object Krueger:
         def parseAst(source: String): CompileEff[Ctx, AstModule] =
             CoreKrueger.parseAst(source) match
                 case parsley.Success(m) => m
-                case parsley.Failure(diagnostic) =>
+                case parsley.Failure(diagnostic: ParseDiagnostic) =>
                     QueryLogic.failFast[Ctx, String, CompileError](
                         CompileError.ParseError(phase = "ast", diagnostic = diagnostic)
                     )

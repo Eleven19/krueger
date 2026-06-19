@@ -4,6 +4,7 @@ import zio.test.*
 
 import io.eleven19.krueger.Krueger as CoreKrueger
 import io.eleven19.krueger.compiler.CompileError
+import io.eleven19.krueger.compiler.ParseDiagnostic
 
 import InvokeJson.decode
 import InvokeJson.given
@@ -20,7 +21,7 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
 
     private def expectedParseInvokeError(source: String): InvokeError =
         CoreKrueger.parseCst(source) match
-            case parsley.Failure(diagnostic) =>
+            case parsley.Failure(diagnostic: ParseDiagnostic) =>
                 InvokeError.fromCompileError(CompileError.ParseError(phase = "cst", diagnostic = diagnostic))
             case parsley.Success(_) =>
                 throw new AssertionError(s"expected parse failure for: $source")

@@ -31,7 +31,8 @@ object CompilerComponentSpec extends ZIOSpecDefault:
 
     private def expectedParseError(phase: String, source: String): CompileError.ParseError =
         CoreKrueger.parseCst(source) match
-            case parsley.Failure(diagnostic) => CompileError.ParseError(phase = phase, diagnostic = diagnostic)
+            case parsley.Failure(diagnostic: ParseDiagnostic) =>
+                CompileError.ParseError(phase = phase, diagnostic = diagnostic)
             case parsley.Success(_)            => throw new AssertionError(s"expected parse failure for: $source")
 
     private val compiler: CompilerComponent[Unit] = Krueger.compiler[Unit]

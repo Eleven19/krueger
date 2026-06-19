@@ -28,7 +28,9 @@ object ParseDiagnosticParserSpec extends ZIOSpecDefault:
                         diagnostic.span.start == 27,
                         diagnostic.span.end == 27,
                         diagnostic.expected.nonEmpty,
-                        diagnostic.message.contains("unexpected end of input")
+                        diagnostic.message.contains("unexpected end of input"),
+                        diagnostic.message.contains(">x ="),
+                        diagnostic.message.contains("^")
                     )
                 case Success(_) => assertTrue(false)
         },
@@ -41,7 +43,10 @@ object ParseDiagnosticParserSpec extends ZIOSpecDefault:
                         diagnostic.span.column == 1,
                         diagnostic.span.start == 0,
                         diagnostic.span.end == 0,
-                        diagnostic.expected.contains("module")
+                        diagnostic.expected.contains("module"),
+                        diagnostic.message.contains("unexpected end of input"),
+                        diagnostic.message.contains(">"),
+                        diagnostic.message.contains("^")
                     )
                 case Success(_) => assertTrue(false)
         }

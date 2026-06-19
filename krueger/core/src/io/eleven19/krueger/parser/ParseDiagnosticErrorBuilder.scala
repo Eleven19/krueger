@@ -71,6 +71,7 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
         val end =
             if unexpected.contains(endOfInput) then start
             else (start + width.max(1)).min(src.length.max(start + 1))
+        val sourceLine = lineAt(src, line)
         val message =
             body match
                 case DiagnosticBody.Vanilla(unexp, exp, rsns, _) =>
@@ -81,7 +82,7 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
                             stringBuilder.unexpected(unexp),
                             stringBuilder.expected(stringBuilder.combineExpectedItems(exp)),
                             rsns,
-                            stringBuilder.lineInfo("", Nil, Nil, column - 1, width)
+                            stringBuilder.lineInfo(sourceLine, Nil, Nil, column - 1, width)
                         )
                     )
                 case DiagnosticBody.Specialised(msgs, _) =>
@@ -90,7 +91,7 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
                         stringBuilder.source(None),
                         stringBuilder.specialisedError(
                             msgs,
-                            stringBuilder.lineInfo("", Nil, Nil, column - 1, width)
+                            stringBuilder.lineInfo(sourceLine, Nil, Nil, column - 1, width)
                         )
                     )
         ParseDiagnostic(
@@ -144,6 +145,12 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
         errorPointsAt: Int,
         errorWidth: Int
     ): LineInfo = errorWidth
+
+    private def lineAt(source: String, oneBasedLine: Int): String =
+        if source.isEmpty then ""
+        else
+            val lines = source.linesIterator.toVector
+            lines.lift(oneBasedLine - 1).getOrElse("")
 
     private def classify(unexpected: Option[Item]): String =
         unexpected match
