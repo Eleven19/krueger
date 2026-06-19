@@ -28,7 +28,7 @@ import io.eleven19.krueger.trees.unist.UnistProjection
   * ES module so a framework-agnostic front-end (in particular the SvelteKit `sites/try-wasm/` playground) can drive the
   * compiler from TypeScript without touching Scala types.
   *
-  * Every entry point runs the PureLogic effect at the boundary (via [[CompilerComponent.runUnit]]) and serializes the
+  * Every entry point runs the Kyo-backed compile effect at the boundary (via [[CompilerComponent.runUnit]]) and serializes the
   * [[QueryLogic.Result]] into a stable envelope:
   *
   * {{{

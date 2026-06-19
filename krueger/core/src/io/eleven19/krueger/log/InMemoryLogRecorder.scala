@@ -29,32 +29,32 @@ object InMemoryLogRecorder:
         Log(new Log.Unsafe:
             def level: Log.Level = Log.Level.trace
 
-            def trace(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.trace, msg.toString))
+            def trace(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.trace, msg))
 
-            def trace(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.trace, msg.toString, Some(t)))
+            def trace(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.trace, msg, Some(t)))
 
-            def debug(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.debug, msg.toString))
+            def debug(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.debug, msg))
 
-            def debug(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.debug, msg.toString, Some(t)))
+            def debug(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.debug, msg, Some(t)))
 
-            def info(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.info, msg.toString))
+            def info(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.info, msg))
 
-            def info(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.info, msg.toString, Some(t)))
+            def info(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.info, msg, Some(t)))
 
-            def warn(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.warn, msg.toString))
+            def warn(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.warn, msg))
 
-            def warn(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.warn, msg.toString, Some(t)))
+            def warn(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.warn, msg, Some(t)))
 
-            def error(msg: => Text)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.error, msg.toString))
+            def error(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.error, msg))
 
-            def error(msg: => Text, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.error, msg.toString, Some(t))))
+            def error(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
+                recorder.append(LogRecord(Log.Level.error, msg, Some(t))))

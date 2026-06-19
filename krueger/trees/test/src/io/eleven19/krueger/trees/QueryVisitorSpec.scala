@@ -52,11 +52,15 @@ object QueryVisitorSpec extends ZIOSpecDefault:
         },
         test("traverse executes effects in pre-order with context and logs") {
             val result = QueryLogic.run[Int, String, String, Int](initialContext = 0) {
-                QueryVisitor.traverse(sampleQuery) { node =>
-                    QueryLogic.log[Int, String, String](tag(node))
-                    QueryLogic.updateContext[Int, String, String](_ + 1)
-                }
-                QueryLogic.readContext[Int, String, String]
+                for
+                    _   <- QueryVisitor.traverse(sampleQuery) { node =>
+                        for
+                            _ <- QueryLogic.log[Int, String, String](tag(node))
+                            _ <- QueryLogic.updateContext[Int, String, String](_ + 1)
+                        yield ()
+                    }
+                    ctx <- QueryLogic.readContext[Int, String, String]
+                yield ctx
             }
             assertTrue(
                 result.value == Right(8),

@@ -2,6 +2,7 @@ package io.eleven19.krueger.trees.query
 
 import io.eleven19.krueger.trees.CaptureName
 import io.eleven19.krueger.trees.QueryableTree
+import kyo.*
 
 object QueryExecutionPipeline:
 
@@ -19,64 +20,59 @@ object QueryExecutionPipeline:
         matches: Vector[Match[T]]
     )
 
-    def normalize[Ctx, Err](query: Query)(using
-        purelogic.Writer[String],
-        purelogic.State[QueryLogic.QueryState[Ctx, Err]]
-    ): Query =
-        QueryLogic.log[Ctx, String, Err]("normalize")
-        query
+    def normalize[Ctx, Err](query: Query)(using Tag[Ctx], Tag[Err]): QueryLogic.QueryEffect[Ctx, String, Err, Query] =
+        QueryLogic.log[Ctx, String, Err]("normalize").map(_ => query)
 
-    def analyze[Ctx, Err](query: Query)(using
-        purelogic.Writer[String],
-        purelogic.State[QueryLogic.QueryState[Ctx, Err]]
-    ): Analysis =
-        QueryLogic.log[Ctx, String, Err]("analyze")
-        Analysis(
-            nodeCount = QueryVisitor.count(query),
-            captureCount = query.captureNames.size,
-            predicateCount = query.predicates.size
-        )
+    def analyze[Ctx, Err](query: Query)(using Tag[Ctx], Tag[Err]): QueryLogic.QueryEffect[Ctx, String, Err, Analysis] =
+        QueryLogic.log[Ctx, String, Err]("analyze").map { _ =>
+            Analysis(
+                nodeCount = QueryVisitor.count(query),
+                captureCount = query.captureNames.size,
+                predicateCount = query.predicates.size
+            )
+        }
 
-    def validate[Ctx](query: Query)(using
-        purelogic.Writer[String],
-        purelogic.State[QueryLogic.QueryState[Ctx, String]]
-    ): Query =
-        QueryLogic.log[Ctx, String, String]("validate")
-        val missing = predicateCaptureRefs(query.predicates).diff(query.captureNames)
-        if missing.nonEmpty then
-            val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
-            QueryLogic.error[Ctx, String, String](s"Predicate references unknown capture(s): $rendered")
-        query
+    def validate[Ctx](query: Query)(using Tag[Ctx]): QueryLogic.QueryEffect[Ctx, String, String, Query] =
+        QueryLogic.log[Ctx, String, String]("validate").flatMap { _ =>
+            val missing = predicateCaptureRefs(query.predicates).diff(query.captureNames)
+            if missing.isEmpty then query
+            else
+                val rendered = missing.toList.map(CaptureName.unwrap).sorted.map(n => s"@$n").mkString(", ")
+                QueryLogic
+                    .error[Ctx, String, String](s"Predicate references unknown capture(s): $rendered")
+                    .map(_ => query)
+        }
 
-    def lower[Ctx, Err](query: Query, registry: PredicateRegistry = PredicateRegistry.default)(using
-        purelogic.Writer[String],
-        purelogic.State[QueryLogic.QueryState[Ctx, Err]]
-    ): Lowered =
-        QueryLogic.log[Ctx, String, Err]("lower")
-        Lowered(query, registry)
+    def lower[Ctx, Err](
+        query: Query,
+        registry: PredicateRegistry = PredicateRegistry.default
+    )(using Tag[Ctx], Tag[Err]): QueryLogic.QueryEffect[Ctx, String, Err, Lowered] =
+        QueryLogic.log[Ctx, String, Err]("lower").map(_ => Lowered(query, registry))
 
     def execute[Ctx, T, Err](lowered: Lowered, root: T)(using
-        purelogic.Writer[String],
-        purelogic.State[QueryLogic.QueryState[Ctx, Err]],
-        QueryableTree[T]
-    ): Vector[Match[T]] =
-        QueryLogic.log[Ctx, String, Err]("execute")
-        Matcher.matches(lowered.query, root, lowered.registry).toVector
+        QueryableTree[T],
+        Tag[Ctx],
+        Tag[Err]
+    ): QueryLogic.QueryEffect[Ctx, String, Err, Vector[Match[T]]] =
+        QueryLogic.log[Ctx, String, Err]("execute").map { _ =>
+            Matcher.matches(lowered.query, root, lowered.registry).toVector
+        }
 
     def run[Ctx, T](
         query: Query,
         root: T,
         initialContext: Ctx,
         registry: PredicateRegistry = PredicateRegistry.default
-    )(using qt: QueryableTree[T]): QueryLogic.Result[Ctx, String, String, PipelineResult[T]] =
+    )(using QueryableTree[T], Tag[Ctx]): QueryLogic.Result[Ctx, String, String, PipelineResult[T]] =
         QueryLogic.run[Ctx, String, String, PipelineResult[T]](initialContext) {
-            val normalized = normalize[Ctx, String](query)
-            val analysis   = analyze[Ctx, String](normalized)
-            val validated  = validate[Ctx](normalized)
-            val plan       = Plan(validated, analysis)
-            val lowered    = lower[Ctx, String](plan.query, registry)
-            val matches    = execute[Ctx, T, String](lowered, root)
-            PipelineResult(normalized, analysis, plan, lowered, matches)
+            for
+                normalized <- normalize[Ctx, String](query)
+                analysis   <- analyze[Ctx, String](normalized)
+                validated  <- validate[Ctx](normalized)
+                plan       = Plan(validated, analysis)
+                lowered    <- lower[Ctx, String](plan.query, registry)
+                matches    <- execute[Ctx, T, String](lowered, root)
+            yield PipelineResult(normalized, analysis, plan, lowered, matches)
         }
 
     private def predicateCaptureRefs(predicates: List[Predicate]): Set[CaptureName] =
