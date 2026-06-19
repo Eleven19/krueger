@@ -16,7 +16,7 @@ final case class ParseDiagnostic(
 object ParseDiagnostic:
 
     def unexpectedEndOfInput(source: String, line: Int, column: Int, expected: List[String]): ParseDiagnostic =
-        val start     = SourceOffsets.offsetAt(source, line, column)
+        val start = SourceOffsets.offsetAt(source, line, column)
         val formatted = DiagnosticMessageFormatter.format(
             source = source,
             code = DiagnosticCode.UnexpectedEndOfInput,
@@ -44,8 +44,8 @@ object ParseDiagnostic:
         unexpected: String,
         expected: List[String]
     ): ParseDiagnostic =
-        val start     = SourceOffsets.offsetAt(source, line, column)
-        val end       = (start + width.max(1)).min(source.length.max(start + 1))
+        val start = SourceOffsets.offsetAt(source, line, column)
+        val end   = (start + width.max(1)).min(source.length.max(start + 1))
         val formatted = DiagnosticMessageFormatter.format(
             source = source,
             code = DiagnosticCode.UnexpectedToken,
