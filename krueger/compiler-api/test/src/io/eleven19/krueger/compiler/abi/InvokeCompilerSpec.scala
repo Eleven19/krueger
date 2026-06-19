@@ -42,12 +42,15 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
         },
         test("failure path: malformed source returns a structured parse error envelope") {
             val response = invoke("parseCst", s"""{"source":${stringLiteral(malformedSource)}}""")
+            val expected   = expectedParseInvokeError(malformedSource)
 
             assertTrue(
                 !response.ok,
                 response.value.isEmpty,
                 response.logs.isEmpty,
-                response.errors == Vector(expectedParseInvokeError(malformedSource))
+                response.errors == Vector(expected),
+                response.errors.head.contextLines.nonEmpty,
+                response.errors.head.contextLines.count(_.isErrorLine) == 1
             )
         },
         test("edge path: unknown operation returns a structured internal error envelope") {

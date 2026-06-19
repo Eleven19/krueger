@@ -71,7 +71,7 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
         val message =
             body match
                 case DiagnosticBody.Vanilla(_, _, rsns, w) =>
-                    DiagnosticMessageFormatter.format(
+                    val formatted = DiagnosticMessageFormatter.format(
                         source = src,
                         code = code,
                         line = line,
@@ -82,8 +82,9 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
                         suggestion = suggestion,
                         errorWidth = w
                     )
+                    formatted.message -> formatted.contextLines
                 case DiagnosticBody.Specialised(msgs, w) =>
-                    DiagnosticMessageFormatter.format(
+                    val formatted = DiagnosticMessageFormatter.format(
                         source = src,
                         code = code,
                         line = line,
@@ -94,12 +95,14 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
                         suggestion = suggestion,
                         errorWidth = w
                     )
+                    formatted.message -> formatted.contextLines
         ParseDiagnostic(
             code = code,
             span = SourceSpan(start = start, end = end, line = line, column = column),
-            message = message,
+            message = message._1,
             expected = expected,
-            suggestion = suggestion
+            suggestion = suggestion,
+            contextLines = message._2
         )
 
     def vanillaError(

@@ -58,7 +58,8 @@ Most calls return a plain **envelope** object:
     expected?: string[],  // parser-expected tokens at failure site
     suggestion?: string,  // optional human hint for common mistakes
     line?: number,
-    column?: number
+    column?: number,
+    contextLines?: [{ line: number, text: string, isErrorLine: boolean }, ...]
   }, ...]
 }
 ```

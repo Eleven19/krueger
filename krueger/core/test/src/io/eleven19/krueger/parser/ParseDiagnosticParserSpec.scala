@@ -29,9 +29,12 @@ object ParseDiagnosticParserSpec extends ZIOSpecDefault:
                         diagnostic.span.end == 27,
                         diagnostic.expected.nonEmpty,
                         diagnostic.message.contains("I ran into the end of the file unexpectedly"),
+                        diagnostic.message.contains("1| module M exposing (..)"),
                         diagnostic.message.contains("3| x ="),
                         diagnostic.message.contains("^"),
-                        diagnostic.message.contains("I was expecting one of the following:")
+                        diagnostic.message.contains("I was expecting one of the following:"),
+                        diagnostic.contextLines.nonEmpty,
+                        diagnostic.contextLines.count(_.isErrorLine) == 1
                     )
                 case Success(_) => assertTrue(false)
         },
@@ -48,7 +51,8 @@ object ParseDiagnosticParserSpec extends ZIOSpecDefault:
                         diagnostic.message.contains("I ran into the end of the file unexpectedly"),
                         diagnostic.message.contains("1|"),
                         diagnostic.message.contains("^"),
-                        diagnostic.message.contains("I was expecting one of the following:")
+                        diagnostic.message.contains("I was expecting one of the following:"),
+                        diagnostic.contextLines.nonEmpty
                     )
                 case Success(_) => assertTrue(false)
         }

@@ -241,6 +241,8 @@ object KruegerJsSpec extends ZIOSpecDefault:
             test("malformed parseCst source matches the JVM and Chicory error scenario") {
                 val env    = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.malformedParseCst.source))
                 val errors = env.errors.asInstanceOf[js.Array[js.Dynamic]]
+                val error  = errors(0)
+                val contextLines = error.contextLines.asInstanceOf[js.Array[js.Dynamic]]
                 assertTrue(
                     hasEnvelopeShape(env.asInstanceOf[js.Object]),
                     !env.ok.asInstanceOf[Boolean],
@@ -248,6 +250,10 @@ object KruegerJsSpec extends ZIOSpecDefault:
                     errors(0).phase.asInstanceOf[String] == CompilerApiAcceptanceCases.malformedParseCst.expectedPhase,
                     errors(0).message.asInstanceOf[String].contains(
                         CompilerApiAcceptanceCases.malformedParseCst.expectedMessageFragment
+                    ),
+                    contextLines.length >= 1,
+                    (0 until contextLines.length).exists(index =>
+                        contextLines(index).isErrorLine.asInstanceOf[Boolean]
                     )
                 )
             },

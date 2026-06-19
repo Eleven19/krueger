@@ -4,6 +4,7 @@ import parsley.{Failure, Success}
 import zio.test.*
 
 import io.eleven19.krueger.Krueger
+import io.eleven19.krueger.compiler.DiagnosticCodes
 import io.eleven19.krueger.compiler.ParseDiagnostic
 import io.eleven19.krueger.lexer.{ElmTokenizer, ElmTokenizerConfig}
 
@@ -18,8 +19,11 @@ object ParseDiagnosticMessageSnapshotSpec extends ZIOSpecDefault:
                         diagnostic.message.startsWith("-- PARSE ERROR (ELM-P001)"),
                         diagnostic.message.contains("I ran into the end of the file unexpectedly."),
                         diagnostic.message.contains("I was expecting one of the following:"),
+                        diagnostic.message.contains("1| module M exposing (..)"),
                         diagnostic.message.contains("3| x ="),
-                        diagnostic.message.linesIterator.toList.last == "      ^"
+                        diagnostic.message.linesIterator.toList.last == "      ^",
+                        diagnostic.contextLines.nonEmpty,
+                        diagnostic.contextLines.count(_.isErrorLine) == 1
                     )
                 case Success(_) => assertTrue(false)
         },
@@ -31,7 +35,8 @@ object ParseDiagnosticMessageSnapshotSpec extends ZIOSpecDefault:
                         diagnostic.message.startsWith("-- TOKENIZE ERROR (ELM-T001)") &&
                         diagnostic.message.contains("I ran into an unexpected character:") &&
                         diagnostic.message.contains("1| main @") &&
-                        diagnostic.message.linesIterator.toList.last == "        ^"
+                        diagnostic.message.linesIterator.toList.last == "        ^" &&
+                        diagnostic.contextLines.count(_.isErrorLine) == 1
                     case _ => false
                 }
             )

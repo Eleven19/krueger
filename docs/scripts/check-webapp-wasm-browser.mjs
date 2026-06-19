@@ -75,6 +75,7 @@ try {
                 malformedErrorCount: malformed.errors.length,
                 malformedPhase: malformed.errors[0]?.phase,
                 malformedMessage: malformed.errors[0]?.message,
+                malformedContextLineCount: malformed.errors[0]?.contextLines?.length ?? 0,
                 deterministic: String(valid.value) === String(again.value),
             };
         });
@@ -82,8 +83,11 @@ try {
         if (!result.validOk || !result.validValue.includes('CstModule(')) fail(`valid parseCst failed: ${JSON.stringify(result)}`);
         if (!result.malformedOk || result.malformedErrorCount < 1) fail(`malformed parseCst did not return errors: ${JSON.stringify(result)}`);
         if (result.malformedPhase !== 'cst') fail(`malformed parseCst phase mismatch: ${JSON.stringify(result)}`);
-        if (!String(result.malformedMessage).includes('unexpected end of input')) {
+        if (!String(result.malformedMessage).includes('I ran into the end of the file unexpectedly.')) {
             fail(`malformed parseCst message mismatch: ${JSON.stringify(result)}`);
+        }
+        if (!result.malformedContextLineCount || result.malformedContextLineCount < 1) {
+            fail(`malformed parseCst missing contextLines: ${JSON.stringify(result)}`);
         }
         if (!result.deterministic) fail(`repeated parseCst was not deterministic: ${JSON.stringify(result)}`);
     } finally {

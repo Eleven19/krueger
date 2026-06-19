@@ -7,7 +7,8 @@ final case class ParseDiagnostic(
     span: SourceSpan,
     message: String,
     expected: List[String],
-    suggestion: Option[String] = None
+    suggestion: Option[String] = None,
+    contextLines: List[DiagnosticContextLine] = Nil
 ) derives CanEqual:
 
     def toCompilerSpan: Span = Span(start = span.start, end = span.end)
@@ -15,22 +16,24 @@ final case class ParseDiagnostic(
 object ParseDiagnostic:
 
     def unexpectedEndOfInput(source: String, line: Int, column: Int, expected: List[String]): ParseDiagnostic =
-        val start = SourceOffsets.offsetAt(source, line, column)
+        val start     = SourceOffsets.offsetAt(source, line, column)
+        val formatted = DiagnosticMessageFormatter.format(
+            source = source,
+            code = DiagnosticCodes.UnexpectedEndOfInput,
+            line = line,
+            column = column,
+            unexpected = Some("end of input"),
+            expected = expected,
+            reasons = Nil,
+            suggestion = None,
+            errorWidth = 0
+        )
         ParseDiagnostic(
             code = DiagnosticCodes.UnexpectedEndOfInput,
             span = SourceSpan(start = start, end = start, line = line, column = column),
-            message = DiagnosticMessageFormatter.format(
-                source = source,
-                code = DiagnosticCodes.UnexpectedEndOfInput,
-                line = line,
-                column = column,
-                unexpected = Some("end of input"),
-                expected = expected,
-                reasons = Nil,
-                suggestion = None,
-                errorWidth = 0
-            ),
-            expected = expected
+            message = formatted.message,
+            expected = expected,
+            contextLines = formatted.contextLines
         )
 
     def unexpectedToken(
@@ -41,40 +44,44 @@ object ParseDiagnostic:
         unexpected: String,
         expected: List[String]
     ): ParseDiagnostic =
-        val start = SourceOffsets.offsetAt(source, line, column)
-        val end   = (start + width.max(1)).min(source.length.max(start + 1))
+        val start     = SourceOffsets.offsetAt(source, line, column)
+        val end       = (start + width.max(1)).min(source.length.max(start + 1))
+        val formatted = DiagnosticMessageFormatter.format(
+            source = source,
+            code = DiagnosticCodes.UnexpectedToken,
+            line = line,
+            column = column,
+            unexpected = Some(unexpected),
+            expected = expected,
+            reasons = Nil,
+            suggestion = None,
+            errorWidth = width
+        )
         ParseDiagnostic(
             code = DiagnosticCodes.UnexpectedToken,
             span = SourceSpan(start = start, end = end, line = line, column = column),
-            message = DiagnosticMessageFormatter.format(
-                source = source,
-                code = DiagnosticCodes.UnexpectedToken,
-                line = line,
-                column = column,
-                unexpected = Some(unexpected),
-                expected = expected,
-                reasons = Nil,
-                suggestion = None,
-                errorWidth = width
-            ),
-            expected = expected
+            message = formatted.message,
+            expected = expected,
+            contextLines = formatted.contextLines
         )
 
     def tokenizerUnexpectedCharacter(source: String, offset: Int, lexeme: String): ParseDiagnostic =
         val (line, column) = SourceOffsets.lineColumnAt(source, offset)
+        val formatted = DiagnosticMessageFormatter.format(
+            source = source,
+            code = DiagnosticCodes.TokenizerUnexpectedCharacter,
+            line = line,
+            column = column,
+            unexpected = Some(lexeme),
+            expected = Nil,
+            reasons = Nil,
+            suggestion = None,
+            errorWidth = lexeme.length
+        )
         ParseDiagnostic(
             code = DiagnosticCodes.TokenizerUnexpectedCharacter,
             span = SourceSpan(start = offset, end = offset + lexeme.length, line = line, column = column),
-            message = DiagnosticMessageFormatter.format(
-                source = source,
-                code = DiagnosticCodes.TokenizerUnexpectedCharacter,
-                line = line,
-                column = column,
-                unexpected = Some(lexeme),
-                expected = Nil,
-                reasons = Nil,
-                suggestion = None,
-                errorWidth = lexeme.length
-            ),
-            expected = Nil
+            message = formatted.message,
+            expected = Nil,
+            contextLines = formatted.contextLines
         )

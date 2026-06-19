@@ -167,6 +167,13 @@ object KruegerJs:
         import CompileError.*
         e match
             case ParseError(phase, diagnostic) =>
+                val contextLines = diagnostic.contextLines.map { line =>
+                    js.Dynamic.literal(
+                        line = line.line,
+                        text = line.text,
+                        isErrorLine = line.isErrorLine
+                    )
+                }.toJSArray
                 val o = js.Dynamic.literal(
                     phase = phase,
                     message = diagnostic.message,
@@ -174,7 +181,8 @@ object KruegerJs:
                     expected = diagnostic.expected.toJSArray,
                     span = spanPojo(diagnostic.toCompilerSpan),
                     line = diagnostic.span.line,
-                    column = diagnostic.span.column
+                    column = diagnostic.span.column,
+                    contextLines = contextLines
                 )
                 diagnostic.suggestion.foreach(s => o.updateDynamic("suggestion")(s))
                 o.asInstanceOf[js.Object]

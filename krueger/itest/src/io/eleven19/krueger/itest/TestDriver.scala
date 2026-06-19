@@ -119,12 +119,12 @@ object TestDriver:
 
 /** Scenario-scoped mutable state shared across step-definition classes via the cucumber-scala DI container. */
 final class TestDriver:
-    private var source: String                               = ""
+    private var source: String                                        = ""
     private var cstResult: Option[Result[ParseDiagnostic, CstModule]] = None
     private var astResult: Option[Result[ParseDiagnostic, Module]]    = None
-    private var lastMatchesBuf: Vector[MatchView]            = Vector.empty
-    private var querySource: Option[String]                  = None
-    private var canonicalQueryText: Option[String]           = None
+    private var lastMatchesBuf: Vector[MatchView]                     = Vector.empty
+    private var querySource: Option[String]                           = None
+    private var canonicalQueryText: Option[String]                    = None
 
     def setSource(raw: String): Unit =
         source = raw
@@ -146,16 +146,16 @@ final class TestDriver:
     def parseAst(): Unit = astResult = Some(Krueger.parseAst(source))
 
     def cst: CstModule = cstResult match
-        case Some(Success(m))   => m
+        case Some(Success(m)) => m
         case Some(Failure(diagnostic: ParseDiagnostic)) =>
             throw new AssertionError(s"CST parse failed: ${diagnostic.message}\nSource:\n$source")
-        case None               => throw new AssertionError("CST not parsed — missing When step?")
+        case None => throw new AssertionError("CST not parsed — missing When step?")
 
     def ast: Module = astResult match
-        case Some(Success(m))   => m
+        case Some(Success(m)) => m
         case Some(Failure(diagnostic: ParseDiagnostic)) =>
             throw new AssertionError(s"AST parse failed: ${diagnostic.message}\nSource:\n$source")
-        case None               => throw new AssertionError("AST not parsed — missing When step?")
+        case None => throw new AssertionError("AST not parsed — missing When step?")
 
     /** Parse the CST (if not already parsed), run `queryText` against it, and store the matches. */
     def queryCst(queryText: String): Unit =

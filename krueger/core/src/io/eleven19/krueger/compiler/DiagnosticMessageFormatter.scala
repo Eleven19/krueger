@@ -3,6 +3,11 @@ package io.eleven19.krueger.compiler
 /** Formats structured parse diagnostics into human-friendly, Elm-inspired messages. */
 object DiagnosticMessageFormatter:
 
+    final case class FormattedDiagnostic(
+        message: String,
+        contextLines: List[DiagnosticContextLine]
+    ) derives CanEqual
+
     def format(
         source: String,
         code: String,
@@ -13,7 +18,7 @@ object DiagnosticMessageFormatter:
         reasons: Seq[String],
         suggestion: Option[String],
         errorWidth: Int
-    ): String =
+    ): FormattedDiagnostic =
         val header = formatHeader(code, line, column)
         val body =
             List(
@@ -21,9 +26,17 @@ object DiagnosticMessageFormatter:
                 expectedExplanation(expected),
                 reasonsExplanation(reasons)
             ).filter(_.nonEmpty).mkString("\n\n")
-        val snippet = sourceSnippet(source, line, column, errorWidth)
-        val hint    = suggestion.map(s => s"\n\nHint: $s").getOrElse("")
-        List(header, body, snippet).filter(_.nonEmpty).mkString("\n\n") + hint
+        val snippet = SourceSnippetBuilder.build(
+            source = source,
+            errorLine = line,
+            column = column,
+            errorWidth = errorWidth
+        )
+        val hint = suggestion.map(s => s"\n\nHint: $s").getOrElse("")
+        FormattedDiagnostic(
+            message = List(header, body, snippet.rendered).filter(_.nonEmpty).mkString("\n\n") + hint,
+            contextLines = snippet.contextLines
+        )
 
     private def formatHeader(code: String, line: Int, column: Int): String =
         val kind =
@@ -52,15 +65,3 @@ object DiagnosticMessageFormatter:
         reasons.filter(_.nonEmpty) match
             case Nil   => ""
             case lines => lines.mkString("\n")
-
-    private def sourceSnippet(source: String, line: Int, column: Int, errorWidth: Int): String =
-        val sourceLine = lineAt(source, line)
-        val gutter     = s"$line| "
-        val caretWidth = errorWidth.max(1)
-        val caretStart = gutter.length + (column - 1).max(0)
-        val caret      = " " * caretStart + ("^" * caretWidth)
-        s"$gutter$sourceLine\n$caret"
-
-    private def lineAt(source: String, oneBasedLine: Int): String =
-        if source.isEmpty then ""
-        else source.linesIterator.toVector.lift(oneBasedLine - 1).getOrElse("")
