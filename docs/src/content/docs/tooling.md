@@ -50,7 +50,16 @@ Most calls return a plain **envelope** object:
   ok: boolean,
   value: /* opaque handle, matches, or tokens — depends on API */,
   logs: string[],
-  errors: [{ phase, message, span? }, ...]
+  errors: [{
+    phase,
+    message,
+    span?: { start, end },
+    code?: string,        // stable diagnostic code, e.g. ELM-P001
+    expected?: string[],  // parser-expected tokens at failure site
+    suggestion?: string,  // optional human hint for common mistakes
+    line?: number,
+    column?: number
+  }, ...]
 }
 ```
 

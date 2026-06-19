@@ -14,18 +14,28 @@ object InvokeSpan:
 final case class InvokeError(
     phase: String,
     message: String,
-    span: Option[InvokeSpan] = None
+    span: Option[InvokeSpan] = None,
+    code: Option[String] = None,
+    expected: List[String] = Nil,
+    suggestion: Option[String] = None,
+    line: Option[Int] = None,
+    column: Option[Int] = None
 ) derives CanEqual
 
 object InvokeError:
 
     def fromCompileError(error: CompileError): InvokeError =
         error match
-            case CompileError.ParseError(phase, message, span) =>
+            case CompileError.ParseError(phase, diagnostic) =>
                 InvokeError(
                     phase = phase,
-                    message = message,
-                    span = span.map(InvokeSpan.fromCompilerSpan)
+                    message = diagnostic.message,
+                    span = Some(InvokeSpan.fromCompilerSpan(diagnostic.toCompilerSpan)),
+                    code = Some(diagnostic.code),
+                    expected = diagnostic.expected,
+                    suggestion = diagnostic.suggestion,
+                    line = Some(diagnostic.span.line),
+                    column = Some(diagnostic.span.column)
                 )
             case CompileError.QueryError(message, span) =>
                 InvokeError(

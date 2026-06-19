@@ -1,7 +1,7 @@
 package io.eleven19.krueger.lexer
 
 import io.eleven19.krueger.compiler.CompileError
-import io.eleven19.krueger.compiler.Span
+import io.eleven19.krueger.compiler.ParseDiagnostic
 import io.eleven19.krueger.trees.query.QueryLogic
 
 final case class ElmTokenizerConfig(
@@ -153,8 +153,7 @@ object ElmTokenizer:
         val lexeme = source.substring(start, start + 1)
         val err = CompileError.ParseError(
             phase = "tokenize",
-            message = s"Unexpected character '$lexeme'",
-            span = Some(Span(start, start + 1))
+            diagnostic = ParseDiagnostic.tokenizerUnexpectedCharacter(source, start, lexeme)
         )
         if config.recoverUnknown then
             for _ <- QueryLogic.log[TokenizeCtx, TokenizeLog, TokenizeErr](

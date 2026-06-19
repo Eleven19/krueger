@@ -2,6 +2,9 @@ package io.eleven19.krueger.compiler.abi
 
 import zio.test.*
 
+import io.eleven19.krueger.Krueger as CoreKrueger
+import io.eleven19.krueger.compiler.CompileError
+
 import InvokeJson.decode
 import InvokeJson.given
 
@@ -15,15 +18,12 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
 
     private val malformedSource = "module Demo exposing (..)\n\nmain ="
 
-    private val expectedMalformedSourceMessage =
-        List(
-            "(line 3, column 7):",
-            "  unexpected end of input",
-            "  expected \"\"\", \"'\", \"+\", \"-\", -, ., \\, case, digit, identifier, if, let, open brace, open parenthesis, or open square bracket",
-            "  >",
-            "  >main =",
-            "         ^"
-        ).mkString("\n")
+    private def expectedParseInvokeError(source: String): InvokeError =
+        CoreKrueger.parseCst(source) match
+            case parsley.Failure(diagnostic) =>
+                InvokeError.fromCompileError(CompileError.ParseError(phase = "cst", diagnostic = diagnostic))
+            case parsley.Success(_) =>
+                throw new AssertionError(s"expected parse failure for: $source")
 
     private def invoke(op: String, source: String): InvokeResponse =
         decode[InvokeResponse](InvokeCompiler.invoke(op, source))
@@ -46,13 +46,7 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
                 !response.ok,
                 response.value.isEmpty,
                 response.logs.isEmpty,
-                response.errors == Vector(
-                    InvokeError(
-                        phase = "cst",
-                        message = expectedMalformedSourceMessage,
-                        span = None
-                    )
-                )
+                response.errors == Vector(expectedParseInvokeError(malformedSource))
             )
         },
         test("edge path: unknown operation returns a structured internal error envelope") {

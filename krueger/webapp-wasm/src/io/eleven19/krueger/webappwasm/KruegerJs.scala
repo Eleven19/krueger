@@ -166,9 +166,17 @@ object KruegerJs:
     private def errorPojo(e: CompileError): js.Object =
         import CompileError.*
         e match
-            case ParseError(phase, message, spanOpt) =>
-                val o = js.Dynamic.literal(phase = phase, message = message)
-                spanOpt.foreach(s => o.updateDynamic("span")(spanPojo(s)))
+            case ParseError(phase, diagnostic) =>
+                val o = js.Dynamic.literal(
+                    phase = phase,
+                    message = diagnostic.message,
+                    code = diagnostic.code,
+                    expected = diagnostic.expected.toJSArray,
+                    span = spanPojo(diagnostic.toCompilerSpan),
+                    line = diagnostic.span.line,
+                    column = diagnostic.span.column
+                )
+                diagnostic.suggestion.foreach(s => o.updateDynamic("suggestion")(s))
                 o.asInstanceOf[js.Object]
             case QueryError(message, spanOpt) =>
                 val o = js.Dynamic.literal(phase = "query", message = message)
