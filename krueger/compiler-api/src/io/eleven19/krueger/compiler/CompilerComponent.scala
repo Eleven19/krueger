@@ -8,10 +8,10 @@ import io.eleven19.krueger.trees.query.QueryLogic
 
 /** A framework- and platform-agnostic compiler surface for Krueger, generic on the caller's context type `Ctx`.
   *
-  * All effectful operations return a PureLogic-backed [[QueryLogic.QueryEffect]] so consumers can compose the compiler
+  * All effectful operations return a Kyo-backed [[QueryLogic.QueryEffect]] so consumers can compose the compiler
   * alongside their own stateful effects and run everything at the edge of a UI or FFI boundary, receiving a plain
-  * [[QueryLogic.Result]] envelope (context, logs, errors, value). The [[QueryLogic.Logic]] type itself never crosses
-  * the JS / WASM FFI boundary.
+  * [[QueryLogic.Result]] envelope (context, logs, errors, value). The effect type itself never crosses the JS /
+  * WASM FFI boundary.
   *
   * @tparam Ctx
   *   the caller-chosen context type threaded through the compile effect. Use `Unit` when no context is needed.

@@ -39,8 +39,10 @@ object ElmTokenizer:
     private val operatorChars: Set[Char]      = "+-*/<>=&|^!~%?:.\\".toSet
 
     def tokenize(source: String): TokenizeEff[Vector[ElmToken]] =
-        val ctx = QueryLogic.readContext[TokenizeCtx, TokenizeLog, TokenizeErr]
-        scan(source, ctx.config)
+        for
+            ctx <- QueryLogic.readContext[TokenizeCtx, TokenizeLog, TokenizeErr]
+            out <- scan(source, ctx.config)
+        yield out
 
     def run(source: String): TokenizeResult[Vector[ElmToken]] =
         run(source, defaultContext)
@@ -52,77 +54,90 @@ object ElmTokenizer:
         QueryLogic.run[TokenizeCtx, TokenizeLog, TokenizeErr, Vector[ElmToken]](ctx)(tokenize(source))
 
     private def scan(source: String, config: ElmTokenizerConfig): TokenizeEff[Vector[ElmToken]] =
-        val tokens = Vector.newBuilder[ElmToken]
-        var index  = 0
+        scanLoop(source, config, index = 0, acc = Vector.empty)
 
-        def add(kind: ElmTokenKind, start: Int, end: Int): Unit =
-            if config.includeTrivia || !isTrivia(kind) then
-                tokens += ElmToken(kind, source.substring(start, end), start, end)
-
-        def recoverUnknown(start: Int): Unit =
-            val lexeme = source.substring(start, start + 1)
-            val err = CompileError.ParseError(
-                phase = "tokenize",
-                message = s"Unexpected character '$lexeme'",
-                span = Some(Span(start, start + 1))
-            )
-            if config.recoverUnknown then
-                QueryLogic.log[TokenizeCtx, TokenizeLog, TokenizeErr](s"Recovered unknown token '$lexeme' at $start")
-                tokens += ElmToken(ElmTokenKind.Unknown, lexeme, start, start + 1)
-            else QueryLogic.failFast[TokenizeCtx, TokenizeLog, TokenizeErr](err)
-
-        while index < source.length do
+    private def scanLoop(
+        source: String,
+        config: ElmTokenizerConfig,
+        index: Int,
+        acc: Vector[ElmToken]
+    ): TokenizeEff[Vector[ElmToken]] =
+        if index >= source.length then acc
+        else
             val start = index
             val ch    = source.charAt(index)
 
             if source.startsWith("\r\n", index) then
-                index += 2
-                add(ElmTokenKind.Newline, start, index)
+                scanLoop(source, config, index + 2, appendToken(source, config, acc, ElmTokenKind.Newline, start, index + 2))
             else if ch == '\n' || ch == '\r' then
-                index += 1
-                add(ElmTokenKind.Newline, start, index)
+                scanLoop(source, config, index + 1, appendToken(source, config, acc, ElmTokenKind.Newline, start, index + 1))
             else if ch == ' ' || ch == '\t' then
-                index = consumeWhile(source, index)(c => c == ' ' || c == '\t')
-                add(ElmTokenKind.Whitespace, start, index)
+                val end = consumeWhile(source, index)(c => c == ' ' || c == '\t')
+                scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Whitespace, start, end))
             else if source.startsWith("--", index) then
-                index = consumeLineComment(source, index)
-                add(ElmTokenKind.Comment, start, index)
+                val end = consumeLineComment(source, index)
+                scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Comment, start, end))
             else if source.startsWith("{-", index) then
-                index = consumeBlockComment(source, index)
-                add(ElmTokenKind.Comment, start, index)
+                val end = consumeBlockComment(source, index)
+                scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Comment, start, end))
             else if ch == '"' then
-                index = consumeQuoted(source, index, '"')
-                add(ElmTokenKind.StringLiteral, start, index)
+                val end = consumeQuoted(source, index, '"')
+                scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.StringLiteral, start, end))
             else if ch == '\'' then
-                index = consumeQuoted(source, index, '\'')
-                add(ElmTokenKind.CharLiteral, start, index)
+                val end = consumeQuoted(source, index, '\'')
+                scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.CharLiteral, start, end))
             else if ch.isDigit then
-                index = consumeNumber(source, index)
-                add(ElmTokenKind.Number, start, index)
+                val end = consumeNumber(source, index)
+                scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Number, start, end))
             else if isIdentifierStart(ch) then
-                index = consumeWhile(source, index)(isIdentifierPart)
-                val lexeme = source.substring(start, index)
+                val end    = consumeWhile(source, index)(isIdentifierPart)
+                val lexeme = source.substring(start, end)
                 val kind =
                     if ElmLexer.keywords.contains(lexeme) then ElmTokenKind.Keyword
                     else if lexeme.head.isUpper then ElmTokenKind.UpperIdentifier
                     else ElmTokenKind.LowerIdentifier
-                add(kind, start, index)
+                scanLoop(source, config, end, appendToken(source, config, acc, kind, start, end))
             else
                 hardOperators.find(source.startsWith(_, index)) match
                     case Some(op) =>
-                        index += op.length
-                        add(ElmTokenKind.Operator, start, index)
+                        val end = index + op.length
+                        scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Operator, start, end))
                     case None if operatorChars.contains(ch) =>
-                        index = consumeWhile(source, index)(operatorChars.contains)
-                        add(ElmTokenKind.Operator, start, index)
+                        val end = consumeWhile(source, index)(operatorChars.contains)
+                        scanLoop(source, config, end, appendToken(source, config, acc, ElmTokenKind.Operator, start, end))
                     case None if punctuation.contains(ch) =>
-                        index += 1
-                        add(ElmTokenKind.Punctuation, start, index)
+                        scanLoop(source, config, index + 1, appendToken(source, config, acc, ElmTokenKind.Punctuation, start, index + 1))
                     case None =>
-                        recoverUnknown(start)
-                        index += 1
+                        for
+                            recovered <- recoverUnknown(source, start, config)
+                            out       <- scanLoop(source, config, start + 1, acc ++ recovered)
+                        yield out
 
-        tokens.result()
+    private def appendToken(
+        source: String,
+        config: ElmTokenizerConfig,
+        acc: Vector[ElmToken],
+        kind: ElmTokenKind,
+        start: Int,
+        end: Int
+    ): Vector[ElmToken] =
+        if config.includeTrivia || !isTrivia(kind) then
+            acc :+ ElmToken(kind, source.substring(start, end), start, end)
+        else acc
+
+    private def recoverUnknown(source: String, start: Int, config: ElmTokenizerConfig): TokenizeEff[Vector[ElmToken]] =
+        val lexeme = source.substring(start, start + 1)
+        val err = CompileError.ParseError(
+            phase = "tokenize",
+            message = s"Unexpected character '$lexeme'",
+            span = Some(Span(start, start + 1))
+        )
+        if config.recoverUnknown then
+            for
+                _ <- QueryLogic.log[TokenizeCtx, TokenizeLog, TokenizeErr](s"Recovered unknown token '$lexeme' at $start")
+            yield Vector(ElmToken(ElmTokenKind.Unknown, lexeme, start, start + 1))
+        else
+            QueryLogic.failFast[TokenizeCtx, TokenizeLog, TokenizeErr](err)
 
     private def isTrivia(kind: ElmTokenKind): Boolean =
         kind == ElmTokenKind.Whitespace || kind == ElmTokenKind.Newline || kind == ElmTokenKind.Comment

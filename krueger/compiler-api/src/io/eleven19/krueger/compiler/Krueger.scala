@@ -10,9 +10,9 @@ import io.eleven19.krueger.trees.query.QueryLogic
 import io.eleven19.krueger.trees.query.QueryParser
 import io.eleven19.krueger.trees.query.QueryPretty
 
-/** Default implementation of [[CompilerComponent]] that wraps the existing pure Krueger APIs inside PureLogic effects.
-  * Every parse/query failure becomes a structured [[CompileError]] surfaced through the result envelope via
-  * [[QueryLogic.failFast]], never an exception.
+/** Default implementation of [[CompilerComponent]] that wraps the existing pure Krueger APIs inside Kyo-backed
+  * [[QueryLogic.QueryEffect]] values. Every parse/query failure becomes a structured [[CompileError]] surfaced through
+  * the result envelope via [[QueryLogic.failFast]], never an exception.
   */
 object Krueger:
 

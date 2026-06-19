@@ -86,12 +86,12 @@ The query module now exposes visitor and zipper-style traversal utilities:
   - `depth`, `isRoot`, `isLeaf`, `root`
   - `preOrder` for deterministic cursor traversal
 
-## PureLogic-backed query effect
+## Kyo-backed query effect
 
-`QueryLogic` defines a PureLogic-backed alias and helpers for query analysis and
+`QueryLogic` defines a Kyo-backed alias and helpers for query analysis and
 execution workflows:
 
-- `QueryEffect[Ctx, Log, Err, A]` is backed by PureLogic capabilities.
+- `QueryEffect[Ctx, Log, Err, A]` tracks `Var` (context + soft errors), `Emit` (logs), and `Abort` (fail-fast).
 - Context threading is provided by stateful `readContext` / `setContext` /
   `updateContext`.
 - Log accumulation uses `log`.
@@ -246,7 +246,7 @@ Delivered in v1:
   configurable) for round-trip canonicalization.
 - `QueryVisitor` (typed dispatch + fold/collect/traverse) and `QueryCursor` (zipper
   navigation) for query AST analysis.
-- `QueryLogic` PureLogic effect and `QueryExecutionPipeline` staged execution.
+- `QueryLogic` Kyo effect and `QueryExecutionPipeline` staged execution.
 - Given instances for `CstNode` and `AstNode`.
 - `QuerySteps` BDD step pack with canonicalization verbs.
 

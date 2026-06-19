@@ -1,10 +1,6 @@
 package io.eleven19.krueger.trees.query
 
-import purelogic.Abort
-import purelogic.Logic
-import purelogic.Reader
-import purelogic.State
-import purelogic.Writer
+import kyo.*
 
 object QueryLogic:
 
@@ -17,36 +13,47 @@ object QueryLogic:
         value: Either[Vector[Err], A]
     ) derives CanEqual
 
-    type QueryEffect[Ctx, Log, Err, A] = Logic[Unit, Log, QueryState[Ctx, Err], Err, A]
+    type QueryEffects[Ctx, Log, Err] = Var[QueryState[Ctx, Err]] & Emit[Log] & Abort[Err]
 
-    def run[Ctx, Log, Err, A](initialContext: Ctx)(effect: QueryEffect[Ctx, Log, Err, A]): Result[Ctx, Log, Err, A] =
-        val (logs, (state, value)) = Reader(()) {
-            Writer[Log, (QueryState[Ctx, Err], Either[Err, A])] {
-                State(QueryState(initialContext, Vector.empty[Err])) {
-                    Abort(effect)
+    type QueryEffect[Ctx, Log, Err, A] = A < QueryEffects[Ctx, Log, Err]
+
+    def run[Ctx, Log, Err, A](initialContext: Ctx)(effect: QueryEffect[Ctx, Log, Err, A])(using
+        Tag[Ctx],
+        Tag[Log],
+        Tag[Err],
+        Tag[Var[QueryState[Ctx, Err]]],
+        Tag[Emit[Log]],
+        ConcreteTag[Err],
+        Frame
+    ): Result[Ctx, Log, Err, A] =
+        val initial = QueryState(initialContext, Vector.empty[Err])
+        val (state, (logs, abortResult)) =
+            Var.runTuple(initial) {
+                Emit.run {
+                    Abort.run(effect)
                 }
-            }
-        }
-        // Combine accumulated state errors and any abort error into a single list.
+            }.eval
+        val value: Either[Err, A] = abortResult match
+            case kyo.Result.Success(a)   => Right(a)
+            case kyo.Result.Failure(err) => Left(err)
         val allErrors = value.left.toOption.fold(state.errors)(state.errors :+ _)
-        // Return Left(allErrors) if any errors exist; otherwise preserve the Right value.
-        val rendered = if allErrors.nonEmpty then Left(allErrors) else value.left.map(_ => allErrors)
-        Result(state.context, logs, allErrors, rendered)
+        val rendered  = if allErrors.nonEmpty then Left(allErrors) else value.left.map(_ => allErrors)
+        Result(state.context, logs.toVector, allErrors, rendered)
 
-    def readContext[Ctx, Log, Err](using State[QueryState[Ctx, Err]]): Ctx =
-        State.get[QueryState[Ctx, Err]].context
+    def readContext[Ctx, Log, Err](using Tag[Var[QueryState[Ctx, Err]]]): Ctx < QueryEffects[Ctx, Log, Err] =
+        Var.use(_.context)
 
-    def setContext[Ctx, Log, Err](context: Ctx)(using State[QueryState[Ctx, Err]]): Unit =
-        State.update[QueryState[Ctx, Err]](_.copy(context = context))
+    def setContext[Ctx, Log, Err](context: Ctx)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
+        Var.updateDiscard(_.copy(context = context))
 
-    def updateContext[Ctx, Log, Err](f: Ctx => Ctx)(using State[QueryState[Ctx, Err]]): Unit =
-        State.update[QueryState[Ctx, Err]](s => s.copy(context = f(s.context)))
+    def updateContext[Ctx, Log, Err](f: Ctx => Ctx)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
+        Var.updateDiscard(s => s.copy(context = f(s.context)))
 
-    def log[Ctx, Log, Err](entry: Log)(using Writer[Log]): Unit =
-        Writer.write(entry)
+    def log[Ctx, Log, Err](entry: Log)(using Tag[Emit[Log]]): Unit < QueryEffects[Ctx, Log, Err] =
+        Emit.value(entry)
 
-    def error[Ctx, Log, Err](err: Err)(using State[QueryState[Ctx, Err]]): Unit =
-        State.update[QueryState[Ctx, Err]](s => s.copy(errors = s.errors :+ err))
+    def error[Ctx, Log, Err](err: Err)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
+        Var.updateDiscard(s => s.copy(errors = s.errors :+ err))
 
-    def failFast[Ctx, Log, Err](err: Err)(using Abort[Err]): Nothing =
+    def failFast[Ctx, Log, Err](err: Err)(using ConcreteTag[Err]): Nothing < QueryEffects[Ctx, Log, Err] =
         Abort.fail(err)

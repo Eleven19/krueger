@@ -126,15 +126,27 @@ object QueryVisitor:
 
     def traverse[Ctx, Log, Err](query: Query)(
         f: QueryNode => QueryLogic.QueryEffect[Ctx, Log, Err, Unit]
-    )(using
-        purelogic.Reader[Unit],
-        purelogic.Writer[Log],
-        purelogic.State[QueryLogic.QueryState[Ctx, Err]],
-        purelogic.Abort[Err]
-    ): Unit =
-        foldLeft(query, ()) { (_, node) =>
-            f(node)
-        }
+    ): QueryLogic.QueryEffect[Ctx, Log, Err, Unit] =
+        traverseNode(QueryNode.Root(query))(f)
+
+    private def traverseNode[Ctx, Log, Err](node: QueryNode)(
+        f: QueryNode => QueryLogic.QueryEffect[Ctx, Log, Err, Unit]
+    ): QueryLogic.QueryEffect[Ctx, Log, Err, Unit] =
+        for
+            _ <- f(node)
+            _ <- traverseChildren(QueryVisitor.children(node))(f)
+        yield ()
+
+    private def traverseChildren[Ctx, Log, Err](children: List[QueryNode])(
+        f: QueryNode => QueryLogic.QueryEffect[Ctx, Log, Err, Unit]
+    ): QueryLogic.QueryEffect[Ctx, Log, Err, Unit] =
+        children match
+            case Nil       => ()
+            case h :: rest =>
+                for
+                    _ <- traverseNode(h)(f)
+                    _ <- traverseChildren(rest)(f)
+                yield ()
 
     extension (query: Query)
 
