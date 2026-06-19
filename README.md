@@ -21,7 +21,7 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 ### Requirements
 
 - JDK 25+ (Temurin recommended)
-- [Mill](https://mill-build.org/) 1.1.5+
+- [Mill](https://mill-build.org/) 1.2.0-RC1+
 - Node.js 22+ (for the Starlight docs site, SvelteKit `sites/try-wasm`, and Playwright checks — match [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml))
 - For Scala Native: `clang`, `libunwind`, and a boehm-gc library (`libgc` on Linux)
 
@@ -29,7 +29,7 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 
 Add the dependency to your build:
 
-**Mill** (1.1.5+ — add inside a `package.mill` module's `mvnDeps`)
+**Mill** (1.2.0-RC1+ — add inside a `package.mill` module's `mvnDeps`)
 
 ```scala
 def mvnDeps = Seq(
