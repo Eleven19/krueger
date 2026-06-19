@@ -19,8 +19,17 @@ object ParseDiagnostic:
         ParseDiagnostic(
             code = DiagnosticCodes.UnexpectedEndOfInput,
             span = SourceSpan(start = start, end = start, line = line, column = column),
-            message =
-                formatMessage(line, column, unexpected = Some("end of input"), expected = expected, reasons = Nil),
+            message = DiagnosticMessageFormatter.format(
+                source = source,
+                code = DiagnosticCodes.UnexpectedEndOfInput,
+                line = line,
+                column = column,
+                unexpected = Some("end of input"),
+                expected = expected,
+                reasons = Nil,
+                suggestion = None,
+                errorWidth = 0
+            ),
             expected = expected
         )
 
@@ -37,7 +46,17 @@ object ParseDiagnostic:
         ParseDiagnostic(
             code = DiagnosticCodes.UnexpectedToken,
             span = SourceSpan(start = start, end = end, line = line, column = column),
-            message = formatMessage(line, column, unexpected = Some(unexpected), expected = expected, reasons = Nil),
+            message = DiagnosticMessageFormatter.format(
+                source = source,
+                code = DiagnosticCodes.UnexpectedToken,
+                line = line,
+                column = column,
+                unexpected = Some(unexpected),
+                expected = expected,
+                reasons = Nil,
+                suggestion = None,
+                errorWidth = width
+            ),
             expected = expected
         )
 
@@ -46,26 +65,16 @@ object ParseDiagnostic:
         ParseDiagnostic(
             code = DiagnosticCodes.TokenizerUnexpectedCharacter,
             span = SourceSpan(start = offset, end = offset + lexeme.length, line = line, column = column),
-            message = s"Unexpected character '$lexeme'",
+            message = DiagnosticMessageFormatter.format(
+                source = source,
+                code = DiagnosticCodes.TokenizerUnexpectedCharacter,
+                line = line,
+                column = column,
+                unexpected = Some(lexeme),
+                expected = Nil,
+                reasons = Nil,
+                suggestion = None,
+                errorWidth = lexeme.length
+            ),
             expected = Nil
         )
-
-    private def formatMessage(
-        line: Int,
-        column: Int,
-        unexpected: Option[String],
-        expected: List[String],
-        reasons: Seq[String]
-    ): String =
-        val header         = s"(line $line, column $column):"
-        val unexpectedLine = unexpected.map(u => s"  unexpected $u")
-        val expectedLine =
-            if expected.isEmpty then None
-            else Some(s"  expected ${formatExpected(expected)}")
-        val reasonLines = reasons.map(r => s"  $r")
-        (header :: unexpectedLine.toList ::: expectedLine.toList ::: reasonLines.toList).mkString("\n")
-
-    private def formatExpected(items: List[String]): String =
-        if items.isEmpty then ""
-        else if items.size == 1 then items.head
-        else items.init.mkString(", ") + s", or ${items.last}"

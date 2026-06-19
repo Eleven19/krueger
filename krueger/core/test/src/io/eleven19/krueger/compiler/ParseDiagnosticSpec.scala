@@ -52,7 +52,8 @@ object ParseDiagnosticSpec extends ZIOSpecDefault:
                 diagnostic.span.end == 6,
                 diagnostic.span.line == 1,
                 diagnostic.span.column == 6,
-                diagnostic.message.contains("Unexpected character '@'")
+                diagnostic.message.contains("I ran into an unexpected character"),
+                diagnostic.message.contains("@")
             )
         },
         test("suggestion helper recognizes missing in after let") {

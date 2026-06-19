@@ -12,6 +12,7 @@ import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.ast.AstNode
 import io.eleven19.krueger.ast.AstQueryableTree.given
 import io.eleven19.krueger.ast.Module
+import io.eleven19.krueger.compiler.ParseDiagnostic
 import io.eleven19.krueger.compiler.abi.InvokeCompiler
 import io.eleven19.krueger.cst.CstModule
 import io.eleven19.krueger.cst.CstNode
@@ -119,8 +120,8 @@ object TestDriver:
 /** Scenario-scoped mutable state shared across step-definition classes via the cucumber-scala DI container. */
 final class TestDriver:
     private var source: String                               = ""
-    private var cstResult: Option[Result[String, CstModule]] = None
-    private var astResult: Option[Result[String, Module]]    = None
+    private var cstResult: Option[Result[ParseDiagnostic, CstModule]] = None
+    private var astResult: Option[Result[ParseDiagnostic, Module]]    = None
     private var lastMatchesBuf: Vector[MatchView]            = Vector.empty
     private var querySource: Option[String]                  = None
     private var canonicalQueryText: Option[String]           = None
@@ -146,12 +147,14 @@ final class TestDriver:
 
     def cst: CstModule = cstResult match
         case Some(Success(m))   => m
-        case Some(Failure(msg)) => throw new AssertionError(s"CST parse failed: $msg\nSource:\n$source")
+        case Some(Failure(diagnostic: ParseDiagnostic)) =>
+            throw new AssertionError(s"CST parse failed: ${diagnostic.message}\nSource:\n$source")
         case None               => throw new AssertionError("CST not parsed — missing When step?")
 
     def ast: Module = astResult match
         case Some(Success(m))   => m
-        case Some(Failure(msg)) => throw new AssertionError(s"AST parse failed: $msg\nSource:\n$source")
+        case Some(Failure(diagnostic: ParseDiagnostic)) =>
+            throw new AssertionError(s"AST parse failed: ${diagnostic.message}\nSource:\n$source")
         case None               => throw new AssertionError("AST not parsed — missing When step?")
 
     /** Parse the CST (if not already parsed), run `queryText` against it, and store the matches. */

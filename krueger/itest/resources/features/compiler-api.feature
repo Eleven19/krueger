@@ -36,7 +36,7 @@ Feature: Compiler API backends
     Then the compiler response is not ok
     And the compiler response has at least 1 error
     And compiler error 1 phase is "cst"
-    And compiler error 1 message contains "unexpected end of input"
+    And compiler error 1 message contains "I ran into the end of the file unexpectedly"
 
     Examples:
       | backend |

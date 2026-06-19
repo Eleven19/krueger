@@ -74,7 +74,8 @@ object ElmTokenizerSpec extends ZIOSpecDefault:
                 result.errors.exists {
                     case CompileError.ParseError("tokenize", diagnostic) =>
                         diagnostic.code == "ELM-T001" &&
-                        diagnostic.message.contains("Unexpected character '@'") &&
+                        diagnostic.message.contains("I ran into an unexpected character") &&
+                        diagnostic.message.contains("@") &&
                         diagnostic.span.start == 5 &&
                         diagnostic.span.end == 6
                     case _ => false

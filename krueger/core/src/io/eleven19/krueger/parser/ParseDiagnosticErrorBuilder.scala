@@ -1,6 +1,5 @@
 package io.eleven19.krueger.parser
 
-import parsley.errors.DefaultErrorBuilder
 import parsley.errors.ErrorBuilder
 import parsley.errors.tokenextractors.SingleChar
 
@@ -36,8 +35,6 @@ object ParseDiagnosticContext:
 /** Builds structured [[ParseDiagnostic]] values from Parsley failures for a single parse invocation. */
 final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilder[ParseDiagnostic] with SingleChar:
 
-    private val stringBuilder = new DefaultErrorBuilder with SingleChar {}
-
     type Position       = (Int, Int)
     type Source         = Unit
     type ErrorInfoLines = DiagnosticBody
@@ -71,28 +68,31 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
         val end =
             if unexpected.contains(endOfInput) then start
             else (start + width.max(1)).min(src.length.max(start + 1))
-        val sourceLine = lineAt(src, line)
         val message =
             body match
-                case DiagnosticBody.Vanilla(unexp, exp, rsns, _) =>
-                    stringBuilder.format(
-                        stringBuilder.pos(line, column),
-                        stringBuilder.source(None),
-                        stringBuilder.vanillaError(
-                            stringBuilder.unexpected(unexp),
-                            stringBuilder.expected(stringBuilder.combineExpectedItems(exp)),
-                            rsns,
-                            stringBuilder.lineInfo(sourceLine, Nil, Nil, column - 1, width)
-                        )
+                case DiagnosticBody.Vanilla(_, _, rsns, w) =>
+                    DiagnosticMessageFormatter.format(
+                        source = src,
+                        code = code,
+                        line = line,
+                        column = column,
+                        unexpected = unexpected,
+                        expected = expected,
+                        reasons = rsns,
+                        suggestion = suggestion,
+                        errorWidth = w
                     )
-                case DiagnosticBody.Specialised(msgs, _) =>
-                    stringBuilder.format(
-                        stringBuilder.pos(line, column),
-                        stringBuilder.source(None),
-                        stringBuilder.specialisedError(
-                            msgs,
-                            stringBuilder.lineInfo(sourceLine, Nil, Nil, column - 1, width)
-                        )
+                case DiagnosticBody.Specialised(msgs, w) =>
+                    DiagnosticMessageFormatter.format(
+                        source = src,
+                        code = code,
+                        line = line,
+                        column = column,
+                        unexpected = None,
+                        expected = Nil,
+                        reasons = msgs,
+                        suggestion = suggestion,
+                        errorWidth = w
                     )
         ParseDiagnostic(
             code = code,
@@ -145,12 +145,6 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
         errorPointsAt: Int,
         errorWidth: Int
     ): LineInfo = errorWidth
-
-    private def lineAt(source: String, oneBasedLine: Int): String =
-        if source.isEmpty then ""
-        else
-            val lines = source.linesIterator.toVector
-            lines.lift(oneBasedLine - 1).getOrElse("")
 
     private def classify(unexpected: Option[Item]): String =
         unexpected match
