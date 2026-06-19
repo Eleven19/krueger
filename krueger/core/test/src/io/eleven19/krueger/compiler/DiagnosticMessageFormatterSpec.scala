@@ -10,7 +10,7 @@ object DiagnosticMessageFormatterSpec extends ZIOSpecDefault:
         test("formats unexpected end of input with surrounding context and expected tokens") {
             val formatted = DiagnosticMessageFormatter.format(
                 source = malformedSource,
-                code = DiagnosticCodes.UnexpectedEndOfInput,
+                code = DiagnosticCode.UnexpectedEndOfInput,
                 line = 3,
                 column = 4,
                 unexpected = Some("end of input"),
@@ -41,7 +41,7 @@ I was expecting one of the following:
         test("formats tokenizer unexpected character errors with surrounding context") {
             val formatted = DiagnosticMessageFormatter.format(
                 source = "main @",
-                code = DiagnosticCodes.TokenizerUnexpectedCharacter,
+                code = DiagnosticCode.TokenizerUnexpectedCharacter,
                 line = 1,
                 column = 6,
                 unexpected = Some("@"),
@@ -65,7 +65,7 @@ I ran into an unexpected character:
         test("appends hints when provided") {
             val formatted = DiagnosticMessageFormatter.format(
                 source = "let x = 1",
-                code = DiagnosticCodes.UnexpectedEndOfInput,
+                code = DiagnosticCode.UnexpectedEndOfInput,
                 line = 1,
                 column = 10,
                 unexpected = Some("end of input"),

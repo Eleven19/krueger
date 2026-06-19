@@ -3,7 +3,7 @@ package io.eleven19.krueger.compiler
 final case class SourceSpan(start: Int, end: Int, line: Int, column: Int) derives CanEqual
 
 final case class ParseDiagnostic(
-    code: String,
+    code: DiagnosticCode,
     span: SourceSpan,
     message: String,
     expected: List[String],
@@ -19,7 +19,7 @@ object ParseDiagnostic:
         val start     = SourceOffsets.offsetAt(source, line, column)
         val formatted = DiagnosticMessageFormatter.format(
             source = source,
-            code = DiagnosticCodes.UnexpectedEndOfInput,
+            code = DiagnosticCode.UnexpectedEndOfInput,
             line = line,
             column = column,
             unexpected = Some("end of input"),
@@ -29,7 +29,7 @@ object ParseDiagnostic:
             errorWidth = 0
         )
         ParseDiagnostic(
-            code = DiagnosticCodes.UnexpectedEndOfInput,
+            code = DiagnosticCode.UnexpectedEndOfInput,
             span = SourceSpan(start = start, end = start, line = line, column = column),
             message = formatted.message,
             expected = expected,
@@ -48,7 +48,7 @@ object ParseDiagnostic:
         val end       = (start + width.max(1)).min(source.length.max(start + 1))
         val formatted = DiagnosticMessageFormatter.format(
             source = source,
-            code = DiagnosticCodes.UnexpectedToken,
+            code = DiagnosticCode.UnexpectedToken,
             line = line,
             column = column,
             unexpected = Some(unexpected),
@@ -58,7 +58,7 @@ object ParseDiagnostic:
             errorWidth = width
         )
         ParseDiagnostic(
-            code = DiagnosticCodes.UnexpectedToken,
+            code = DiagnosticCode.UnexpectedToken,
             span = SourceSpan(start = start, end = end, line = line, column = column),
             message = formatted.message,
             expected = expected,
@@ -69,7 +69,7 @@ object ParseDiagnostic:
         val (line, column) = SourceOffsets.lineColumnAt(source, offset)
         val formatted = DiagnosticMessageFormatter.format(
             source = source,
-            code = DiagnosticCodes.TokenizerUnexpectedCharacter,
+            code = DiagnosticCode.TokenizerUnexpectedCharacter,
             line = line,
             column = column,
             unexpected = Some(lexeme),
@@ -79,7 +79,7 @@ object ParseDiagnostic:
             errorWidth = lexeme.length
         )
         ParseDiagnostic(
-            code = DiagnosticCodes.TokenizerUnexpectedCharacter,
+            code = DiagnosticCode.TokenizerUnexpectedCharacter,
             span = SourceSpan(start = offset, end = offset + lexeme.length, line = line, column = column),
             message = formatted.message,
             expected = Nil,

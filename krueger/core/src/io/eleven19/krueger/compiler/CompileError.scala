@@ -16,7 +16,7 @@ object CompileError:
 
         def span: Option[Span] = Some(diagnostic.toCompilerSpan)
 
-        def code: String = diagnostic.code
+        def code: DiagnosticCode = diagnostic.code
 
         def expected: List[String] = diagnostic.expected
 

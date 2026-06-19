@@ -2,7 +2,7 @@ package io.eleven19.krueger.lexer
 
 import zio.test.*
 
-import io.eleven19.krueger.compiler.CompileError
+import io.eleven19.krueger.compiler.{CompileError, DiagnosticCode}
 
 object ElmTokenizerSpec extends ZIOSpecDefault:
 
@@ -73,7 +73,7 @@ object ElmTokenizerSpec extends ZIOSpecDefault:
                 result.value.isLeft,
                 result.errors.exists {
                     case CompileError.ParseError("tokenize", diagnostic) =>
-                        diagnostic.code == "ELM-T001" &&
+                        diagnostic.code == DiagnosticCode.TokenizerUnexpectedCharacter &&
                         diagnostic.message.contains("I ran into an unexpected character") &&
                         diagnostic.message.contains("@") &&
                         diagnostic.span.start == 5 &&

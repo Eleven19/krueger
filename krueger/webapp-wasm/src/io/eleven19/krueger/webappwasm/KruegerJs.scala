@@ -10,6 +10,7 @@ import io.eleven19.krueger.ast.AstUnistProjection.given
 import io.eleven19.krueger.compiler.CapturedNode
 import io.eleven19.krueger.compiler.CompileError
 import io.eleven19.krueger.compiler.CompilerComponent
+import io.eleven19.krueger.compiler.DiagnosticCode
 import io.eleven19.krueger.compiler.MatchView
 import io.eleven19.krueger.compiler.Span
 import io.eleven19.krueger.cst.CstModule
@@ -177,7 +178,7 @@ object KruegerJs:
                 val o = js.Dynamic.literal(
                     phase = phase,
                     message = diagnostic.message,
-                    code = diagnostic.code,
+                    code = DiagnosticCode.unwrap(diagnostic.code),
                     expected = diagnostic.expected.toJSArray,
                     span = spanPojo(diagnostic.toCompilerSpan),
                     line = diagnostic.span.line,

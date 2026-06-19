@@ -15,7 +15,7 @@ object ParseDiagnosticSpec extends ZIOSpecDefault:
                 expected = List("exposing", "where")
             )
             assertTrue(
-                diagnostic.code == DiagnosticCodes.UnexpectedEndOfInput,
+                diagnostic.code == DiagnosticCode.UnexpectedEndOfInput,
                 diagnostic.span.line == 1,
                 diagnostic.span.column == 9,
                 diagnostic.span.start == 8,
@@ -34,7 +34,7 @@ object ParseDiagnosticSpec extends ZIOSpecDefault:
                 expected = List("identifier", "digit")
             )
             assertTrue(
-                diagnostic.code == DiagnosticCodes.UnexpectedToken,
+                diagnostic.code == DiagnosticCode.UnexpectedToken,
                 diagnostic.span.start == 4,
                 diagnostic.span.end == 5,
                 diagnostic.message.contains("unexpected")
@@ -47,7 +47,7 @@ object ParseDiagnosticSpec extends ZIOSpecDefault:
                 lexeme = "@"
             )
             assertTrue(
-                diagnostic.code == DiagnosticCodes.TokenizerUnexpectedCharacter,
+                diagnostic.code == DiagnosticCode.TokenizerUnexpectedCharacter,
                 diagnostic.span.start == 5,
                 diagnostic.span.end == 6,
                 diagnostic.span.line == 1,

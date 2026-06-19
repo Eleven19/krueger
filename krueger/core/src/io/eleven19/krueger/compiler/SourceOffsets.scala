@@ -1,11 +1,5 @@
 package io.eleven19.krueger.compiler
 
-object DiagnosticCodes:
-    val UnexpectedEndOfInput: String         = "ELM-P001"
-    val UnexpectedToken: String              = "ELM-P002"
-    val SpecialisedParseFailure: String      = "ELM-P003"
-    val TokenizerUnexpectedCharacter: String = "ELM-T001"
-
 object SourceOffsets:
 
     /** Convert 1-based line/column to a 0-based character offset in `source`. */

@@ -4,7 +4,7 @@ import parsley.{Failure, Success}
 import zio.test.*
 
 import io.eleven19.krueger.Krueger
-import io.eleven19.krueger.compiler.DiagnosticCodes
+import io.eleven19.krueger.compiler.DiagnosticCode
 import io.eleven19.krueger.compiler.ParseDiagnostic
 
 object ParseDiagnosticParserSpec extends ZIOSpecDefault:
@@ -22,7 +22,7 @@ object ParseDiagnosticParserSpec extends ZIOSpecDefault:
             Krueger.parseCst(malformedSource) match
                 case Failure(diagnostic: ParseDiagnostic) =>
                     assertTrue(
-                        diagnostic.code == DiagnosticCodes.UnexpectedEndOfInput,
+                        diagnostic.code == DiagnosticCode.UnexpectedEndOfInput,
                         diagnostic.span.line == 3,
                         diagnostic.span.column == 4,
                         diagnostic.span.start == 27,
@@ -42,7 +42,7 @@ object ParseDiagnosticParserSpec extends ZIOSpecDefault:
             Krueger.parseCst("") match
                 case Failure(diagnostic: ParseDiagnostic) =>
                     assertTrue(
-                        diagnostic.code == DiagnosticCodes.UnexpectedEndOfInput,
+                        diagnostic.code == DiagnosticCode.UnexpectedEndOfInput,
                         diagnostic.span.line == 1,
                         diagnostic.span.column == 1,
                         diagnostic.span.start == 0,

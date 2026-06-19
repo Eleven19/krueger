@@ -3,6 +3,7 @@ package io.eleven19.krueger.compiler.abi
 import io.eleven19.krueger.compiler.CompileError
 import io.eleven19.krueger.compiler.CompilerComponent
 import io.eleven19.krueger.compiler.DiagnosticContextLine
+import io.eleven19.krueger.compiler.DiagnosticCode
 import io.eleven19.krueger.compiler.Span
 
 final case class InvokeSpan(start: Int, end: Int) derives CanEqual
@@ -48,7 +49,7 @@ object InvokeError:
                     phase = phase,
                     message = diagnostic.message,
                     span = Some(InvokeSpan.fromCompilerSpan(diagnostic.toCompilerSpan)),
-                    code = Some(diagnostic.code),
+                    code = Some(DiagnosticCode.unwrap(diagnostic.code)),
                     expected = diagnostic.expected,
                     suggestion = diagnostic.suggestion,
                     line = Some(diagnostic.span.line),

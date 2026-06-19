@@ -64,7 +64,7 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
                     w
                 )
             case DiagnosticBody.Specialised(msgs, w) =>
-                (DiagnosticCodes.SpecialisedParseFailure, None, Nil, msgs, None, w)
+                (DiagnosticCode.SpecialisedParseFailure, None, Nil, msgs, None, w)
         val end =
             if unexpected.contains(endOfInput) then start
             else (start + width.max(1)).min(src.length.max(start + 1))
@@ -149,11 +149,11 @@ final class ParseDiagnosticErrorBuilder(parseSource: String) extends ErrorBuilde
         errorWidth: Int
     ): LineInfo = errorWidth
 
-    private def classify(unexpected: Option[Item]): String =
+    private def classify(unexpected: Option[Item]): DiagnosticCode =
         unexpected match
-            case Some(`endOfInput`) => DiagnosticCodes.UnexpectedEndOfInput
-            case Some(_)            => DiagnosticCodes.UnexpectedToken
-            case None               => DiagnosticCodes.UnexpectedToken
+            case Some(`endOfInput`) => DiagnosticCode.UnexpectedEndOfInput
+            case Some(_)            => DiagnosticCode.UnexpectedToken
+            case None               => DiagnosticCode.UnexpectedToken
 
     private def suggestionFor(
         unexpected: Option[Item],

@@ -10,7 +10,7 @@ object DiagnosticMessageFormatter:
 
     def format(
         source: String,
-        code: String,
+        code: DiagnosticCode,
         line: Int,
         column: Int,
         unexpected: Option[String],
@@ -38,17 +38,14 @@ object DiagnosticMessageFormatter:
             contextLines = snippet.contextLines
         )
 
-    private def formatHeader(code: String, line: Int, column: Int): String =
-        val kind =
-            if code.startsWith("ELM-T") then "TOKENIZE ERROR"
-            else "PARSE ERROR"
-        s"-- $kind ($code) at line $line, column $column"
+    private def formatHeader(code: DiagnosticCode, line: Int, column: Int): String =
+        s"-- ${DiagnosticCode.kindLabel(code)} (${DiagnosticCode.unwrap(code)}) at line $line, column $column"
 
-    private def unexpectedExplanation(code: String, unexpected: Option[String]): String =
+    private def unexpectedExplanation(code: DiagnosticCode, unexpected: Option[String]): String =
         unexpected match
             case Some("end of input") =>
                 "I ran into the end of the file unexpectedly."
-            case Some(value) if code.startsWith("ELM-T") =>
+            case Some(value) if DiagnosticCode.isTokenizer(code) =>
                 s"I ran into an unexpected character:\n\n    $value"
             case Some(token) =>
                 s"I ran into an unexpected token:\n\n    $token"
