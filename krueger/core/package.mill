@@ -12,7 +12,8 @@ trait CoreModule extends _root_.build.CommonScalaModule
         mvn"com.github.j-mie6::parsley::4.6.2",
         mvn"io.getkyo::kyo-prelude::${_root_.build.KruegerVersions.Kyo}",
         mvn"io.getkyo::kyo-core::${_root_.build.KruegerVersions.Kyo}",
-        mvn"com.outr::scribe::${_root_.build.KruegerVersions.Scribe}"
+        mvn"com.outr::scribe::${_root_.build.KruegerVersions.Scribe}",
+        mvn"io.github.kitlangton::neotype::0.4.10"
     )
 }
 

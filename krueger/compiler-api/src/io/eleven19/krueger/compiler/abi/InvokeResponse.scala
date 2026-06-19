@@ -2,6 +2,8 @@ package io.eleven19.krueger.compiler.abi
 
 import io.eleven19.krueger.compiler.CompileError
 import io.eleven19.krueger.compiler.CompilerComponent
+import io.eleven19.krueger.compiler.DiagnosticContextLine
+import io.eleven19.krueger.compiler.DiagnosticCode
 import io.eleven19.krueger.compiler.Span
 
 final case class InvokeSpan(start: Int, end: Int) derives CanEqual
@@ -11,21 +13,48 @@ object InvokeSpan:
     def fromCompilerSpan(span: Span): InvokeSpan =
         InvokeSpan(start = span.start, end = span.end)
 
+final case class InvokeContextLine(
+    line: Int,
+    text: String,
+    isErrorLine: Boolean
+) derives CanEqual
+
+object InvokeContextLine:
+
+    def fromDiagnosticContextLine(line: DiagnosticContextLine): InvokeContextLine =
+        InvokeContextLine(
+            line = line.line,
+            text = line.text,
+            isErrorLine = line.isErrorLine
+        )
+
 final case class InvokeError(
     phase: String,
     message: String,
-    span: Option[InvokeSpan] = None
+    span: Option[InvokeSpan] = None,
+    code: Option[String] = None,
+    expected: List[String] = Nil,
+    suggestion: Option[String] = None,
+    line: Option[Int] = None,
+    column: Option[Int] = None,
+    contextLines: List[InvokeContextLine] = Nil
 ) derives CanEqual
 
 object InvokeError:
 
     def fromCompileError(error: CompileError): InvokeError =
         error match
-            case CompileError.ParseError(phase, message, span) =>
+            case CompileError.ParseError(phase, diagnostic) =>
                 InvokeError(
                     phase = phase,
-                    message = message,
-                    span = span.map(InvokeSpan.fromCompilerSpan)
+                    message = diagnostic.message,
+                    span = Some(InvokeSpan.fromCompilerSpan(diagnostic.toCompilerSpan)),
+                    code = Some(DiagnosticCode.unwrap(diagnostic.code)),
+                    expected = diagnostic.expected,
+                    suggestion = diagnostic.suggestion,
+                    line = Some(diagnostic.span.line),
+                    column = Some(diagnostic.span.column),
+                    contextLines = diagnostic.contextLines.map(InvokeContextLine.fromDiagnosticContextLine)
                 )
             case CompileError.QueryError(message, span) =>
                 InvokeError(

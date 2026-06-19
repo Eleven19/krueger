@@ -106,7 +106,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
     expect(cst.value).toBeNull();
     expect(cst.errors.length).toBeGreaterThan(0);
     expect(cst.errors[0]?.phase).toBe('cst');
-    expect(cst.errors[0]?.message).toContain('unexpected end of input');
+    expect(cst.errors[0]?.message).toContain('I ran into the end of the file unexpectedly.');
   });
 
   it('returns existing error envelopes for malformed CST and AST unist parses', async () => {
@@ -122,7 +122,7 @@ describe('krueger.ts real compiler facade wrapper', () => {
     expect(ast.value).toBeNull();
     expect(cst.errors[0]?.phase).toBe('cst');
     expect(ast.errors[0]?.phase).toBe('ast');
-    expect(ast.errors[0]?.message).toContain('unexpected end of input');
+    expect(ast.errors[0]?.message).toContain('I ran into the end of the file unexpectedly.');
   });
 
   it('supports stale facades without unist methods while degrading unist calls to internal error envelopes', async () => {

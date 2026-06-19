@@ -2,6 +2,7 @@ package io.eleven19.krueger.compiler
 
 import zio.test.*
 
+import io.eleven19.krueger.Krueger as CoreKrueger
 import io.eleven19.krueger.cst.CstNode
 import io.eleven19.krueger.cst.CstQueryableTree.given
 
@@ -28,6 +29,12 @@ object CompilerComponentSpec extends ZIOSpecDefault:
             case Right(value) => value
             case Left(_)      => throw new AssertionError(clue)
 
+    private def expectedParseError(phase: String, source: String): CompileError.ParseError =
+        CoreKrueger.parseCst(source) match
+            case parsley.Failure(diagnostic: ParseDiagnostic) =>
+                CompileError.ParseError(phase = phase, diagnostic = diagnostic)
+            case parsley.Success(_)            => throw new AssertionError(s"expected parse failure for: $source")
+
     private val compiler: CompilerComponent[Unit] = Krueger.compiler[Unit]
 
     private val simpleSource =
@@ -41,25 +48,6 @@ object CompilerComponentSpec extends ZIOSpecDefault:
     private val simpleQuery    = "(CstValueDeclaration) @v"
     private val malformedQuery = "(unbalanced"
     private val zeroMatchQuery = "(nonexistent_node_type) @x"
-
-    private val expectedMalformedSourceMessage =
-        List(
-            "(line 3, column 4):",
-            "  unexpected end of input",
-            "  expected \"\"\", \"'\", \"+\", \"-\", -, ., \\, case, digit, identifier, if, let, open brace, open parenthesis, or open square bracket",
-            "  >",
-            "  >x =",
-            "      ^"
-        ).mkString("\n")
-
-    private val expectedEmptySourceMessage =
-        List(
-            "(line 1, column 1):",
-            "  unexpected end of input",
-            "  expected effect, module, or port",
-            "  >",
-            "   ^"
-        ).mkString("\n")
 
     private val expectedEmptyQueryMessage =
         List(
@@ -102,10 +90,7 @@ object CompilerComponentSpec extends ZIOSpecDefault:
             },
             test("negative path: malformed source produces the expected ParseError envelope") {
                 val actual = snapshot(run(compiler.parseCst(malformedSource)))
-                val expectedError = CompileError.ParseError(
-                    phase = "cst",
-                    message = expectedMalformedSourceMessage
-                )
+                val expectedError = expectedParseError(phase = "cst", source = malformedSource)
                 val expected = Snapshot(
                     logs = Vector.empty,
                     errors = Vector(expectedError),
@@ -129,10 +114,7 @@ object CompilerComponentSpec extends ZIOSpecDefault:
             },
             test("edge path: empty source returns the expected ParseError envelope") {
                 val actual = snapshot(run(compiler.parseCst("")))
-                val expectedError = CompileError.ParseError(
-                    phase = "cst",
-                    message = expectedEmptySourceMessage
-                )
+                val expectedError = expectedParseError(phase = "cst", source = "")
                 val expected = Snapshot(
                     logs = Vector.empty,
                     errors = Vector(expectedError),

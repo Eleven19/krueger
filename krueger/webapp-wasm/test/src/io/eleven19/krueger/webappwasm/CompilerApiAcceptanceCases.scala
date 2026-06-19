@@ -23,5 +23,5 @@ object CompilerApiAcceptanceCases:
         MalformedParseCst(
             source = "module Demo exposing (..)\n\nmain =\n",
             expectedPhase = "cst",
-            expectedMessageFragment = "unexpected end of input"
+            expectedMessageFragment = "I ran into the end of the file unexpectedly"
         )

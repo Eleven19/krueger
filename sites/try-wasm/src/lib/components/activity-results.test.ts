@@ -191,14 +191,14 @@ describe('try-wasm ActivityBar and ResultsPanel components', () => {
       ResultsPanel,
       resultProps({
         selectedPanel: 'cst',
-        cstResult: error('unexpected end of input'),
-        cstUnistResult: error('unexpected end of input')
+        cstResult: error('I ran into the end of the file unexpectedly.'),
+        cstUnistResult: error('I ran into the end of the file unexpectedly.')
       })
     );
 
     expect(screen.getByRole('tabpanel', { name: 'CST' })).not.toBeNull();
     expect(screen.getByText('Parse errors:')).not.toBeNull();
-    expect(screen.getByText('unexpected end of input')).not.toBeNull();
+    expect(screen.getByText('I ran into the end of the file unexpectedly.')).not.toBeNull();
   });
 
   it('renders the canonical query echo panel', () => {
