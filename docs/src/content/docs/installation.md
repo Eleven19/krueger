@@ -6,14 +6,14 @@ description: Add Krueger to your build.
 ## Requirements
 
 - JDK 25+ (Temurin recommended)
-- [Mill](https://mill-build.org/) 1.1.5+ (only if you build Krueger from source)
+- [Mill](https://mill-build.org/) 1.2.0-RC1+ (only if you build Krueger from source)
 - For Scala Native: `clang`, `libunwind`, and a boehm-gc library (`libgc` on Linux)
 
 ## Add the dependency
 
 ### Mill
 
-In Mill 1.1.5+, add the dependency inside a `package.mill` module's
+In Mill 1.2.0-RC1+, add the dependency inside a `package.mill` module's
 `mvnDeps`:
 
 ```scala
