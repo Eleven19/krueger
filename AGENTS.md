@@ -2,6 +2,13 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
+## Agent-Local Documents (Mandatory)
+
+- Never commit Superpowers documents or other agent-generated plans, specifications, handoffs, prompts, reports, ledgers, or tracking artifacts.
+- Store every agent-only document under `.dev/docs/`, using subdirectories there when useful.
+- Keep `.dev/` gitignored. Never force-add files from `.dev/`.
+- Repository documentation intended for users or maintainers remains under the normal tracked documentation paths; this rule applies only to agent-local working material.
+
 ## TDD Red-Green-Refactor (Mandatory)
 
 - For any behavior change or bug fix, follow strict **Red-Green-Refactor**.
