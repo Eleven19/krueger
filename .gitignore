@@ -52,3 +52,6 @@ sites/try-wasm/node_modules/
 # here, but keep the committed stub.
 /node_modules/*
 !/node_modules/monaco-editor/
+
+# os-lib / Mill watch sentinel files (transient, must never be committed)
+.os-lib-watch-sentinel-*
