@@ -2,3 +2,7 @@ mill-version: 1.2.0-RC1
 mill-build:
   jvmVersion: "temurin:25"
   jvmIndexVersion: latest.release
+  mvnDeps:
+    - com.lihaoyi::mill-libs-scalajslib-config-1:1.2.0-RC1
+    - org.scala-js:scalajs-linker_2.13:1.22.0
+    - org.scala-js:scalajs-js-envs_2.13:1.4.0

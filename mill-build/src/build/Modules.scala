@@ -98,10 +98,19 @@ trait CommonScalaJSModule extends ScalaJSModule with scalafmt.ScalafmtModule {
   *   The `webapp-wasm.wasm` submodule's `WasmFacade` uses the val pattern; the JS-linked `webapp-wasm` module reuses
   *   the conventional `@JSExportTopLevel object` pattern under the JS linker, where it works as expected.
   */
-trait CommonScalaJSWasmModule extends CommonScalaJSModule {
+trait CommonScalaJSWasmModule
+    extends CommonScalaJSModule
+    with mill.scalajslib.config.ScalaJSConfigModule {
   override def scalaJSExperimentalUseWebAssembly: T[Boolean] = Task { true }
   override def moduleKind: T[mill.scalajslib.api.ModuleKind] =
     Task { mill.scalajslib.api.ModuleKind.ESModule }
+
+  override def scalaJSConfig: Task[org.scalajs.linker.interface.StandardConfig] = Task.Anon {
+    super.scalaJSConfig().withESFeatures(
+      _.withESVersion(org.scalajs.linker.interface.ESVersion.ES2022)
+        .withUseWebAssembly(true)
+    )
+  }
 }
 
 trait CommonScalaNativeModule extends ScalaNativeModule with scalafmt.ScalafmtModule {
