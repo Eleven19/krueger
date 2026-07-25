@@ -27,8 +27,8 @@ object InMemoryLogRecorder:
 
     def layer(recorder: InMemoryLogRecorder): Log =
         Log(new Log.Unsafe:
-            def level: Log.Level = Log.Level.trace
-            def name: String = "krueger.in-memory-log-recorder"
+            def level: Log.Level                   = Log.Level.trace
+            def name: String                       = "krueger.in-memory-log-recorder"
             def withName(name: String): Log.Unsafe = this
 
             def trace(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =

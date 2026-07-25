@@ -43,10 +43,14 @@ object QueryLogic:
     def readContext[Ctx, Log, Err](using Tag[Var[QueryState[Ctx, Err]]]): Ctx < QueryEffects[Ctx, Log, Err] =
         Var.use(_.context)
 
-    def setContext[Ctx, Log, Err](context: Ctx)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
+    def setContext[Ctx, Log, Err](context: Ctx)(using
+        Tag[Var[QueryState[Ctx, Err]]]
+    ): Unit < QueryEffects[Ctx, Log, Err] =
         Var.updateDiscard(_.copy(context = context))
 
-    def updateContext[Ctx, Log, Err](f: Ctx => Ctx)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
+    def updateContext[Ctx, Log, Err](f: Ctx => Ctx)(using
+        Tag[Var[QueryState[Ctx, Err]]]
+    ): Unit < QueryEffects[Ctx, Log, Err] =
         Var.updateDiscard(s => s.copy(context = f(s.context)))
 
     def log[Ctx, Log, Err](entry: Log)(using Tag[Emit[Log]]): Unit < QueryEffects[Ctx, Log, Err] =
@@ -55,5 +59,7 @@ object QueryLogic:
     def error[Ctx, Log, Err](err: Err)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
         Var.updateDiscard(s => s.copy(errors = s.errors :+ err))
 
-    def failFast[Ctx, Log, Err](err: Err)(using tag: ConcreteTag[Err], frame: Frame): Nothing < QueryEffects[Ctx, Log, Err] =
+    def failFast[Ctx, Log, Err](
+        err: Err
+    )(using tag: ConcreteTag[Err], frame: Frame): Nothing < QueryEffects[Ctx, Log, Err] =
         Abort.fail[Err](err)

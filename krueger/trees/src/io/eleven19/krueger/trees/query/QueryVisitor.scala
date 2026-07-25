@@ -141,7 +141,7 @@ object QueryVisitor:
         f: QueryNode => QueryLogic.QueryEffect[Ctx, Log, Err, Unit]
     ): QueryLogic.QueryEffect[Ctx, Log, Err, Unit] =
         children match
-            case Nil       => ()
+            case Nil => ()
             case h :: rest =>
                 for
                     _ <- traverseNode(h)(f)

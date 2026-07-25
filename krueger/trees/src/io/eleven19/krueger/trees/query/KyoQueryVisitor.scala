@@ -47,7 +47,9 @@ object KyoQueryVisitor:
             case Nil       => ()
             case h :: rest => traverse(h)(f).flatMap(_ => visitChildren(rest)(f))
 
-    private def foldChildren[A, S](children: List[QueryNode], acc: A)(f: (A, QueryNode) => A < S)(using frame: Frame): A < S =
+    private def foldChildren[A, S](children: List[QueryNode], acc: A)(f: (A, QueryNode) => A < S)(using
+        frame: Frame
+    ): A < S =
         children match
             case Nil       => acc
             case h :: rest => traverseFold(h, acc)(f).flatMap(next => foldChildren(rest, next)(f))
