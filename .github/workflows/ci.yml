@@ -87,8 +87,14 @@ jobs:
       - name: Compile JS modules
         run: ./mill krueger.core.js.compile
 
-      - name: Run JS tests
+      - name: Run core Scala.js tests
         run: ./mill krueger.core.js.test
+
+      - name: Run trees Scala.js tests
+        run: ./mill krueger.trees.js.test
+
+      - name: Run compiler-api Scala.js tests
+        run: ./mill krueger.compiler-api.js.test
 
       - name: Run webapp-wasm Scala.js tests
         run: ./mill krueger.webapp-wasm.test
