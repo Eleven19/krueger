@@ -4,16 +4,16 @@ import kyo.*
 import zio.test.*
 
 object KyoQueryableTreeSpec extends ZIOSpecDefault:
-    final case class TestNode(id: Int, kids: List[TestNode]) derives CanEqual
+    final case class SampleNode(id: Int, kids: List[SampleNode]) derives CanEqual
 
-    given QueryableTree[TestNode] with
-        def nodeType(t: TestNode): NodeTypeName                = NodeTypeName.unsafeMake(s"node-${t.id}")
-        def children(t: TestNode): Seq[TestNode]            = t.kids
-        def text(t: TestNode): Option[String]               = None
-        def fields(t: TestNode): Map[FieldName, Seq[TestNode]] = Map.empty
+    private given QueryableTree[SampleNode] with
+        def nodeType(t: SampleNode): NodeTypeName                 = NodeTypeName.unsafeMake(s"node-${t.id}")
+        def children(t: SampleNode): Seq[SampleNode]              = t.kids
+        def text(t: SampleNode): Option[String]                   = None
+        def fields(t: SampleNode): Map[FieldName, Seq[SampleNode]] = Map.empty
 
-    private val tree: TestNode =
-        TestNode(1, List(TestNode(2, Nil), TestNode(3, List(TestNode(4, Nil)))))
+    private val tree: SampleNode =
+        SampleNode(1, List(SampleNode(2, Nil), SampleNode(3, List(SampleNode(4, Nil)))))
 
     def spec = suite("KyoQueryableTree")(
         test("traverseKyo visits every node in pre-order"):
@@ -29,7 +29,7 @@ object KyoQueryableTreeSpec extends ZIOSpecDefault:
             assertTrue(out == 10)
         ,
         test("traverseKyo on a single-node tree visits exactly once"):
-            val out = KyoQueryableTree.foldKyo(TestNode(99, Nil), 0) { (acc, _) =>
+            val out = KyoQueryableTree.foldKyo(SampleNode(99, Nil), 0) { (acc, _) =>
                 (acc + 1): Int < Any
             }.eval
             assertTrue(out == 1)

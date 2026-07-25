@@ -1,6 +1,6 @@
 package io.eleven19.krueger.webappwasm
 
-import scala.scalajs.js
+import scala.scalajs.{js as sjs}
 
 import zio.test.*
 
@@ -28,18 +28,18 @@ object KruegerJsSpec extends ZIOSpecDefault:
 
     private val validQuery = "(CstValueDeclaration) @v"
 
-    private def dyn(o: js.Object): js.Dynamic = o.asInstanceOf[js.Dynamic]
+    private def dyn(o: sjs.Object): sjs.Dynamic = o.asInstanceOf[sjs.Dynamic]
 
-    private def arrayLen(arr: js.Any): Int = arr.asInstanceOf[js.Array[js.Any]].length
+    private def arrayLen(arr: sjs.Any): Int = arr.asInstanceOf[sjs.Array[sjs.Any]].length
 
-    private def hasEnvelopeShape(env: js.Object): Boolean =
+    private def hasEnvelopeShape(env: sjs.Object): Boolean =
         val d = dyn(env)
-        val hasOk     = js.typeOf(d.ok) == "boolean"
-        val hasLogs   = d.logs.asInstanceOf[js.Any] match
-            case arr if js.Array.isArray(arr) => true
+        val hasOk     = sjs.typeOf(d.ok) == "boolean"
+        val hasLogs   = d.logs.asInstanceOf[sjs.Any] match
+            case arr if sjs.Array.isArray(arr) => true
             case _                            => false
-        val hasErrors = d.errors.asInstanceOf[js.Any] match
-            case arr if js.Array.isArray(arr) => true
+        val hasErrors = d.errors.asInstanceOf[sjs.Any] match
+            case arr if sjs.Array.isArray(arr) => true
             case _                            => false
         // `value` may be absent, null, or any value — we only require the
         // OTHER three fields to be present with the right types.
@@ -57,7 +57,7 @@ object KruegerJsSpec extends ZIOSpecDefault:
                     // value must be defined (truthy) on success — we don't
                     // inspect its internals because parseCst's value is an
                     // opaque handle.
-                    !js.isUndefined(d.value) && d.value != null
+                    !sjs.isUndefined(d.value) && d.value != null
                 )
             },
             test("parseQuery returns an envelope with ok=true on valid query") {
@@ -72,33 +72,33 @@ object KruegerJsSpec extends ZIOSpecDefault:
             test("parseCstUnist returns ok=true with a plain JS unist root and childCount matching children.length") {
                 val env      = KruegerJs.parseCstUnist(validSource)
                 val d        = dyn(env)
-                val root     = d.value.asInstanceOf[js.Dynamic]
-                val children = root.children.asInstanceOf[js.Any]
+                val root     = d.value.asInstanceOf[sjs.Dynamic]
+                val children = root.children.asInstanceOf[sjs.Any]
                 assertTrue(
                     hasEnvelopeShape(env),
                     d.ok.asInstanceOf[Boolean] == true,
                     arrayLen(d.errors) == 0,
                     root.`type`.asInstanceOf[String] == "CstModule",
-                    js.Array.isArray(children),
+                    sjs.Array.isArray(children),
                     root.data.childCount.asInstanceOf[Int] == arrayLen(children)
                 )
             },
             test("parseAstUnist returns ok=true with a plain JS unist Module root and JS-array children") {
                 val env      = KruegerJs.parseAstUnist(validSource)
                 val d        = dyn(env)
-                val root     = d.value.asInstanceOf[js.Dynamic]
-                val children = root.children.asInstanceOf[js.Any]
+                val root     = d.value.asInstanceOf[sjs.Dynamic]
+                val children = root.children.asInstanceOf[sjs.Any]
                 assertTrue(
                     hasEnvelopeShape(env),
                     d.ok.asInstanceOf[Boolean] == true,
                     arrayLen(d.errors) == 0,
                     root.`type`.asInstanceOf[String] == "Module",
-                    js.Array.isArray(children)
+                    sjs.Array.isArray(children)
                 )
             },
             test("prettyQuery returns a non-empty canonical string for a parsed query") {
                 val parseEnv = KruegerJs.parseQuery(validQuery)
-                val q        = dyn(parseEnv).value.asInstanceOf[js.Any]
+                val q        = dyn(parseEnv).value.asInstanceOf[sjs.Any]
                 val pretty   = KruegerJs.prettyQuery(q)
                 assertTrue(pretty.nonEmpty)
             }
@@ -126,10 +126,10 @@ object KruegerJsSpec extends ZIOSpecDefault:
             },
             test("each serialized error carries a non-empty message field") {
                 val env    = KruegerJs.parseCst(malformedSource)
-                val errs   = dyn(env).errors.asInstanceOf[js.Array[js.Dynamic]]
+                val errs   = dyn(env).errors.asInstanceOf[sjs.Array[sjs.Dynamic]]
                 val hasMsg = (0 until errs.length).forall { i =>
                     val msg = errs(i).message
-                    js.typeOf(msg) == "string" && msg.asInstanceOf[String].nonEmpty
+                    sjs.typeOf(msg) == "string" && msg.asInstanceOf[String].nonEmpty
                 }
                 assertTrue(hasMsg)
             },
@@ -156,10 +156,10 @@ object KruegerJsSpec extends ZIOSpecDefault:
         suite("shared tokenizer facade")(
             test("tokenize returns plain JS token POJOs with spans and kinds") {
                 val env    = dyn(KruegerJs.tokenize("""module Main = "hi""""))
-                val tokens = env.value.asInstanceOf[js.Array[js.Dynamic]]
+                val tokens = env.value.asInstanceOf[sjs.Array[sjs.Dynamic]]
 
                 assertTrue(
-                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
+                    hasEnvelopeShape(env.asInstanceOf[sjs.Object]),
                     env.ok.asInstanceOf[Boolean],
                     tokens.length == 4,
                     tokens(0).kind.asInstanceOf[String] == "Keyword",
@@ -171,7 +171,7 @@ object KruegerJsSpec extends ZIOSpecDefault:
             },
             test("tokenize recovers unknown input as token value plus logs") {
                 val env    = dyn(KruegerJs.tokenize("main @ value"))
-                val tokens = env.value.asInstanceOf[js.Array[js.Dynamic]]
+                val tokens = env.value.asInstanceOf[sjs.Array[sjs.Dynamic]]
 
                 assertTrue(
                     env.ok.asInstanceOf[Boolean],
@@ -189,7 +189,7 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 assertTrue(
                     hasEnvelopeShape(env),
                     d.ok.asInstanceOf[Boolean] == true,
-                    js.Array.isArray(d.value),
+                    sjs.Array.isArray(d.value),
                     // the simple source defines `x = 1`, so at least one
                     // CstValueDeclaration match is expected.
                     arrayLen(d.value) >= 1
@@ -202,7 +202,7 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 val d      = dyn(env)
                 assertTrue(
                     d.ok.asInstanceOf[Boolean] == true,
-                    js.Array.isArray(d.value),
+                    sjs.Array.isArray(d.value),
                     arrayLen(d.value) == 0
                 )
             }
@@ -224,7 +224,7 @@ object KruegerJsSpec extends ZIOSpecDefault:
                 val env    = dyn(KruegerJs.runQuery(qEnv.value, cstEnv.value))
                 assertTrue(
                     env.ok.asInstanceOf[Boolean],
-                    js.Array.isArray(env.value)
+                    sjs.Array.isArray(env.value)
                 )
             }
         ),
@@ -232,19 +232,19 @@ object KruegerJsSpec extends ZIOSpecDefault:
             test("valid parseCst source matches the JVM and Chicory acceptance scenario") {
                 val env = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
                 assertTrue(
-                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
+                    hasEnvelopeShape(env.asInstanceOf[sjs.Object]),
                     env.ok.asInstanceOf[Boolean],
-                    !js.isUndefined(env.value) && env.value != null,
+                    !sjs.isUndefined(env.value) && env.value != null,
                     jsString(env.value).contains(CompilerApiAcceptanceCases.validParseCst.expectedValueFragment)
                 )
             },
             test("malformed parseCst source matches the JVM and Chicory error scenario") {
                 val env    = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.malformedParseCst.source))
-                val errors = env.errors.asInstanceOf[js.Array[js.Dynamic]]
+                val errors = env.errors.asInstanceOf[sjs.Array[sjs.Dynamic]]
                 val error  = errors(0)
-                val contextLines = error.contextLines.asInstanceOf[js.Array[js.Dynamic]]
+                val contextLines = error.contextLines.asInstanceOf[sjs.Array[sjs.Dynamic]]
                 assertTrue(
-                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
+                    hasEnvelopeShape(env.asInstanceOf[sjs.Object]),
                     !env.ok.asInstanceOf[Boolean],
                     errors.length >= 1,
                     errors(0).phase.asInstanceOf[String] == CompilerApiAcceptanceCases.malformedParseCst.expectedPhase,
@@ -281,5 +281,5 @@ object KruegerJsSpec extends ZIOSpecDefault:
         )
     )
 
-    private def jsString(value: js.Any): String =
-        js.Dynamic.global.String(value).asInstanceOf[String]
+    private def jsString(value: sjs.Any): String =
+        sjs.Dynamic.global.String(value).asInstanceOf[String]

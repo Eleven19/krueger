@@ -55,5 +55,5 @@ object QueryLogic:
     def error[Ctx, Log, Err](err: Err)(using Tag[Var[QueryState[Ctx, Err]]]): Unit < QueryEffects[Ctx, Log, Err] =
         Var.updateDiscard(s => s.copy(errors = s.errors :+ err))
 
-    def failFast[Ctx, Log, Err](err: Err)(using ConcreteTag[Err]): Nothing < QueryEffects[Ctx, Log, Err] =
-        Abort.fail(err)
+    def failFast[Ctx, Log, Err](err: Err)(using tag: ConcreteTag[Err], frame: Frame): Nothing < QueryEffects[Ctx, Log, Err] =
+        Abort.fail[Err](err)

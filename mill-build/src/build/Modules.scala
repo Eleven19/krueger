@@ -10,7 +10,7 @@ object KruegerVersions:
     /** Minimum required Kyo version. Later snapshot or stable releases are acceptable.
       * Lower bound exists because this build introduced kyo-schema on the Kyo mainline.
       */
-    val Kyo: String = "1.0.0-RC4"
+    val Kyo: String = "1.0.0-RC5"
 
     /** Pinned scribe version for cross-platform logging (JVM + JS + Native). */
     val Scribe: String = "3.16.1"
@@ -42,8 +42,41 @@ trait CommonScalaModule extends ScalaModule with scalafmt.ScalafmtModule {
 
 trait CommonScalaTestModule extends ScalaModule with scalafmt.ScalafmtModule
 
+/** Mill-native kyo-test wiring.
+  *
+  * Kyo ships no built-in Mill test module, so we wire the framework class and
+  * mandatory dependencies here for each platform.
+  */
+trait KyoTestModule extends TestModule {
+  def kyoVersion: T[String] = Task { KruegerVersions.Kyo }
+
+  override def testFramework: T[String] = "kyo.test.runner.SbtFramework"
+
+  override def forkArgs: T[Seq[String]] = Task {
+    super.forkArgs() ++ Seq("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+  }
+
+  override def mandatoryMvnDeps: T[Seq[Dep]] = Task {
+    super.mandatoryMvnDeps() ++ Seq(
+      mvn"io.getkyo::kyo-core::${kyoVersion()}",
+      mvn"io.getkyo::kyo-test-api::${kyoVersion()}",
+      mvn"io.getkyo::kyo-test-runner::${kyoVersion()}"
+    )
+  }
+}
+
+trait KyoTestJSModule extends KyoTestModule {
+  override def testFramework: T[String] = "kyo.test.runner.JsFramework"
+}
+
+trait KyoTestNativeModule extends KyoTestModule {
+  override def testFramework: T[String] = "kyo.test.runner.NativeFramework"
+}
+
+trait KyoTestWasmModule extends KyoTestJSModule
+
 trait CommonScalaJSModule extends ScalaJSModule with scalafmt.ScalafmtModule {
-  def scalaJSVersion = "1.21.0"
+  def scalaJSVersion = "1.22.0"
 }
 
 /** Scala.js module variant that emits a Wasm GC module instead of plain JS.

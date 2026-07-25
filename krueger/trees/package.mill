@@ -18,26 +18,22 @@ trait TreesModule extends _root_.build.CommonScalaModule
 }
 
 trait TreesTestModule extends _root_.build.CommonScalaTestModule
-    with TestModule.ZioTest {
+{
 
     override def sources = Task.Sources(
         moduleDir / os.up / "test" / "src"
     )
 
-    def mvnDeps = Seq(
-        mvn"dev.zio::zio-test::2.1.24",
-        mvn"dev.zio::zio-test-sbt::2.1.24"
-    )
 }
 
 object jvm extends TreesModule {
-    object test extends ScalaTests with TreesTestModule
+    object test extends ScalaTests with TreesTestModule with _root_.build.KyoTestModule
 }
 
 object js extends TreesModule with _root_.build.CommonScalaJSModule {
-    object test extends ScalaJSTests with TreesTestModule
+    object test extends ScalaJSTests with TreesTestModule with _root_.build.KyoTestJSModule
 }
 
 object native extends TreesModule with _root_.build.CommonScalaNativeModule {
-    object test extends ScalaNativeTests with TreesTestModule
+    object test extends ScalaNativeTests with TreesTestModule with _root_.build.KyoTestNativeModule
 }

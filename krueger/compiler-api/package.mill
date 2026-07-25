@@ -19,16 +19,12 @@ trait CompilerApiModule extends _root_.build.CommonScalaModule
 }
 
 trait CompilerApiTestModule extends _root_.build.CommonScalaTestModule
-    with TestModule.ZioTest {
+{
 
     override def sources = Task.Sources(
         moduleDir / os.up / "test" / "src"
     )
 
-    def mvnDeps = Seq(
-        mvn"dev.zio::zio-test::2.1.24",
-        mvn"dev.zio::zio-test-sbt::2.1.24"
-    )
 }
 
 def test(): Command[Unit] = Task.Command {
@@ -44,7 +40,7 @@ object jvm extends CompilerApiModule {
         build.krueger.core.jvm,
         build.krueger.trees.jvm
     )
-    object test extends ScalaTests with CompilerApiTestModule
+    object test extends ScalaTests with CompilerApiTestModule with _root_.build.KyoTestModule
 }
 
 object js extends CompilerApiModule with _root_.build.CommonScalaJSModule {
@@ -52,7 +48,7 @@ object js extends CompilerApiModule with _root_.build.CommonScalaJSModule {
         build.krueger.core.js,
         build.krueger.trees.js
     )
-    object test extends ScalaJSTests with CompilerApiTestModule
+    object test extends ScalaJSTests with CompilerApiTestModule with _root_.build.KyoTestJSModule
 }
 
 object native extends CompilerApiModule with _root_.build.CommonScalaNativeModule {
@@ -60,7 +56,7 @@ object native extends CompilerApiModule with _root_.build.CommonScalaNativeModul
         build.krueger.core.native,
         build.krueger.trees.native
     )
-    object test extends ScalaNativeTests with CompilerApiTestModule
+    object test extends ScalaNativeTests with CompilerApiTestModule with _root_.build.KyoTestNativeModule
 }
 
 /** WASM linker variant. Shares the same Scala source as `js`; only the linker config differs so a main.wasm artifact
@@ -74,5 +70,5 @@ object wasm extends CompilerApiModule with _root_.build.CommonScalaJSWasmModule 
     override def sources = Task.Sources(
         moduleDir / "src"
     )
-    object test extends ScalaJSTests with CompilerApiTestModule
+    object test extends ScalaJSTests with CompilerApiTestModule with _root_.build.KyoTestWasmModule
 }

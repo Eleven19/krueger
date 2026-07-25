@@ -19,7 +19,7 @@ mill krueger.core.native.compile
 ## Test
 
 ```sh
-# ZIO Test unit suites (cross-platform)
+# kyo-test unit suites (cross-platform)
 mill krueger.core.jvm.test
 mill krueger.core.js.test
 mill krueger.core.native.test
