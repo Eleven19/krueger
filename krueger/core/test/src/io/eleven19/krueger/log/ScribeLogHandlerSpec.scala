@@ -52,7 +52,6 @@ class ScribeLogHandlerSpec extends Test[Any]:
                         _ <- Log.error("error-msg")
                     yield ()
                 }
-            val _ = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
-            succeed
+            program.andThen(Log.flush).map(_ => succeed)
         }
     }
