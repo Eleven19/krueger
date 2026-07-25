@@ -1,13 +1,13 @@
 package io.eleven19.krueger.ast
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.ast.AstVisitor.*
 import io.eleven19.krueger.cst.*
 import io.eleven19.krueger.parser.CstLowering
 
-object AstVisitorSpec extends ZIOSpecDefault:
+class AstVisitorSpec extends Test[Any]:
 
     private val sp                  = Span.zero
     private def cn(name: String)    = CstName(name)(sp)
@@ -29,29 +29,27 @@ object AstVisitorSpec extends ZIOSpecDefault:
         override def visitImport(node: Import): String               = s"Imp(${node.moduleName.fullName})"
         override def visitModule(node: Module): String               = s"Mod(${node.name.fullName})"
 
-    def spec = suite("AstVisitor")(
-        suite("dispatch")(
-            test("visit routes to the specific visitor method") {
+    "AstVisitor" - {
+        "dispatch" - {
+            "visit routes to the specific visitor method" in {
                 val v            = new TagVisitor
                 val lit: AstNode = IntLiteral(5L)(sp)
-                assertTrue(AstVisitor.visit(lit, v) == "Int(5)")
-            },
-            test("visit falls back to visitNode when no override is provided") {
+                assert(AstVisitor.visit(lit, v) == "Int(5)")
+            }
+            "visit falls back to visitNode when no override is provided" in {
                 val v          = new TagVisitor
                 val s: AstNode = StringLiteral("hi")(sp)
-                assertTrue(AstVisitor.visit(s, v) == "Node")
+                assert(AstVisitor.visit(s, v) == "Node")
             }
-        ),
-        suite("traversal")(
-            test("children returns direct children of a module") {
+        }
+        "traversal" - {
+            "children returns direct children of a module" in
                 // Module's children are: exposing :: imports ::: declarations
-                assertTrue(AstVisitor.children(sampleAst).size == 2)
-            },
-            test("count counts all lowered nodes") {
+                assert(AstVisitor.children(sampleAst).size == 2)
+            "count counts all lowered nodes" in
                 // Module + ExposingAll + Import = 3
-                assertTrue(AstVisitor.count(sampleAst) == 3)
-            },
-            test("foldLeft visits pre-order") {
+                assert(AstVisitor.count(sampleAst) == 3)
+            "foldLeft visits pre-order" in {
                 val tags = AstVisitor
                     .foldLeft(sampleAst, List.empty[String])((acc, n) =>
                         (n match
@@ -62,31 +60,28 @@ object AstVisitorSpec extends ZIOSpecDefault:
                         ) :: acc
                     )
                     .reverse
-                assertTrue(tags == List("M", "EA", "I"))
-            },
-            test("collect picks up nodes matching a partial function") {
-                val imports = AstVisitor.collect(sampleAst) { case i: Import => i.moduleName.fullName }
-                assertTrue(imports == List("List"))
+                assert(tags == List("M", "EA", "I"))
             }
-        ),
-        suite("extension methods")(
-            test("node.visit delegates to AstVisitor.visit") {
+            "collect picks up nodes matching a partial function" in {
+                val imports = AstVisitor.collect(sampleAst) { case i: Import => i.moduleName.fullName }
+                assert(imports == List("List"))
+            }
+        }
+        "extension methods" - {
+            "node.visit delegates to AstVisitor.visit" in {
                 val v             = new TagVisitor
                 val node: AstNode = IntLiteral(9L)(sp)
-                assertTrue(node.visit(v) == "Int(9)")
-            },
-            test("node.children delegates to AstVisitor.children") {
-                assertTrue(sampleAst.children.size == 2)
-            },
-            test("node.count delegates to AstVisitor.count") {
-                assertTrue(sampleAst.count == 3)
-            },
-            test("node.fold delegates to AstVisitor.foldLeft") {
-                assertTrue(sampleAst.fold(0)((acc, _) => acc + 1) == 3)
-            },
-            test("node.collect delegates to AstVisitor.collect") {
-                val names = sampleAst.collect { case i: Import => i.moduleName.fullName }
-                assertTrue(names == List("List"))
+                assert(node.visit(v) == "Int(9)")
             }
-        )
-    )
+            "node.children delegates to AstVisitor.children" in
+                assert(sampleAst.children.size == 2)
+            "node.count delegates to AstVisitor.count" in
+                assert(sampleAst.count == 3)
+            "node.fold delegates to AstVisitor.foldLeft" in
+                assert(sampleAst.fold(0)((acc, _) => acc + 1) == 3)
+            "node.collect delegates to AstVisitor.collect" in {
+                val names = sampleAst.collect { case i: Import => i.moduleName.fullName }
+                assert(names == List("List"))
+            }
+        }
+    }

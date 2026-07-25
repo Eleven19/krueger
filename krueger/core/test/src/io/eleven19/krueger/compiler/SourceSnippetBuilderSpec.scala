@@ -1,11 +1,11 @@
 package io.eleven19.krueger.compiler
 
-import zio.test.*
+import kyo.test.*
 
-object SourceSnippetBuilderSpec extends ZIOSpecDefault:
+class SourceSnippetBuilderSpec extends Test[Any]:
 
-    def spec = suite("SourceSnippetBuilder")(
-        test("includes two lines before and one line after when available") {
+    "SourceSnippetBuilder" - {
+        "includes two lines before and one line after when available" in {
             val source = "module Demo exposing (..)\n\nmain =\n"
             val snippet = SourceSnippetBuilder.build(
                 source = source,
@@ -13,37 +13,31 @@ object SourceSnippetBuilderSpec extends ZIOSpecDefault:
                 column = 7,
                 errorWidth = 0
             )
-            assertTrue(
-                snippet.contextLines.map(_.line) == List(1, 2, 3, 4),
-                snippet.contextLines.count(_.isErrorLine) == 1,
-                snippet.rendered.contains("1| module Demo exposing (..)"),
-                snippet.rendered.contains("3| main ="),
-                snippet.rendered.contains("4|"),
-                snippet.rendered.linesIterator.toList.last == "         ^"
-            )
-        },
-        test("clamps context at the start of the file") {
+            assert(snippet.contextLines.map(_.line) == List(1, 2, 3, 4))
+            assert(snippet.contextLines.count(_.isErrorLine) == 1)
+            assert(snippet.rendered.contains("1| module Demo exposing (..)"))
+            assert(snippet.rendered.contains("3| main ="))
+            assert(snippet.rendered.contains("4|"))
+            assert(snippet.rendered.linesIterator.toList.last == "         ^")
+        }
+        "clamps context at the start of the file" in {
             val snippet = SourceSnippetBuilder.build(
                 source = "module M",
                 errorLine = 1,
                 column = 7,
                 errorWidth = 0
             )
-            assertTrue(
-                snippet.contextLines.map(_.line) == List(1),
-                snippet.rendered.startsWith("1| module M")
-            )
-        },
-        test("preserves a trailing empty line after a final newline") {
+            assert(snippet.contextLines.map(_.line) == List(1))
+            assert(snippet.rendered.startsWith("1| module M"))
+        }
+        "preserves a trailing empty line after a final newline" in {
             val snippet = SourceSnippetBuilder.build(
                 source = "x =\n",
                 errorLine = 2,
                 column = 1,
                 errorWidth = 0
             )
-            assertTrue(
-                snippet.contextLines.exists(line => line.line == 2 && line.text.isEmpty),
-                snippet.rendered.contains("2| ")
-            )
+            assert(snippet.contextLines.exists(line => line.line == 2 && line.text.isEmpty))
+            assert(snippet.rendered.contains("2| "))
         }
-    )
+    }

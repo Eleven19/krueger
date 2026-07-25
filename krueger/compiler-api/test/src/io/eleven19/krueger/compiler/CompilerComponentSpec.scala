@@ -1,14 +1,14 @@
 package io.eleven19.krueger.compiler
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Krueger as CoreKrueger
 import io.eleven19.krueger.cst.CstNode
 import io.eleven19.krueger.cst.CstQueryableTree.given
 
-object CompilerComponentSpec extends ZIOSpecDefault:
+class CompilerComponentSpec extends Test[Any]:
 
-    private final case class Snapshot[A](
+    final private case class Snapshot[A](
         logs: Vector[String],
         errors: Vector[CompileError],
         value: Either[Vector[CompileError], A]
@@ -33,7 +33,7 @@ object CompilerComponentSpec extends ZIOSpecDefault:
         CoreKrueger.parseCst(source) match
             case parsley.Failure(diagnostic: ParseDiagnostic) =>
                 CompileError.ParseError(phase = phase, diagnostic = diagnostic)
-            case parsley.Success(_)            => throw new AssertionError(s"expected parse failure for: $source")
+            case parsley.Success(_) => throw new AssertionError(s"expected parse failure for: $source")
 
     private val compiler: CompilerComponent[Unit] = Krueger.compiler[Unit]
 
@@ -58,11 +58,17 @@ object CompilerComponentSpec extends ZIOSpecDefault:
             "   ^"
         ).mkString("\n")
 
-    def spec = suite("CompilerComponent")(
-        suite("cross-platform fixture snapshots")(
-            test("happy path: valid source and query produce the expected MatchView list") {
-                val cst   = requireRight(run(compiler.parseCst(simpleSource)).value, "expected parseCst(simpleSource) to succeed")
-                val query = requireRight(run(compiler.parseQuery(simpleQuery)).value, "expected parseQuery(simpleQuery) to succeed")
+    "CompilerComponent" - {
+        "cross-platform fixture snapshots" - {
+            "happy path: valid source and query produce the expected MatchView list" in {
+                val cst = requireRight(
+                    run(compiler.parseCst(simpleSource)).value,
+                    "expected parseCst(simpleSource) to succeed"
+                )
+                val query = requireRight(
+                    run(compiler.parseQuery(simpleQuery)).value,
+                    "expected parseQuery(simpleQuery) to succeed"
+                )
                 val actual =
                     snapshot(run(compiler.runQuery[CstNode](query, cst)))
 
@@ -86,10 +92,10 @@ object CompilerComponentSpec extends ZIOSpecDefault:
                     )
                 )
 
-                assertTrue(actual == expected)
-            },
-            test("negative path: malformed source produces the expected ParseError envelope") {
-                val actual = snapshot(run(compiler.parseCst(malformedSource)))
+                assert(actual == expected)
+            }
+            "negative path: malformed source produces the expected ParseError envelope" in {
+                val actual        = snapshot(run(compiler.parseCst(malformedSource)))
                 val expectedError = expectedParseError(phase = "cst", source = malformedSource)
                 val expected = Snapshot(
                     logs = Vector.empty,
@@ -97,11 +103,17 @@ object CompilerComponentSpec extends ZIOSpecDefault:
                     value = Left(Vector(expectedError))
                 )
 
-                assertTrue(actual == expected)
-            },
-            test("edge path: zero-match query returns an empty match list with no errors") {
-                val cst   = requireRight(run(compiler.parseCst(simpleSource)).value, "expected parseCst(simpleSource) to succeed")
-                val query = requireRight(run(compiler.parseQuery(zeroMatchQuery)).value, "expected parseQuery(zeroMatchQuery) to succeed")
+                assert(actual == expected)
+            }
+            "edge path: zero-match query returns an empty match list with no errors" in {
+                val cst = requireRight(
+                    run(compiler.parseCst(simpleSource)).value,
+                    "expected parseCst(simpleSource) to succeed"
+                )
+                val query = requireRight(
+                    run(compiler.parseQuery(zeroMatchQuery)).value,
+                    "expected parseQuery(zeroMatchQuery) to succeed"
+                )
                 val actual =
                     snapshot(run(compiler.runQuery[CstNode](query, cst)))
                 val expected = Snapshot(
@@ -110,10 +122,10 @@ object CompilerComponentSpec extends ZIOSpecDefault:
                     value = Right(List.empty[MatchView])
                 )
 
-                assertTrue(actual == expected)
-            },
-            test("edge path: empty source returns the expected ParseError envelope") {
-                val actual = snapshot(run(compiler.parseCst("")))
+                assert(actual == expected)
+            }
+            "edge path: empty source returns the expected ParseError envelope" in {
+                val actual        = snapshot(run(compiler.parseCst("")))
                 val expectedError = expectedParseError(phase = "cst", source = "")
                 val expected = Snapshot(
                     logs = Vector.empty,
@@ -121,9 +133,9 @@ object CompilerComponentSpec extends ZIOSpecDefault:
                     value = Left(Vector(expectedError))
                 )
 
-                assertTrue(actual == expected)
-            },
-            test("edge path: empty query returns the expected QueryError envelope") {
+                assert(actual == expected)
+            }
+            "edge path: empty query returns the expected QueryError envelope" in {
                 val actual = snapshot(run(compiler.parseQuery("")))
                 val expectedError = CompileError.QueryError(
                     message = expectedEmptyQueryMessage
@@ -134,135 +146,125 @@ object CompilerComponentSpec extends ZIOSpecDefault:
                     value = Left(Vector(expectedError))
                 )
 
-                assertTrue(actual == expected)
-            },
-            test("determinism: repeated runQuery calls produce identical snapshots") {
-                val cst   = requireRight(run(compiler.parseCst(simpleSource)).value, "expected parseCst(simpleSource) to succeed")
-                val query = requireRight(run(compiler.parseQuery(simpleQuery)).value, "expected parseQuery(simpleQuery) to succeed")
-                val first = snapshot(run(compiler.runQuery[CstNode](query, cst)))
+                assert(actual == expected)
+            }
+            "determinism: repeated runQuery calls produce identical snapshots" in {
+                val cst = requireRight(
+                    run(compiler.parseCst(simpleSource)).value,
+                    "expected parseCst(simpleSource) to succeed"
+                )
+                val query = requireRight(
+                    run(compiler.parseQuery(simpleQuery)).value,
+                    "expected parseQuery(simpleQuery) to succeed"
+                )
+                val first  = snapshot(run(compiler.runQuery[CstNode](query, cst)))
                 val second = snapshot(run(compiler.runQuery[CstNode](query, cst)))
 
-                assertTrue(first == second)
+                assert(first == second)
             }
-        ),
-        suite("parseCst")(
-            test("happy path: valid source produces a CST with no errors") {
+        }
+        "parseCst" - {
+            "happy path: valid source produces a CST with no errors" in {
                 val r = run(compiler.parseCst(simpleSource))
-                assertTrue(
-                    r.errors.isEmpty,
-                    r.value.isRight
-                )
-            },
-            test("negative: malformed source surfaces a ParseError; no exception thrown") {
+                assert(r.errors.isEmpty)
+                assert(r.value.isRight)
+            }
+            "negative: malformed source surfaces a ParseError; no exception thrown" in {
                 val r = run(compiler.parseCst(malformedSource))
-                assertTrue(
-                    r.errors.nonEmpty,
+                assert(r.errors.nonEmpty)
+                assert(
                     r.errors.forall {
                         case _: CompileError.ParseError => true
                         case _                          => false
-                    },
-                    r.value.isLeft
+                    }
                 )
-            },
-            test("edge: empty source still returns a well-formed Result (no exception)") {
+                assert(r.value.isLeft)
+            }
+            "edge: empty source still returns a well-formed Result (no exception)" in {
                 val r = run(compiler.parseCst(""))
-                assertTrue(
-                    r.logs != null,
-                    r.errors != null
-                )
+                assert(r.logs != null)
+                assert(r.errors != null)
             }
-        ),
-        suite("parseAst")(
-            test("happy path: valid source produces an AST with no errors") {
+        }
+        "parseAst" - {
+            "happy path: valid source produces an AST with no errors" in {
                 val r = run(compiler.parseAst(simpleSource))
-                assertTrue(
-                    r.errors.isEmpty,
-                    r.value.isRight
-                )
-            },
-            test("negative: malformed source surfaces a ParseError") {
-                val r = run(compiler.parseAst(malformedSource))
-                assertTrue(
-                    r.errors.nonEmpty,
-                    r.value.isLeft
-                )
+                assert(r.errors.isEmpty)
+                assert(r.value.isRight)
             }
-        ),
-        suite("parseQuery")(
-            test("happy path: valid query parses to Query") {
+            "negative: malformed source surfaces a ParseError" in {
+                val r = run(compiler.parseAst(malformedSource))
+                assert(r.errors.nonEmpty)
+                assert(r.value.isLeft)
+            }
+        }
+        "parseQuery" - {
+            "happy path: valid query parses to Query" in {
                 val r = run(compiler.parseQuery(simpleQuery))
-                assertTrue(
-                    r.errors.isEmpty,
-                    r.value.isRight
-                )
-            },
-            test("negative: malformed query surfaces a QueryError") {
+                assert(r.errors.isEmpty)
+                assert(r.value.isRight)
+            }
+            "negative: malformed query surfaces a QueryError" in {
                 val r = run(compiler.parseQuery(malformedQuery))
-                assertTrue(
-                    r.errors.nonEmpty,
+                assert(r.errors.nonEmpty)
+                assert(
                     r.errors.forall {
                         case _: CompileError.QueryError => true
                         case _                          => false
-                    },
-                    r.value.isLeft
+                    }
                 )
-            },
-            test("edge: empty query surfaces a QueryError (not a crash)") {
-                val r = run(compiler.parseQuery(""))
-                assertTrue(
-                    r.errors.nonEmpty,
-                    r.value.isLeft
-                )
+                assert(r.value.isLeft)
             }
-        ),
-        suite("runQuery")(
-            test("happy path: valid query against parsed CST produces non-empty matches") {
+            "edge: empty query surfaces a QueryError (not a crash)" in {
+                val r = run(compiler.parseQuery(""))
+                assert(r.errors.nonEmpty)
+                assert(r.value.isLeft)
+            }
+        }
+        "runQuery" - {
+            "happy path: valid query against parsed CST produces non-empty matches" in {
                 val cstResult   = run(compiler.parseCst(simpleSource))
                 val queryResult = run(compiler.parseQuery(simpleQuery))
                 (cstResult.value, queryResult.value) match
                     case (Right(cst), Right(q)) =>
                         val r = run(compiler.runQuery[CstNode](q, cst))
-                        assertTrue(
-                            r.errors.isEmpty,
-                            r.value.toOption.exists(_.nonEmpty)
-                        )
+                        assert(r.errors.isEmpty)
+                        assert(r.value.toOption.exists(_.nonEmpty))
                     case _ =>
-                        assertTrue(false)
-            },
-            test("edge: query that matches no nodes returns empty list, no errors") {
+                        assert(false)
+            }
+            "edge: query that matches no nodes returns empty list, no errors" in {
                 val cstResult   = run(compiler.parseCst(simpleSource))
                 val queryResult = run(compiler.parseQuery(zeroMatchQuery))
                 (cstResult.value, queryResult.value) match
                     case (Right(cst), Right(q)) =>
                         val r = run(compiler.runQuery[CstNode](q, cst))
-                        assertTrue(
-                            r.errors.isEmpty,
-                            r.value == Right(List.empty[MatchView])
-                        )
+                        assert(r.errors.isEmpty)
+                        assert(r.value == Right(List.empty[MatchView]))
                     case _ =>
-                        assertTrue(false)
-            },
-            test("determinism: repeated runQuery calls produce equal results") {
+                        assert(false)
+            }
+            "determinism: repeated runQuery calls produce equal results" in {
                 val cstResult   = run(compiler.parseCst(simpleSource))
                 val queryResult = run(compiler.parseQuery(simpleQuery))
                 (cstResult.value, queryResult.value) match
                     case (Right(cst), Right(q)) =>
                         val r1 = run(compiler.runQuery[CstNode](q, cst))
                         val r2 = run(compiler.runQuery[CstNode](q, cst))
-                        assertTrue(r1.value == r2.value)
+                        assert(r1.value == r2.value)
                     case _ =>
-                        assertTrue(false)
+                        assert(false)
             }
-        ),
-        suite("prettyQuery")(
-            test("pure: returns canonical string for a parsed query") {
+        }
+        "prettyQuery" - {
+            "pure: returns canonical string for a parsed query" in {
                 val r = run(compiler.parseQuery(simpleQuery))
                 r.value match
                     case Right(q) =>
                         val pretty = compiler.prettyQuery(q)
-                        assertTrue(pretty.nonEmpty)
+                        assert(pretty.nonEmpty)
                     case Left(_) =>
-                        assertTrue(false)
+                        assert(false)
             }
-        )
-    )
+        }
+    }

@@ -1,19 +1,17 @@
 package io.eleven19.krueger
 
-import zio.test.*
+import kyo.test.*
 
-object SpanSpec extends ZIOSpecDefault:
+class SpanTest extends Test[Any]:
 
-    def spec = suite("Span")(
-        test("zero is (0, 0)") {
-            assertTrue(Span.zero == Span(0, 0))
-        },
-        test("end is offset + length") {
-            assertTrue(Span(3, 7).end == 10)
-        },
-        test("between spans from start offset to end of end span") {
+    "Span" - {
+        "represents the empty span at offset zero" in
+            assert(Span.zero == Span(0, 0))
+        "computes the end offset" in
+            assert(Span(3, 7).end == 10)
+        "spans from the first offset through the second end" in {
             val a = Span(2, 3)
             val b = Span(10, 2)
-            assertTrue(Span.between(a, b) == Span(2, 10))
+            assert(Span.between(a, b) == Span(2, 10))
         }
-    )
+    }

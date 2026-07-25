@@ -1,11 +1,10 @@
 package io.eleven19.krueger.trees
 
-import zio.test.*
+import kyo.test.*
 
-object TreesSpec extends ZIOSpecDefault:
+class TreesSpec extends Test[Any]:
 
-    def spec = suite("Trees")(
-        test("module marker is set") {
-            assertTrue(Trees.moduleName == "krueger-trees")
-        }
-    )
+    "Trees" - {
+        "module marker is set" in
+            assert(Trees.moduleName == "krueger-trees")
+    }

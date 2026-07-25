@@ -72,8 +72,7 @@ optional `logs`).
 
 Inside the Scala codebase, the compiler exposes a canonical UTF-8 JSON
 contract (`invoke(operation, inputJson) → outputJson`) shared by JVM tests,
-future host-callable WASM ABIs, and the browser adapter. That contract is
-documented for contributors in the repository design note
-[`docs/superpowers/specs/2026-04-24-wasm-shared-api-surface-design.md`](https://github.com/Eleven19/krueger/blob/main/docs/superpowers/specs/2026-04-24-wasm-shared-api-surface-design.md).
+future host-callable WASM ABIs, and the browser adapter. This internal entry
+point exists for cross-platform adapters and regression tests.
 Most web authors should use the stable **`Krueger.*`** methods above instead of
 calling `invoke` directly.

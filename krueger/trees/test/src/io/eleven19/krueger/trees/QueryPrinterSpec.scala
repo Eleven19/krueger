@@ -1,12 +1,12 @@
 package io.eleven19.krueger.trees
 
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.trees.query.*
 
 /** Verifies that [[QueryPrinter]] produces canonical S-expression output that round-trips through [[QueryParser]]. */
-object QueryPrinterSpec extends ZIOSpecDefault:
+class QueryPrinterSpec extends Test[Any]:
 
     private val leafType: NodeTypeName  = NodeTypeName.make("Leaf").toOption.get
     private val namedType: NodeTypeName = NodeTypeName.make("Named").toOption.get
@@ -30,19 +30,19 @@ object QueryPrinterSpec extends ZIOSpecDefault:
         val canonical = QueryPrinter.print(parse(source))
         QueryParser.parse(canonical).isSuccess
 
-    def spec = suite("QueryPrinter")(
-        suite("node patterns")(
-            test("bare node pattern") {
+    "QueryPrinter" - {
+        "node patterns" - {
+            "bare node pattern" in {
                 val q   = Query(NodePattern(leafType, Nil, Nil, None), Nil)
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf)")
-            },
-            test("node with capture") {
+                assert(out == "(Leaf)")
+            }
+            "node with capture" in {
                 val q   = Query(NodePattern(leafType, Nil, Nil, Some(l)), Nil)
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l")
-            },
-            test("node with field pattern") {
+                assert(out == "(Leaf) @l")
+            }
+            "node with field pattern" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -53,9 +53,9 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named name: (Leaf))")
-            },
-            test("node with multiple fields and outer capture") {
+                assert(out == "(Named name: (Leaf))")
+            }
+            "node with multiple fields and outer capture" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -69,9 +69,9 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named name: (Leaf) @n body: (Leaf) @b) @outer")
-            },
-            test("node with unfielded child patterns") {
+                assert(out == "(Named name: (Leaf) @n body: (Leaf) @b) @outer")
+            }
+            "node with unfielded child patterns" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -82,9 +82,9 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named (Leaf) @n (Leaf) @b)")
-            },
-            test("node with anchored adjacent child patterns") {
+                assert(out == "(Named (Leaf) @n (Leaf) @b)")
+            }
+            "node with anchored adjacent child patterns" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -96,17 +96,17 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named (Leaf) @n . (Leaf) @b)")
-            },
-            test("node with negated field constraint") {
+                assert(out == "(Named (Leaf) @n . (Leaf) @b)")
+            }
+            "node with negated field constraint" in {
                 val q = Query(
                     NodePattern(namedType, Nil, Nil, None, Set.empty, Set(nameField)),
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named !name)")
-            },
-            test("node with optional child quantifier") {
+                assert(out == "(Named !name)")
+            }
+            "node with optional child quantifier" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -120,9 +120,9 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named (Leaf) @n?)")
-            },
-            test("node with zero-or-more child quantifier") {
+                assert(out == "(Named (Leaf) @n?)")
+            }
+            "node with zero-or-more child quantifier" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -136,9 +136,9 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named (Leaf)*)")
-            },
-            test("node with one-or-more child quantifier") {
+                assert(out == "(Named (Leaf)*)")
+            }
+            "node with one-or-more child quantifier" in {
                 val q = Query(
                     NodePattern(
                         namedType,
@@ -152,19 +152,17 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Named (Leaf)+)")
+                assert(out == "(Named (Leaf)+)")
             }
-        ),
-        suite("wildcards")(
-            test("bare wildcard") {
-                assertTrue(QueryPrinter.print(Query(WildcardPattern(None), Nil)) == "_")
-            },
-            test("wildcard with capture") {
-                assertTrue(QueryPrinter.print(Query(WildcardPattern(Some(x)), Nil)) == "_ @x")
-            }
-        ),
-        suite("alternation")(
-            test("alternation without capture") {
+        }
+        "wildcards" - {
+            "bare wildcard" in
+                assert(QueryPrinter.print(Query(WildcardPattern(None), Nil)) == "_")
+            "wildcard with capture" in
+                assert(QueryPrinter.print(Query(WildcardPattern(Some(x)), Nil)) == "_ @x")
+        }
+        "alternation" - {
+            "alternation without capture" in {
                 val q = Query(
                     AlternationPattern(
                         List(NodePattern(leafType, Nil, Nil, Some(n)), NodePattern(namedType, Nil, Nil, Some(b))),
@@ -173,9 +171,9 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "[(Leaf) @n (Named) @b]")
-            },
-            test("alternation with outer capture") {
+                assert(out == "[(Leaf) @n (Named) @b]")
+            }
+            "alternation with outer capture" in {
                 val q = Query(
                     AlternationPattern(
                         List(NodePattern(leafType, Nil, Nil, None), WildcardPattern(None)),
@@ -184,46 +182,53 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "[(Leaf) _] @x")
+                assert(out == "[(Leaf) _] @x")
             }
-        ),
-        suite("predicates")(
-            test("#eq? with two capture refs") {
-                val q   = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(EqPredicate(CaptureRef(l), CaptureRef(n))))
+        }
+        "predicates" - {
+            "#eq? with two capture refs" in {
+                val q = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(EqPredicate(CaptureRef(l), CaptureRef(n))))
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (#eq? @l @n)")
-            },
-            test("#eq? with string literal on the right") {
-                val q   = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(EqPredicate(CaptureRef(l), StringArg("hello"))))
+                assert(out == "(Leaf) @l (#eq? @l @n)")
+            }
+            "#eq? with string literal on the right" in {
+                val q = Query(
+                    NodePattern(leafType, Nil, Nil, Some(l)),
+                    List(EqPredicate(CaptureRef(l), StringArg("hello")))
+                )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (#eq? @l \"hello\")")
-            },
-            test("#match? with capture ref and regex") {
-                val q   = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(MatchPredicate(CaptureRef(l), rx("^hi"))))
+                assert(out == "(Leaf) @l (#eq? @l \"hello\")")
+            }
+            "#match? with capture ref and regex" in {
+                val q = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(MatchPredicate(CaptureRef(l), rx("^hi"))))
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (#match? @l \"^hi\")")
-            },
-            test("#not-eq? predicate") {
-                val q   = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(NotEqPredicate(CaptureRef(l), StringArg("bye"))))
+                assert(out == "(Leaf) @l (#match? @l \"^hi\")")
+            }
+            "#not-eq? predicate" in {
+                val q = Query(
+                    NodePattern(leafType, Nil, Nil, Some(l)),
+                    List(NotEqPredicate(CaptureRef(l), StringArg("bye")))
+                )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (#not-eq? @l \"bye\")")
-            },
-            test("#not-match? predicate") {
-                val q   = Query(NodePattern(leafType, Nil, Nil, Some(l)), List(NotMatchPredicate(CaptureRef(l), rx("^z"))))
+                assert(out == "(Leaf) @l (#not-eq? @l \"bye\")")
+            }
+            "#not-match? predicate" in {
+                val q =
+                    Query(NodePattern(leafType, Nil, Nil, Some(l)), List(NotMatchPredicate(CaptureRef(l), rx("^z"))))
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (#not-match? @l \"^z\")")
-            },
-            test("multiple predicates are appended in order") {
+                assert(out == "(Leaf) @l (#not-match? @l \"^z\")")
+            }
+            "multiple predicates are appended in order" in {
                 val q = Query(
                     NodePattern(leafType, Nil, Nil, Some(l)),
                     List(EqPredicate(CaptureRef(l), StringArg("x")), MatchPredicate(CaptureRef(l), rx("y")))
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (#eq? @l \"x\") (#match? @l \"y\")")
+                assert(out == "(Leaf) @l (#eq? @l \"x\") (#match? @l \"y\")")
             }
-        ),
-        suite("multi-pattern")(
-            test("two top-level patterns") {
+        }
+        "multi-pattern" - {
+            "two top-level patterns" in {
                 val q = Query(
                     MultiPattern(
                         List(
@@ -234,58 +239,43 @@ object QueryPrinterSpec extends ZIOSpecDefault:
                     Nil
                 )
                 val out = QueryPrinter.print(q)
-                assertTrue(out == "(Leaf) @l (Named) @n")
+                assert(out == "(Leaf) @l (Named) @n")
             }
-        ),
-        suite("round-trip")(
-            test("bare node round-trips") {
-                assertTrue(roundTrips("(Leaf)"))
-            },
-            test("node with capture round-trips") {
-                assertTrue(roundTrips("(Leaf) @l"))
-            },
-            test("node with field round-trips") {
-                assertTrue(roundTrips("(Named name: (Leaf) @n)"))
-            },
-            test("node with multiple fields round-trips") {
-                assertTrue(roundTrips("(Named name: (Leaf) @n body: (Leaf) @b) @outer"))
-            },
-            test("node with child patterns round-trips") {
-                assertTrue(roundTrips("(Named (Leaf) @n (Leaf) @b)"))
-            },
-            test("node with anchor round-trips") {
-                assertTrue(roundTrips("(Named (Leaf) @n . (Leaf) @b)"))
-            },
-            test("node with negated field round-trips") {
-                assertTrue(roundTrips("(Named !name)"))
-            },
-            test("node with optional quantifier round-trips") {
-                assertTrue(roundTrips("(Named (Leaf) @n?)"))
-            },
-            test("wildcard round-trips") {
-                assertTrue(roundTrips("_"))
-            },
-            test("wildcard with capture round-trips") {
-                assertTrue(roundTrips("(_ ) @x"))
-            },
-            test("alternation round-trips") {
-                assertTrue(roundTrips("[(Leaf) @n (Named) @b]"))
-            },
-            test("alternation with capture round-trips") {
-                assertTrue(roundTrips("[(Leaf) _] @x"))
-            },
-            test("#eq? predicate round-trips") {
-                assertTrue(roundTrips("(Leaf) @l (#eq? @l \"hello\")"))
-            },
-            test("#match? predicate round-trips") {
-                assertTrue(roundTrips("(Leaf) @l (#match? @l \"^hi\")"))
-            },
-            test("multi-pattern round-trips") {
-                assertTrue(roundTrips("(Leaf) @l (Named) @n"))
-            },
-            test("query with comment is canonical without comment") {
+        }
+        "round-trip" - {
+            "bare node round-trips" in
+                assert(roundTrips("(Leaf)"))
+            "node with capture round-trips" in
+                assert(roundTrips("(Leaf) @l"))
+            "node with field round-trips" in
+                assert(roundTrips("(Named name: (Leaf) @n)"))
+            "node with multiple fields round-trips" in
+                assert(roundTrips("(Named name: (Leaf) @n body: (Leaf) @b) @outer"))
+            "node with child patterns round-trips" in
+                assert(roundTrips("(Named (Leaf) @n (Leaf) @b)"))
+            "node with anchor round-trips" in
+                assert(roundTrips("(Named (Leaf) @n . (Leaf) @b)"))
+            "node with negated field round-trips" in
+                assert(roundTrips("(Named !name)"))
+            "node with optional quantifier round-trips" in
+                assert(roundTrips("(Named (Leaf) @n?)"))
+            "wildcard round-trips" in
+                assert(roundTrips("_"))
+            "wildcard with capture round-trips" in
+                assert(roundTrips("(_ ) @x"))
+            "alternation round-trips" in
+                assert(roundTrips("[(Leaf) @n (Named) @b]"))
+            "alternation with capture round-trips" in
+                assert(roundTrips("[(Leaf) _] @x"))
+            "#eq? predicate round-trips" in
+                assert(roundTrips("(Leaf) @l (#eq? @l \"hello\")"))
+            "#match? predicate round-trips" in
+                assert(roundTrips("(Leaf) @l (#match? @l \"^hi\")"))
+            "multi-pattern round-trips" in
+                assert(roundTrips("(Leaf) @l (Named) @n"))
+            "query with comment is canonical without comment" in {
                 val out = QueryPrinter.print(parse(";; comment\n(Leaf) @l"))
-                assertTrue(QueryParser.parse(out).isSuccess)
+                assert(QueryParser.parse(out).isSuccess)
             }
-        )
-    )
+        }
+    }

@@ -29,8 +29,8 @@ import io.eleven19.krueger.trees.unist.UnistProjection
   * ES module so a framework-agnostic front-end (in particular the SvelteKit `sites/try-wasm/` playground) can drive the
   * compiler from TypeScript without touching Scala types.
   *
-  * Every entry point runs the Kyo-backed compile effect at the boundary (via [[CompilerComponent.runUnit]]) and serializes the
-  * [[QueryLogic.Result]] into a stable envelope:
+  * Every entry point runs the Kyo-backed compile effect at the boundary (via [[CompilerComponent.runUnit]]) and
+  * serializes the [[QueryLogic.Result]] into a stable envelope:
   *
   * {{{
   *   { ok: boolean, value: T | null, logs: string[], errors: ErrorPojo[] }
@@ -232,16 +232,20 @@ object KruegerJs:
     private def unistDataPojo(data: io.eleven19.krueger.trees.unist.UnistData): js.Object =
         val fields = js.Dynamic.literal()
         data.fields.foreach((name, indexes) => fields.updateDynamic(name)(indexes.toJSArray.asInstanceOf[js.Any]))
-        js.Dynamic.literal(
-            childCount = data.childCount,
-            fields = fields.asInstanceOf[js.Object]
-        ).asInstanceOf[js.Object]
+        js.Dynamic
+            .literal(
+                childCount = data.childCount,
+                fields = fields.asInstanceOf[js.Object]
+            )
+            .asInstanceOf[js.Object]
 
     private def positionPojo(position: UnistPosition): js.Object =
-        js.Dynamic.literal(
-            start = pointPojo(position.start),
-            end = pointPojo(position.end)
-        ).asInstanceOf[js.Object]
+        js.Dynamic
+            .literal(
+                start = pointPojo(position.start),
+                end = pointPojo(position.end)
+            )
+            .asInstanceOf[js.Object]
 
     private def pointPojo(point: UnistPoint): js.Object =
         val o = js.Dynamic.literal(

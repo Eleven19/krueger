@@ -1,69 +1,63 @@
 package io.eleven19.krueger.parser
 
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.cst.*
 
-object ModuleParserSpec extends ZIOSpecDefault:
+class ModuleParserSpec extends Test[Any]:
 
     private def parseOrFail(src: String): CstModule =
         ModuleParser.module.parse(src) match
             case Success(m)   => m
             case Failure(msg) => throw new AssertionError(s"parse failed: $msg\nSource:\n$src")
 
-    def spec = suite("ModuleParser")(
-        test("parses minimal plain module") {
+    "ModuleParser" - {
+        "parses minimal plain module" in {
             val m = parseOrFail("module Main exposing (..)\n")
-            assertTrue(
-                m.moduleDecl.moduleType == ModuleType.Plain,
-                m.moduleDecl.name.parts.map(_.value) == List("Main"),
-                m.moduleDecl.exposing.isInstanceOf[CstExposingAll]
-            )
-        },
-        test("parses port module") {
+            assert(m.moduleDecl.moduleType == ModuleType.Plain)
+            assert(m.moduleDecl.name.parts.map(_.value) == List("Main"))
+            assert(m.moduleDecl.exposing.isInstanceOf[CstExposingAll])
+        }
+        "parses port module" in {
             val m = parseOrFail("port module Ports exposing (..)\n")
-            assertTrue(m.moduleDecl.moduleType == ModuleType.Port)
-        },
-        test("parses effect module") {
+            assert(m.moduleDecl.moduleType == ModuleType.Port)
+        }
+        "parses effect module" in {
             val m = parseOrFail("effect module Eff exposing (..)\n")
-            assertTrue(m.moduleDecl.moduleType == ModuleType.Effect)
-        },
-        test("parses qualified module name") {
+            assert(m.moduleDecl.moduleType == ModuleType.Effect)
+        }
+        "parses qualified module name" in {
             val m = parseOrFail("module Data.List exposing (..)\n")
-            assertTrue(m.moduleDecl.name.parts.map(_.value) == List("Data", "List"))
-        },
-        test("parses plain import") {
+            assert(m.moduleDecl.name.parts.map(_.value) == List("Data", "List"))
+        }
+        "parses plain import" in {
             val m = parseOrFail("module M exposing (..)\nimport List\n")
-            assertTrue(m.imports.map(_.moduleName.parts.map(_.value)) == List(List("List")))
-        },
-        test("parses import with alias") {
+            assert(m.imports.map(_.moduleName.parts.map(_.value)) == List(List("List")))
+        }
+        "parses import with alias" in {
             val m = parseOrFail("module M exposing (..)\nimport Data.List as L\n")
-            assertTrue(
-                m.imports.head.alias.map(_.value).contains("L"),
-                m.imports.head.moduleName.parts.map(_.value) == List("Data", "List")
-            )
-        },
-        test("parses import with exposing list") {
+            assert(m.imports.head.alias.map(_.value).contains("L"))
+            assert(m.imports.head.moduleName.parts.map(_.value) == List("Data", "List"))
+        }
+        "parses import with exposing list" in {
             val m = parseOrFail("module M exposing (..)\nimport Html exposing (text, div)\n")
             val items = m.imports.head.exposing match
                 case Some(e: CstExposingExplicit) => e.items.collect { case v: CstExposedValue => v.name.value }
                 case _                            => Nil
-            assertTrue(items == List("text", "div"))
-        },
-        test("parses annotated value declaration without consuming the value name as a type argument") {
+            assert(items == List("text", "div"))
+        }
+        "parses annotated value declaration without consuming the value name as a type argument" in {
             val m = parseOrFail("module M exposing (..)\nfoo : Int\nfoo = 42\n")
             val decl = m.declarations.head match
                 case v: CstValueDeclaration => v
                 case other                  => throw new AssertionError(s"expected value declaration, got $other")
-            assertTrue(
-                decl.name.value == "foo",
-                decl.annotation.exists(_.name.value == "foo"),
-                decl.annotation.exists(_.typeExpr.isInstanceOf[CstTypeReference]),
-                decl.body == CstIntLiteral(42L)(decl.body.span)
-            )
-        },
-        test("parses lower-case value references and record field access") {
+            assert(decl.name.value == "foo")
+            assert(decl.annotation.exists(_.name.value == "foo"))
+            assert(decl.annotation.exists(_.typeExpr.isInstanceOf[CstTypeReference]))
+            assert(decl.body == CstIntLiteral(42L)(decl.body.span))
+        }
+        "parses lower-case value references and record field access" in {
             val m = parseOrFail("module M exposing (..)\nfoo : { bar : Int } -> Int\nfoo record = record.bar\n")
             val decl = m.declarations.head match
                 case v: CstValueDeclaration => v
@@ -71,14 +65,12 @@ object ModuleParserSpec extends ZIOSpecDefault:
             val access = decl.body match
                 case a: CstFieldAccess => a
                 case other             => throw new AssertionError(s"expected field access, got $other")
-            assertTrue(
-                access.field.value == "bar",
-                access.record.asInstanceOf[CstVariableRef].name.parts.map(_.value) == List("record")
-            )
-        },
-        test("fails on malformed module header") {
+            assert(access.field.value == "bar")
+            assert(access.record.asInstanceOf[CstVariableRef].name.parts.map(_.value) == List("record"))
+        }
+        "fails on malformed module header" in {
             ModuleParser.module.parse("module !!!") match
-                case Failure(_) => assertCompletes
+                case Failure(_) => succeed
                 case Success(_) => throw new AssertionError("expected failure")
         }
-    )
+    }

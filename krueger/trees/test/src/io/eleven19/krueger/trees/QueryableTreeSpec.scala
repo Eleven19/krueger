@@ -1,10 +1,10 @@
 package io.eleven19.krueger.trees
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.trees.ToyTree.*
 
-object QueryableTreeSpec extends ZIOSpecDefault:
+class QueryableTreeSpec extends Test[Any]:
 
     private val qt: QueryableTree[ToyTree] = summon[QueryableTree[ToyTree]]
 
@@ -21,62 +21,52 @@ object QueryableTreeSpec extends ZIOSpecDefault:
     private val named: ToyTree             = Named(name = leaf, body = anotherLeaf)
     private val allVariants: List[ToyTree] = List(leaf, anotherLeaf, branch, named)
 
-    def spec = suite("QueryableTree[ToyTree]")(
-        suite("nodeType")(
-            test("is non-empty for every variant") {
-                assertTrue(allVariants.forall(t => NodeTypeName.unwrap(qt.nodeType(t)).nonEmpty))
-            },
-            test("uses the simple class name") {
-                assertTrue(
-                    qt.nodeType(leaf) == leafType,
-                    qt.nodeType(branch) == branchType,
-                    qt.nodeType(named) == namedType
-                )
+    "QueryableTree[ToyTree]" - {
+        "nodeType" - {
+            "is non-empty for every variant" in
+                assert(allVariants.forall(t => NodeTypeName.unwrap(qt.nodeType(t)).nonEmpty))
+            "uses the simple class name" in {
+                assert(qt.nodeType(leaf) == leafType)
+                assert(qt.nodeType(branch) == branchType)
+                assert(qt.nodeType(named) == namedType)
             }
-        ),
-        suite("children")(
-            test("Leaf has no children") {
-                assertTrue(qt.children(leaf).isEmpty)
-            },
-            test("Branch enumerates its items in order") {
-                assertTrue(qt.children(branch) == Seq(leaf, anotherLeaf))
-            },
-            test("Named exposes name then body as children") {
-                assertTrue(qt.children(named) == Seq(leaf, anotherLeaf))
-            },
-            test("children is stable under repeated invocation") {
+        }
+        "children" - {
+            "Leaf has no children" in
+                assert(qt.children(leaf).isEmpty)
+            "Branch enumerates its items in order" in
+                assert(qt.children(branch) == Seq(leaf, anotherLeaf))
+            "Named exposes name then body as children" in
+                assert(qt.children(named) == Seq(leaf, anotherLeaf))
+            "children is stable under repeated invocation" in {
                 val first  = qt.children(branch)
                 val second = qt.children(branch)
-                assertTrue(first == second)
+                assert(first == second)
             }
-        ),
-        suite("fields")(
-            test("Leaf and Branch expose no fields") {
-                assertTrue(
-                    qt.fields(leaf).isEmpty,
-                    qt.fields(branch).isEmpty
-                )
-            },
-            test("Named exposes name and body keys") {
+        }
+        "fields" - {
+            "Leaf and Branch expose no fields" in {
+                assert(qt.fields(leaf).isEmpty)
+                assert(qt.fields(branch).isEmpty)
+            }
+            "Named exposes name and body keys" in {
                 val fs = qt.fields(named)
-                assertTrue(
-                    fs.keySet == Set(nameField, bodyField),
-                    fs(nameField) == Seq(leaf),
-                    fs(bodyField) == Seq(anotherLeaf)
-                )
-            },
-            test("all field values appear among children") {
+                assert(fs.keySet == Set(nameField, bodyField))
+                assert(fs(nameField) == Seq(leaf))
+                assert(fs(bodyField) == Seq(anotherLeaf))
+            }
+            "all field values appear among children" in {
                 val fieldValues = qt.fields(named).values.flatten.toSet
                 val kids        = qt.children(named).toSet
-                assertTrue(fieldValues.subsetOf(kids))
+                assert(fieldValues.subsetOf(kids))
             }
-        ),
-        suite("text")(
-            test("Leaf returns Some(value)") {
-                assertTrue(qt.text(leaf).contains("hello"))
-            },
-            test("compound nodes return None") {
-                assertTrue(qt.text(branch).isEmpty, qt.text(named).isEmpty)
+        }
+        "text" - {
+            "Leaf returns Some(value)" in
+                assert(qt.text(leaf).contains("hello"))
+            "compound nodes return None" in {
+                assert(qt.text(branch).isEmpty)
+                assert(qt.text(named).isEmpty)
             }
-        )
-    )
+        }
+    }

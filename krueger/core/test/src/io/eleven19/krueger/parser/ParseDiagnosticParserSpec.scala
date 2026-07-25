@@ -1,59 +1,55 @@
 package io.eleven19.krueger.parser
 
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.compiler.DiagnosticCode
 import io.eleven19.krueger.compiler.ParseDiagnostic
 
-object ParseDiagnosticParserSpec extends ZIOSpecDefault:
+class ParseDiagnosticParserSpec extends Test[Any]:
 
     private val malformedSource = "module M exposing (..)\n\nx ="
 
-    def spec = suite("ParseDiagnosticParser")(
-        test("happy path: valid source produces zero diagnostics") {
+    "ParseDiagnosticParser" - {
+        "happy path: valid source produces zero diagnostics" in {
             val source = "module M exposing (..)\n\nx = 1\n"
             Krueger.parseCst(source) match
-                case Success(_) => assertTrue(true)
-                case Failure(_) => assertTrue(false)
-        },
-        test("malformed source produces ELM-P001 with span and expected tokens") {
+                case Success(_) => assert(true)
+                case Failure(_) => assert(false)
+        }
+        "malformed source produces ELM-P001 with span and expected tokens" in {
             Krueger.parseCst(malformedSource) match
                 case Failure(diagnostic: ParseDiagnostic) =>
-                    assertTrue(
-                        diagnostic.code == DiagnosticCode.UnexpectedEndOfInput,
-                        diagnostic.span.line == 3,
-                        diagnostic.span.column == 4,
-                        diagnostic.span.start == 27,
-                        diagnostic.span.end == 27,
-                        diagnostic.expected.nonEmpty,
-                        diagnostic.message.contains("I ran into the end of the file unexpectedly"),
-                        diagnostic.message.contains("1| module M exposing (..)"),
-                        diagnostic.message.contains("3| x ="),
-                        diagnostic.message.contains("^"),
-                        diagnostic.message.contains("I was expecting one of the following:"),
-                        diagnostic.contextLines.nonEmpty,
-                        diagnostic.contextLines.count(_.isErrorLine) == 1
-                    )
-                case Success(_) => assertTrue(false)
-        },
-        test("empty source produces ELM-P001 at start of file") {
+                    assert(diagnostic.code == DiagnosticCode.UnexpectedEndOfInput)
+                    assert(diagnostic.span.line == 3)
+                    assert(diagnostic.span.column == 4)
+                    assert(diagnostic.span.start == 27)
+                    assert(diagnostic.span.end == 27)
+                    assert(diagnostic.expected.nonEmpty)
+                    assert(diagnostic.message.contains("I ran into the end of the file unexpectedly"))
+                    assert(diagnostic.message.contains("1| module M exposing (..)"))
+                    assert(diagnostic.message.contains("3| x ="))
+                    assert(diagnostic.message.contains("^"))
+                    assert(diagnostic.message.contains("I was expecting one of the following:"))
+                    assert(diagnostic.contextLines.nonEmpty)
+                    assert(diagnostic.contextLines.count(_.isErrorLine) == 1)
+                case Success(_) => assert(false)
+        }
+        "empty source produces ELM-P001 at start of file" in {
             Krueger.parseCst("") match
                 case Failure(diagnostic: ParseDiagnostic) =>
-                    assertTrue(
-                        diagnostic.code == DiagnosticCode.UnexpectedEndOfInput,
-                        diagnostic.span.line == 1,
-                        diagnostic.span.column == 1,
-                        diagnostic.span.start == 0,
-                        diagnostic.span.end == 0,
-                        diagnostic.expected.contains("module"),
-                        diagnostic.message.contains("I ran into the end of the file unexpectedly"),
-                        diagnostic.message.contains("1|"),
-                        diagnostic.message.contains("^"),
-                        diagnostic.message.contains("I was expecting one of the following:"),
-                        diagnostic.contextLines.nonEmpty
-                    )
-                case Success(_) => assertTrue(false)
+                    assert(diagnostic.code == DiagnosticCode.UnexpectedEndOfInput)
+                    assert(diagnostic.span.line == 1)
+                    assert(diagnostic.span.column == 1)
+                    assert(diagnostic.span.start == 0)
+                    assert(diagnostic.span.end == 0)
+                    assert(diagnostic.expected.contains("module"))
+                    assert(diagnostic.message.contains("I ran into the end of the file unexpectedly"))
+                    assert(diagnostic.message.contains("1|"))
+                    assert(diagnostic.message.contains("^"))
+                    assert(diagnostic.message.contains("I was expecting one of the following:"))
+                    assert(diagnostic.contextLines.nonEmpty)
+                case Success(_) => assert(false)
         }
-    )
+    }

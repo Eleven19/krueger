@@ -92,7 +92,7 @@ mill krueger.core.native.compile
 
 Krueger has two complementary test layers.
 
-### Unit tests (ZIO Test, cross-platform)
+### Unit tests (kyo-test, cross-platform)
 
 Sources under `krueger/core/test/src/` are shared by all three platforms:
 
@@ -185,7 +185,7 @@ krueger/
       cst/           # CST nodes, cursor, and visitor
       lexer/         # Elm lexer
       parser/        # Module, expression, declaration, and pattern parsers
-    test/            # ZIO Test suite
+    test/            # kyo-test suite
   trees/             # Generic tree-query DSL (JVM + JS + Native)
     src/             # QueryableTree typeclass, Query AST, Parsley parser, Matcher
     test/            # Typeclass + parser + matcher unit tests

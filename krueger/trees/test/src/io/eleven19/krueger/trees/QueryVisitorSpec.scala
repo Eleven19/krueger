@@ -1,10 +1,10 @@
 package io.eleven19.krueger.trees
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.trees.query.*
 
-object QueryVisitorSpec extends ZIOSpecDefault:
+class QueryVisitorSpec extends Test[Any]:
 
     private val namedType: NodeTypeName = NodeTypeName.make("Named").toOption.get
     private val leafType: NodeTypeName  = NodeTypeName.make("Leaf").toOption.get
@@ -31,29 +31,29 @@ object QueryVisitorSpec extends ZIOSpecDefault:
         case QueryNode.PredicateNode(_)    => "predicate"
         case QueryNode.PredicateArgNode(_) => "arg"
 
-    def spec = suite("QueryVisitor")(
-        test("children of root includes root pattern then predicates in order") {
+    "QueryVisitor" - {
+        "children of root includes root pattern then predicates in order" in {
             val kinds = QueryVisitor.children(QueryNode.Root(sampleQuery)).map(tag)
-            assertTrue(kinds == List("pattern", "predicate"))
-        },
-        test("foldLeft is deterministic pre-order over query nodes") {
+            assert(kinds == List("pattern", "predicate"))
+        }
+        "foldLeft is deterministic pre-order over query nodes" in {
             val seen = QueryVisitor.foldLeft(sampleQuery, Vector.empty[String]) { (acc, node) =>
                 acc :+ tag(node)
             }
-            assertTrue(seen == Vector("query", "pattern", "field", "pattern", "pattern", "predicate", "arg", "arg"))
-        },
-        test("collect can extract captures from pattern and predicate args") {
+            assert(seen == Vector("query", "pattern", "field", "pattern", "pattern", "predicate", "arg", "arg"))
+        }
+        "collect can extract captures from pattern and predicate args" in {
             val captures = QueryVisitor.collect(sampleQuery) {
                 case QueryNode.PatternNode(NodePattern(_, _, _, Some(capture), _, _, _)) => CaptureName.unwrap(capture)
-                case QueryNode.PatternNode(WildcardPattern(Some(capture)))                => CaptureName.unwrap(capture)
-                case QueryNode.PredicateArgNode(CaptureRef(name))                         => CaptureName.unwrap(name)
+                case QueryNode.PatternNode(WildcardPattern(Some(capture)))               => CaptureName.unwrap(capture)
+                case QueryNode.PredicateArgNode(CaptureRef(name))                        => CaptureName.unwrap(name)
             }
-            assertTrue(captures == List("n", "b", "n"))
-        },
-        test("traverse executes effects in pre-order with context and logs") {
+            assert(captures == List("n", "b", "n"))
+        }
+        "traverse executes effects in pre-order with context and logs" in {
             val result = QueryLogic.run[Int, String, String, Int](initialContext = 0) {
                 for
-                    _   <- QueryVisitor.traverse(sampleQuery) { node =>
+                    _ <- QueryVisitor.traverse(sampleQuery) { node =>
                         for
                             _ <- QueryLogic.log[Int, String, String](tag(node))
                             _ <- QueryLogic.updateContext[Int, String, String](_ + 1)
@@ -62,10 +62,8 @@ object QueryVisitorSpec extends ZIOSpecDefault:
                     ctx <- QueryLogic.readContext[Int, String, String]
                 yield ctx
             }
-            assertTrue(
-                result.value == Right(8),
-                result.context == 8,
-                result.logs == Vector("query", "pattern", "field", "pattern", "pattern", "predicate", "arg", "arg")
-            )
+            assert(result.value == Right(8))
+            assert(result.context == 8)
+            assert(result.logs == Vector("query", "pattern", "field", "pattern", "pattern", "predicate", "arg", "arg"))
         }
-    )
+    }

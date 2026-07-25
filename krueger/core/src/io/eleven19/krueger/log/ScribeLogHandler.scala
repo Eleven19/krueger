@@ -6,8 +6,17 @@ import scribe.Logger
 final class ScribeLogHandler(logger: Logger):
 
     val log: Log =
-        Log(new Log.Unsafe:
-            def level: Log.Level = Log.Level.trace
+        Log(ScribeLogHandler.unsafe(logger, ScribeLogHandler.DefaultName))
+
+object ScribeLogHandler:
+
+    private val DefaultName = "krueger.scribe-log-handler"
+
+    private def unsafe(logger: Logger, loggerName: String): Log.Unsafe =
+        new Log.Unsafe:
+            def level: Log.Level                   = Log.Level.trace
+            def name: String                       = loggerName
+            def withName(name: String): Log.Unsafe = unsafe(Logger(name), name)
 
             def trace(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
                 logger.trace(msg)
@@ -37,4 +46,4 @@ final class ScribeLogHandler(logger: Logger):
                 logger.error(msg)
 
             def error(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                logger.error(msg, t))
+                logger.error(msg, t)

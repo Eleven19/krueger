@@ -1,6 +1,6 @@
 package io.eleven19.krueger.compiler.abi
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Krueger as CoreKrueger
 import io.eleven19.krueger.compiler.CompileError
@@ -9,7 +9,7 @@ import io.eleven19.krueger.compiler.ParseDiagnostic
 import InvokeJson.decode
 import InvokeJson.given
 
-object InvokeCompilerSpec extends ZIOSpecDefault:
+class InvokeCompilerSpec extends Test[Any]:
 
     private val validSource =
         """module Demo exposing (..)
@@ -29,37 +29,33 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
     private def invoke(op: String, source: String): InvokeResponse =
         decode[InvokeResponse](InvokeCompiler.invoke(op, source))
 
-    def spec = suite("InvokeCompiler")(
-        test("happy path: parseCst returns a structured success envelope") {
+    "InvokeCompiler" - {
+        "happy path: parseCst returns a structured success envelope" in {
             val response = invoke("parseCst", s"""{"source":${stringLiteral(validSource)}}""")
 
-            assertTrue(
-                response.ok,
-                response.logs.isEmpty,
-                response.errors.isEmpty,
-                response.value.exists(value => value.startsWith("CstModule("))
-            )
-        },
-        test("failure path: malformed source returns a structured parse error envelope") {
+            assert(response.ok)
+            assert(response.logs.isEmpty)
+            assert(response.errors.isEmpty)
+            assert(response.value.exists(value => value.startsWith("CstModule(")))
+        }
+        "failure path: malformed source returns a structured parse error envelope" in {
             val response = invoke("parseCst", s"""{"source":${stringLiteral(malformedSource)}}""")
-            val expected   = expectedParseInvokeError(malformedSource)
+            val expected = expectedParseInvokeError(malformedSource)
 
-            assertTrue(
-                !response.ok,
-                response.value.isEmpty,
-                response.logs.isEmpty,
-                response.errors == Vector(expected),
-                response.errors.head.contextLines.nonEmpty,
-                response.errors.head.contextLines.count(_.isErrorLine) == 1
-            )
-        },
-        test("edge path: unknown operation returns a structured internal error envelope") {
+            assert(!response.ok)
+            assert(response.value.isEmpty)
+            assert(response.logs.isEmpty)
+            assert(response.errors == Vector(expected))
+            assert(response.errors.head.contextLines.nonEmpty)
+            assert(response.errors.head.contextLines.count(_.isErrorLine) == 1)
+        }
+        "edge path: unknown operation returns a structured internal error envelope" in {
             val response = invoke("wat", "{}")
 
-            assertTrue(
-                !response.ok,
-                response.value.isEmpty,
-                response.logs.isEmpty,
+            assert(!response.ok)
+            assert(response.value.isEmpty)
+            assert(response.logs.isEmpty)
+            assert(
                 response.errors == Vector(
                     InvokeError(
                         phase = "internal",
@@ -68,15 +64,15 @@ object InvokeCompilerSpec extends ZIOSpecDefault:
                     )
                 )
             )
-        },
-        test("determinism path: the same parseCst input returns byte-identical JSON twice") {
+        }
+        "determinism path: the same parseCst input returns byte-identical JSON twice" in {
             val input  = s"""{"source":${stringLiteral(validSource)}}"""
             val first  = InvokeCompiler.invoke("parseCst", input)
             val second = InvokeCompiler.invoke("parseCst", input)
 
-            assertTrue(first == second)
+            assert(first == second)
         }
-    )
+    }
 
     private def stringLiteral(value: String): String =
         "\"" + value.flatMap {

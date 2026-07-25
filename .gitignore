@@ -17,9 +17,6 @@ out/
 # Oh My Claude Code
 .omc/
 
-# Superpowers brainstorming visual companion cache
-.superpowers/
-
 # OS
 .DS_Store
 
@@ -55,3 +52,6 @@ sites/try-wasm/node_modules/
 
 # os-lib / Mill watch sentinel files (transient, must never be committed)
 .os-lib-watch-sentinel-*
+
+# Agent-local plans, handoffs, prompts, reports, and tracking documents.
+.dev/

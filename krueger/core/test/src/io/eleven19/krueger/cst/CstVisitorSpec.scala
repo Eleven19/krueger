@@ -1,11 +1,11 @@
 package io.eleven19.krueger.cst
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.CstVisitor.*
 
-object CstVisitorSpec extends ZIOSpecDefault:
+class CstVisitorSpec extends Test[Any]:
 
     private val sp = Span.zero
 
@@ -29,43 +29,41 @@ object CstVisitorSpec extends ZIOSpecDefault:
             IndexedSeq.empty
         )(sp)
 
-    def spec = suite("CstVisitor")(
-        suite("dispatch")(
-            test("visit routes to the specific visitor method") {
+    "CstVisitor" - {
+        "dispatch" - {
+            "visit routes to the specific visitor method" in {
                 val v = new TagVisitor
-                assertTrue(CstVisitor.visit(CstName("x")(sp), v) == "Name(x)")
-            },
-            test("visit falls back to visitNode when no override is provided") {
+                assert(CstVisitor.visit(CstName("x")(sp), v) == "Name(x)")
+            }
+            "visit falls back to visitNode when no override is provided" in {
                 val v = new TagVisitor
-                assertTrue(CstVisitor.visit(CstCharPattern('a')(sp), v) == "Node")
-            },
-            test("visit dispatches int literal to visitIntLiteral") {
+                assert(CstVisitor.visit(CstCharPattern('a')(sp), v) == "Node")
+            }
+            "visit dispatches int literal to visitIntLiteral" in {
                 val v = new TagVisitor
-                assertTrue(CstVisitor.visit(CstIntLiteral(3L)(sp), v) == "Int(3)")
-            },
-            test("visit dispatches comments to visitComment") {
+                assert(CstVisitor.visit(CstIntLiteral(3L)(sp), v) == "Int(3)")
+            }
+            "visit dispatches comments to visitComment" in {
                 val v = new TagVisitor
-                assertTrue(CstVisitor.visit(CstComment(CommentKind.Doc, "docs")(sp), v) == "Comment(Doc)")
-            },
-            test("visit dispatches variable pattern to visitVariablePattern") {
+                assert(CstVisitor.visit(CstComment(CommentKind.Doc, "docs")(sp), v) == "Comment(Doc)")
+            }
+            "visit dispatches variable pattern to visitVariablePattern" in {
                 val v = new TagVisitor
                 val p = CstVariablePattern(CstName("a")(sp))(sp)
-                assertTrue(CstVisitor.visit(p, v) == "VarPat(a)")
+                assert(CstVisitor.visit(p, v) == "VarPat(a)")
             }
-        ),
-        suite("traversal")(
-            test("children returns direct children of a module") {
+        }
+        "traversal" - {
+            "children returns direct children of a module" in {
                 val kids = CstVisitor.children(sampleModule)
-                assertTrue(kids.size == 1) // only moduleDecl
-            },
-            test("children returns empty list for a leaf") {
-                assertTrue(CstVisitor.children(CstName("x")(sp)).isEmpty)
-            },
-            test("count counts all nodes pre-order") {
+                assert(kids.size == 1) // only moduleDecl
+            }
+            "children returns empty list for a leaf" in
+                assert(CstVisitor.children(CstName("x")(sp)).isEmpty)
+            "count counts all nodes pre-order" in
                 // Module + ModuleDeclaration + QualifiedName + Name + ExposingAll = 5
-                assertTrue(CstVisitor.count(sampleModule) == 5)
-            },
-            test("foldLeft visits pre-order") {
+                assert(CstVisitor.count(sampleModule) == 5)
+            "foldLeft visits pre-order" in {
                 val q = CstQualifiedName(List(CstName("x")(sp)))(sp)
                 val tags = CstVisitor
                     .foldLeft(q, List.empty[String])((acc, n) =>
@@ -76,36 +74,36 @@ object CstVisitorSpec extends ZIOSpecDefault:
                         ) :: acc
                     )
                     .reverse
-                assertTrue(tags == List("Q", "N:x"))
-            },
-            test("collect picks up nodes matching a partial function") {
+                assert(tags == List("Q", "N:x"))
+            }
+            "collect picks up nodes matching a partial function" in {
                 val q      = CstQualifiedName(List(CstName("a")(sp), CstName("b")(sp)))(sp)
                 val values = CstVisitor.collect(q) { case x: CstName => x.value }
-                assertTrue(values == List("a", "b"))
+                assert(values == List("a", "b"))
             }
-        ),
-        suite("extension methods")(
-            test("node.visit delegates to CstVisitor.visit") {
+        }
+        "extension methods" - {
+            "node.visit delegates to CstVisitor.visit" in {
                 val v             = new TagVisitor
                 val node: CstNode = CstIntLiteral(7L)(sp)
-                assertTrue(node.visit(v) == "Int(7)")
-            },
-            test("node.children delegates to CstVisitor.children") {
+                assert(node.visit(v) == "Int(7)")
+            }
+            "node.children delegates to CstVisitor.children" in {
                 val q: CstNode = CstQualifiedName(List(CstName("a")(sp)))(sp)
-                assertTrue(q.children.size == 1)
-            },
-            test("node.count delegates to CstVisitor.count") {
+                assert(q.children.size == 1)
+            }
+            "node.count delegates to CstVisitor.count" in {
                 val node: CstNode = CstIntLiteral(1L)(sp)
-                assertTrue(node.count == 1)
-            },
-            test("node.fold delegates to CstVisitor.foldLeft") {
+                assert(node.count == 1)
+            }
+            "node.fold delegates to CstVisitor.foldLeft" in {
                 val q: CstNode = CstQualifiedName(List(CstName("a")(sp)))(sp)
-                assertTrue(q.fold(0)((acc, _) => acc + 1) == 2)
-            },
-            test("node.collect delegates to CstVisitor.collect") {
+                assert(q.fold(0)((acc, _) => acc + 1) == 2)
+            }
+            "node.collect delegates to CstVisitor.collect" in {
                 val q: CstNode = CstQualifiedName(List(CstName("x")(sp)))(sp)
                 val values     = q.collect { case cn: CstName => cn.value }
-                assertTrue(values == List("x"))
+                assert(values == List("x"))
             }
-        )
-    )
+        }
+    }

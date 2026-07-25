@@ -1,22 +1,20 @@
 package io.eleven19.krueger.webappwasm
 
-import scala.scalajs.js
+import scala.scalajs.js as sjs
 
-import zio.test.*
+import kyo.test.*
 
 /** Contract spec for the `@JSExportTopLevel("Krueger")` facade.
   *
-  * The spec intentionally pins the plain-JS envelope shape that SvelteKit
-  * consumers depend on per REQ-webappwasm-001..003:
+  * The spec intentionally pins the plain-JS envelope shape that SvelteKit consumers depend on per
+  * REQ-webappwasm-001..003:
   *
-  *   `{ ok: boolean, value: any | null, logs: string[], errors: ErrorPojo[] }`
+  * `{ ok: boolean, value: any | null, logs: string[], errors: ErrorPojo[] }`
   *
-  * All assertions are made through `js.Dynamic` so the facade is exercised
-  * exactly as JavaScript callers would see it. No access to Scala-typed
-  * internals is allowed in the assertions — that is the whole point of
-  * the envelope.
+  * All assertions are made through `js.Dynamic` so the facade is exercised exactly as JavaScript callers would see it.
+  * No access to Scala-typed internals is allowed in the assertions — that is the whole point of the envelope.
   */
-object KruegerJsSpec extends ZIOSpecDefault:
+class KruegerJsSpec extends Test[Any]:
 
     private val validSource =
         """module M exposing (..)
@@ -28,258 +26,228 @@ object KruegerJsSpec extends ZIOSpecDefault:
 
     private val validQuery = "(CstValueDeclaration) @v"
 
-    private def dyn(o: js.Object): js.Dynamic = o.asInstanceOf[js.Dynamic]
+    private def dyn(o: sjs.Object): sjs.Dynamic = o.asInstanceOf[sjs.Dynamic]
 
-    private def arrayLen(arr: js.Any): Int = arr.asInstanceOf[js.Array[js.Any]].length
+    private def arrayLen(arr: sjs.Any): Int = arr.asInstanceOf[sjs.Array[sjs.Any]].length
 
-    private def hasEnvelopeShape(env: js.Object): Boolean =
-        val d = dyn(env)
-        val hasOk     = js.typeOf(d.ok) == "boolean"
-        val hasLogs   = d.logs.asInstanceOf[js.Any] match
-            case arr if js.Array.isArray(arr) => true
-            case _                            => false
-        val hasErrors = d.errors.asInstanceOf[js.Any] match
-            case arr if js.Array.isArray(arr) => true
-            case _                            => false
+    private def hasEnvelopeShape(env: sjs.Object): Boolean =
+        val d     = dyn(env)
+        val hasOk = sjs.typeOf(d.ok) == "boolean"
+        val hasLogs = d.logs.asInstanceOf[sjs.Any] match
+            case arr if sjs.Array.isArray(arr) => true
+            case _                             => false
+        val hasErrors = d.errors.asInstanceOf[sjs.Any] match
+            case arr if sjs.Array.isArray(arr) => true
+            case _                             => false
         // `value` may be absent, null, or any value — we only require the
         // OTHER three fields to be present with the right types.
         hasOk && hasLogs && hasErrors
 
-    def spec = suite("KruegerJs (WASM FFI facade)")(
-        suite("envelope shape (REQ-webappwasm-001)")(
-            test("parseCst returns { ok, value?, logs, errors } with ok=true on valid source") {
+    "KruegerJs (WASM FFI facade)" - {
+        "envelope shape (REQ-webappwasm-001)" - {
+            "parseCst returns { ok, value?, logs, errors } with ok=true on valid source" in {
                 val env = KruegerJs.parseCst(validSource)
                 val d   = dyn(env)
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == true,
-                    arrayLen(d.errors) == 0,
-                    // value must be defined (truthy) on success — we don't
-                    // inspect its internals because parseCst's value is an
-                    // opaque handle.
-                    !js.isUndefined(d.value) && d.value != null
-                )
-            },
-            test("parseQuery returns an envelope with ok=true on valid query") {
+                assert(hasEnvelopeShape(env))
+                assert(d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) == 0)
+                // value must be defined (truthy) on success — we don't
+                // inspect its internals because parseCst's value is an
+                // opaque handle.
+                assert(!sjs.isUndefined(d.value) && d.value != null)
+            }
+            "parseQuery returns an envelope with ok=true on valid query" in {
                 val env = KruegerJs.parseQuery(validQuery)
                 val d   = dyn(env)
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == true,
-                    arrayLen(d.errors) == 0
-                )
-            },
-            test("parseCstUnist returns ok=true with a plain JS unist root and childCount matching children.length") {
+                assert(hasEnvelopeShape(env))
+                assert(d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) == 0)
+            }
+            "parseCstUnist returns ok=true with a plain JS unist root and childCount matching children.length" in {
                 val env      = KruegerJs.parseCstUnist(validSource)
                 val d        = dyn(env)
-                val root     = d.value.asInstanceOf[js.Dynamic]
-                val children = root.children.asInstanceOf[js.Any]
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == true,
-                    arrayLen(d.errors) == 0,
-                    root.`type`.asInstanceOf[String] == "CstModule",
-                    js.Array.isArray(children),
-                    root.data.childCount.asInstanceOf[Int] == arrayLen(children)
-                )
-            },
-            test("parseAstUnist returns ok=true with a plain JS unist Module root and JS-array children") {
+                val root     = d.value.asInstanceOf[sjs.Dynamic]
+                val children = root.children.asInstanceOf[sjs.Any]
+                assert(hasEnvelopeShape(env))
+                assert(d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) == 0)
+                assert(root.`type`.asInstanceOf[String] == "CstModule")
+                assert(sjs.Array.isArray(children))
+                assert(root.data.childCount.asInstanceOf[Int] == arrayLen(children))
+            }
+            "parseAstUnist returns ok=true with a plain JS unist Module root and JS-array children" in {
                 val env      = KruegerJs.parseAstUnist(validSource)
                 val d        = dyn(env)
-                val root     = d.value.asInstanceOf[js.Dynamic]
-                val children = root.children.asInstanceOf[js.Any]
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == true,
-                    arrayLen(d.errors) == 0,
-                    root.`type`.asInstanceOf[String] == "Module",
-                    js.Array.isArray(children)
-                )
-            },
-            test("prettyQuery returns a non-empty canonical string for a parsed query") {
-                val parseEnv = KruegerJs.parseQuery(validQuery)
-                val q        = dyn(parseEnv).value.asInstanceOf[js.Any]
-                val pretty   = KruegerJs.prettyQuery(q)
-                assertTrue(pretty.nonEmpty)
+                val root     = d.value.asInstanceOf[sjs.Dynamic]
+                val children = root.children.asInstanceOf[sjs.Any]
+                assert(hasEnvelopeShape(env))
+                assert(d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) == 0)
+                assert(root.`type`.asInstanceOf[String] == "Module")
+                assert(sjs.Array.isArray(children))
             }
-        ),
-        suite("error envelope (REQ-webappwasm-002)")(
-            test("parseCst on malformed source returns ok=false with errors; value is null") {
+            "prettyQuery returns a non-empty canonical string for a parsed query" in {
+                val parseEnv = KruegerJs.parseQuery(validQuery)
+                val q        = dyn(parseEnv).value.asInstanceOf[sjs.Any]
+                val pretty   = KruegerJs.prettyQuery(q)
+                assert(pretty.nonEmpty)
+            }
+        }
+        "error envelope (REQ-webappwasm-002)" - {
+            "parseCst on malformed source returns ok=false with errors; value is null" in {
                 val env = KruegerJs.parseCst(malformedSource)
                 val d   = dyn(env)
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == false,
-                    arrayLen(d.errors) >= 1,
-                    d.value == null
-                )
-            },
-            test("parseCstUnist on malformed source preserves the error envelope with value=null") {
+                assert(hasEnvelopeShape(env))
+                assert(!d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) >= 1)
+                assert(d.value == null)
+            }
+            "parseCstUnist on malformed source preserves the error envelope with value=null" in {
                 val env = KruegerJs.parseCstUnist(malformedSource)
                 val d   = dyn(env)
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == false,
-                    arrayLen(d.errors) >= 1,
-                    d.value == null
-                )
-            },
-            test("each serialized error carries a non-empty message field") {
-                val env    = KruegerJs.parseCst(malformedSource)
-                val errs   = dyn(env).errors.asInstanceOf[js.Array[js.Dynamic]]
+                assert(hasEnvelopeShape(env))
+                assert(!d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) >= 1)
+                assert(d.value == null)
+            }
+            "each serialized error carries a non-empty message field" in {
+                val env  = KruegerJs.parseCst(malformedSource)
+                val errs = dyn(env).errors.asInstanceOf[sjs.Array[sjs.Dynamic]]
                 val hasMsg = (0 until errs.length).forall { i =>
                     val msg = errs(i).message
-                    js.typeOf(msg) == "string" && msg.asInstanceOf[String].nonEmpty
+                    sjs.typeOf(msg) == "string" && msg.asInstanceOf[String].nonEmpty
                 }
-                assertTrue(hasMsg)
-            },
-            test("parseQuery on malformed query returns ok=false with at least one error") {
+                assert(hasMsg)
+            }
+            "parseQuery on malformed query returns ok=false with at least one error" in {
                 val env = KruegerJs.parseQuery("(unbalanced")
                 val d   = dyn(env)
-                assertTrue(
-                    d.ok.asInstanceOf[Boolean] == false,
-                    arrayLen(d.errors) >= 1,
-                    d.value == null
-                )
+                assert(!d.ok.asInstanceOf[Boolean])
+                assert(arrayLen(d.errors) >= 1)
+                assert(d.value == null)
             }
-        ),
-        suite("edge cases")(
-            test("empty source still produces a well-formed envelope (shape is uniform)") {
+        }
+        "edge cases" - {
+            "empty source still produces a well-formed envelope (shape is uniform)" in {
                 val env = KruegerJs.parseCst("")
-                assertTrue(hasEnvelopeShape(env))
-            },
-            test("empty query still produces a well-formed envelope (shape is uniform)") {
+                assert(hasEnvelopeShape(env))
+            }
+            "empty query still produces a well-formed envelope (shape is uniform)" in {
                 val env = KruegerJs.parseQuery("")
-                assertTrue(hasEnvelopeShape(env))
+                assert(hasEnvelopeShape(env))
             }
-        ),
-        suite("shared tokenizer facade")(
-            test("tokenize returns plain JS token POJOs with spans and kinds") {
+        }
+        "shared tokenizer facade" - {
+            "tokenize returns plain JS token POJOs with spans and kinds" in {
                 val env    = dyn(KruegerJs.tokenize("""module Main = "hi""""))
-                val tokens = env.value.asInstanceOf[js.Array[js.Dynamic]]
+                val tokens = env.value.asInstanceOf[sjs.Array[sjs.Dynamic]]
 
-                assertTrue(
-                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
-                    env.ok.asInstanceOf[Boolean],
-                    tokens.length == 4,
-                    tokens(0).kind.asInstanceOf[String] == "Keyword",
-                    tokens(0).lexeme.asInstanceOf[String] == "module",
-                    tokens(0).start.asInstanceOf[Int] == 0,
-                    tokens(0).end.asInstanceOf[Int] == 6,
-                    tokens(3).kind.asInstanceOf[String] == "StringLiteral"
-                )
-            },
-            test("tokenize recovers unknown input as token value plus logs") {
-                val env    = dyn(KruegerJs.tokenize("main @ value"))
-                val tokens = env.value.asInstanceOf[js.Array[js.Dynamic]]
-
-                assertTrue(
-                    env.ok.asInstanceOf[Boolean],
-                    tokens.exists(_.kind.asInstanceOf[String] == "Unknown"),
-                    arrayLen(env.logs) >= 1
-                )
+                assert(hasEnvelopeShape(env.asInstanceOf[sjs.Object]))
+                assert(env.ok.asInstanceOf[Boolean])
+                assert(tokens.length == 4)
+                assert(tokens(0).kind.asInstanceOf[String] == "Keyword")
+                assert(tokens(0).lexeme.asInstanceOf[String] == "module")
+                assert(tokens(0).start.asInstanceOf[Int] == 0)
+                assert(tokens(0).end.asInstanceOf[Int] == 6)
+                assert(tokens(3).kind.asInstanceOf[String] == "StringLiteral")
             }
-        ),
-        suite("runQuery over parsed CST + query (REQ-webappwasm-001)")(
-            test("valid source + valid query returns ok=true and value is a JS array") {
+            "tokenize recovers unknown input as token value plus logs" in {
+                val env    = dyn(KruegerJs.tokenize("main @ value"))
+                val tokens = env.value.asInstanceOf[sjs.Array[sjs.Dynamic]]
+
+                assert(env.ok.asInstanceOf[Boolean])
+                assert(tokens.exists(_.kind.asInstanceOf[String] == "Unknown"))
+                assert(arrayLen(env.logs) >= 1)
+            }
+        }
+        "runQuery over parsed CST + query (REQ-webappwasm-001)" - {
+            "valid source + valid query returns ok=true and value is a JS array" in {
                 val cstEnv = dyn(KruegerJs.parseCst(validSource))
                 val qEnv   = dyn(KruegerJs.parseQuery(validQuery))
                 val env    = KruegerJs.runQuery(qEnv.value, cstEnv.value)
                 val d      = dyn(env)
-                assertTrue(
-                    hasEnvelopeShape(env),
-                    d.ok.asInstanceOf[Boolean] == true,
-                    js.Array.isArray(d.value),
-                    // the simple source defines `x = 1`, so at least one
-                    // CstValueDeclaration match is expected.
-                    arrayLen(d.value) >= 1
-                )
-            },
-            test("query that matches zero nodes returns an empty array, ok=true") {
+                assert(hasEnvelopeShape(env))
+                assert(d.ok.asInstanceOf[Boolean])
+                assert(sjs.Array.isArray(d.value))
+                // the simple source defines `x = 1`, so at least one
+                // CstValueDeclaration match is expected.
+                assert(arrayLen(d.value) >= 1)
+            }
+            "query that matches zero nodes returns an empty array, ok=true" in {
                 val cstEnv = dyn(KruegerJs.parseCst(validSource))
                 val qEnv   = dyn(KruegerJs.parseQuery("(nonexistent_node) @x"))
                 val env    = KruegerJs.runQuery(qEnv.value, cstEnv.value)
                 val d      = dyn(env)
-                assertTrue(
-                    d.ok.asInstanceOf[Boolean] == true,
-                    js.Array.isArray(d.value),
-                    arrayLen(d.value) == 0
-                )
+                assert(d.ok.asInstanceOf[Boolean])
+                assert(sjs.Array.isArray(d.value))
+                assert(arrayLen(d.value) == 0)
             }
-        ),
-        suite("LinkedCompilerBackend routing")(
-            test("parseCst preserves the public envelope shape through the link-target compiler") {
+        }
+        "LinkedCompilerBackend routing" - {
+            "parseCst preserves the public envelope shape through the link-target compiler" in {
                 val env = KruegerJs.parseCst(validSource)
                 val d   = dyn(env)
-                assertTrue(
-                    d.hasOwnProperty("ok").asInstanceOf[Boolean],
-                    d.hasOwnProperty("value").asInstanceOf[Boolean],
-                    d.hasOwnProperty("logs").asInstanceOf[Boolean],
-                    d.hasOwnProperty("errors").asInstanceOf[Boolean]
-                )
-            },
-            test("runQuery returns results through the link-target compiler") {
+                assert(d.hasOwnProperty("ok").asInstanceOf[Boolean])
+                assert(d.hasOwnProperty("value").asInstanceOf[Boolean])
+                assert(d.hasOwnProperty("logs").asInstanceOf[Boolean])
+                assert(d.hasOwnProperty("errors").asInstanceOf[Boolean])
+            }
+            "runQuery returns results through the link-target compiler" in {
                 val cstEnv = dyn(KruegerJs.parseCst(validSource))
                 val qEnv   = dyn(KruegerJs.parseQuery(validQuery))
                 val env    = dyn(KruegerJs.runQuery(qEnv.value, cstEnv.value))
-                assertTrue(
-                    env.ok.asInstanceOf[Boolean],
-                    js.Array.isArray(env.value)
+                assert(env.ok.asInstanceOf[Boolean])
+                assert(sjs.Array.isArray(env.value))
+            }
+        }
+        "Scala.js compiler API acceptance parity" - {
+            "valid parseCst source matches the JVM and Chicory acceptance scenario" in {
+                val env = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
+                assert(hasEnvelopeShape(env.asInstanceOf[sjs.Object]))
+                assert(env.ok.asInstanceOf[Boolean])
+                assert(!sjs.isUndefined(env.value) && env.value != null)
+                assert(jsString(env.value).contains(CompilerApiAcceptanceCases.validParseCst.expectedValueFragment))
+            }
+            "malformed parseCst source matches the JVM and Chicory error scenario" in {
+                val env          = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.malformedParseCst.source))
+                val errors       = env.errors.asInstanceOf[sjs.Array[sjs.Dynamic]]
+                val error        = errors(0)
+                val contextLines = error.contextLines.asInstanceOf[sjs.Array[sjs.Dynamic]]
+                assert(hasEnvelopeShape(env.asInstanceOf[sjs.Object]))
+                assert(!env.ok.asInstanceOf[Boolean])
+                assert(errors.length >= 1)
+                assert(
+                    errors(0).phase.asInstanceOf[String] == CompilerApiAcceptanceCases.malformedParseCst.expectedPhase
+                )
+                assert(
+                    errors(0).message
+                        .asInstanceOf[String]
+                        .contains(CompilerApiAcceptanceCases.malformedParseCst.expectedMessageFragment)
+                )
+                assert(contextLines.length >= 1)
+                assert(
+                    (0 until contextLines.length).exists(index => contextLines(index).isErrorLine.asInstanceOf[Boolean])
                 )
             }
-        ),
-        suite("Scala.js compiler API acceptance parity")(
-            test("valid parseCst source matches the JVM and Chicory acceptance scenario") {
-                val env = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
-                assertTrue(
-                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
-                    env.ok.asInstanceOf[Boolean],
-                    !js.isUndefined(env.value) && env.value != null,
-                    jsString(env.value).contains(CompilerApiAcceptanceCases.validParseCst.expectedValueFragment)
-                )
-            },
-            test("malformed parseCst source matches the JVM and Chicory error scenario") {
-                val env    = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.malformedParseCst.source))
-                val errors = env.errors.asInstanceOf[js.Array[js.Dynamic]]
-                val error  = errors(0)
-                val contextLines = error.contextLines.asInstanceOf[js.Array[js.Dynamic]]
-                assertTrue(
-                    hasEnvelopeShape(env.asInstanceOf[js.Object]),
-                    !env.ok.asInstanceOf[Boolean],
-                    errors.length >= 1,
-                    errors(0).phase.asInstanceOf[String] == CompilerApiAcceptanceCases.malformedParseCst.expectedPhase,
-                    errors(0).message.asInstanceOf[String].contains(
-                        CompilerApiAcceptanceCases.malformedParseCst.expectedMessageFragment
-                    ),
-                    contextLines.length >= 1,
-                    (0 until contextLines.length).exists(index =>
-                        contextLines(index).isErrorLine.asInstanceOf[Boolean]
-                    )
-                )
-            },
-            test("repeated parseCst source matches the JVM and Chicory determinism scenario") {
+            "repeated parseCst source matches the JVM and Chicory determinism scenario" in {
                 val a = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
                 val b = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.validParseCst.source))
-                assertTrue(
-                    a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean],
-                    arrayLen(a.errors) == arrayLen(b.errors),
-                    arrayLen(a.logs) == arrayLen(b.logs),
-                    jsString(a.value) == jsString(b.value)
-                )
+                assert(a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean])
+                assert(arrayLen(a.errors) == arrayLen(b.errors))
+                assert(arrayLen(a.logs) == arrayLen(b.logs))
+                assert(jsString(a.value) == jsString(b.value))
             }
-        ),
-        suite("determinism (REQ-webappwasm-001 tail)")(
-            test("repeated parseCst calls return envelopes with the same ok flag and error count") {
+        }
+        "determinism (REQ-webappwasm-001 tail)" - {
+            "repeated parseCst calls return envelopes with the same ok flag and error count" in {
                 val a = dyn(KruegerJs.parseCst(validSource))
                 val b = dyn(KruegerJs.parseCst(validSource))
-                assertTrue(
-                    a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean],
-                    arrayLen(a.errors) == arrayLen(b.errors),
-                    arrayLen(a.logs) == arrayLen(b.logs)
-                )
+                assert(a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean])
+                assert(arrayLen(a.errors) == arrayLen(b.errors))
+                assert(arrayLen(a.logs) == arrayLen(b.logs))
             }
-        )
-    )
+        }
+    }
 
-    private def jsString(value: js.Any): String =
-        js.Dynamic.global.String(value).asInstanceOf[String]
+    private def jsString(value: sjs.Any): String =
+        sjs.Dynamic.global.String(value).asInstanceOf[String]

@@ -69,9 +69,9 @@ object QueryExecutionPipeline:
                 normalized <- normalize[Ctx, String](query)
                 analysis   <- analyze[Ctx, String](normalized)
                 validated  <- validate[Ctx](normalized)
-                plan       = Plan(validated, analysis)
-                lowered    <- lower[Ctx, String](plan.query, registry)
-                matches    <- execute[Ctx, T, String](lowered, root)
+                plan = Plan(validated, analysis)
+                lowered <- lower[Ctx, String](plan.query, registry)
+                matches <- execute[Ctx, T, String](lowered, root)
             yield PipelineResult(normalized, analysis, plan, lowered, matches)
         }
 
