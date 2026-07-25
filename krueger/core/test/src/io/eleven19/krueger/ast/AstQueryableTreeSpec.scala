@@ -1,7 +1,7 @@
 package io.eleven19.krueger.ast
 
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.Span
@@ -12,7 +12,7 @@ import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
 
-object AstQueryableTreeSpec extends ZIOSpecDefault:
+class AstQueryableTreeSpec extends Test[Any]:
 
     private def parse(src: String): Module = Krueger.parseAst(src) match
         case Success(m)   => m
@@ -35,73 +35,66 @@ object AstQueryableTreeSpec extends ZIOSpecDefault:
     private def field(s: String): FieldName = FieldName.make(s).toOption.get
     private def cap(s: String): CaptureName = CaptureName.make(s).toOption.get
 
-    def spec = suite("QueryableTree[AstNode]")(
-        suite("nodeType")(
-            test("uses simple class name for concrete variants") {
-                assertTrue(
-                    typeNameOf(moduleTree) == "Module",
-                    typeNameOf(moduleTree.name) == "QualifiedName"
-                )
+    "QueryableTree[AstNode]" - {
+        "nodeType" - {
+            "uses simple class name for concrete variants" in {
+                assert(typeNameOf(moduleTree) == "Module")
+                assert(typeNameOf(moduleTree.name) == "QualifiedName")
             }
-        ),
-        suite("children")(
-            test("match AstVisitor.children for every node in the parsed module") {
+        }
+        "children" - {
+            "match AstVisitor.children for every node in the parsed module" in {
                 val mismatches = AstVisitor.collect(moduleTree) {
                     case n if qt.children(n) != AstVisitor.children(n) => n
                 }
-                assertTrue(mismatches.isEmpty)
+                assert(mismatches.isEmpty)
             }
-        ),
-        suite("fields")(
-            test("ValueDeclaration exposes typeAnnotation, parameters, body") {
+        }
+        "fields" - {
+            "ValueDeclaration exposes typeAnnotation, parameters, body" in {
                 val valueDecl = moduleTree.declarations
                     .collectFirst { case v: ValueDeclaration => v }
                     .getOrElse(throw new AssertionError("no value declaration"))
                 val fs = qt.fields(valueDecl)
-                assertTrue(
-                    fs.keySet == Set(field("typeAnnotation"), field("parameters"), field("body")),
-                    fs(field("body")) == Seq(valueDecl.body),
-                    fs(field("parameters")) == valueDecl.parameters.toSeq,
-                    fs(field("typeAnnotation")) == valueDecl.typeAnnotation.toSeq
-                )
-            },
-            test("Module exposes exposing, imports, declarations as fields") {
-                val fs = qt.fields(moduleTree)
-                assertTrue(
-                    fs.keySet == Set(field("exposing"), field("imports"), field("declarations")),
-                    fs(field("exposing")) == Seq(moduleTree.exposing),
-                    fs(field("imports")) == moduleTree.imports.toSeq,
-                    fs(field("declarations")) == moduleTree.declarations.toSeq
-                )
+                assert(fs.keySet == Set(field("typeAnnotation"), field("parameters"), field("body")))
+                assert(fs(field("body")) == Seq(valueDecl.body))
+                assert(fs(field("parameters")) == valueDecl.parameters.toSeq)
+                assert(fs(field("typeAnnotation")) == valueDecl.typeAnnotation.toSeq)
             }
-        ),
-        suite("text")(
-            test("IntLiteral stringifies its value") {
+            "Module exposes exposing, imports, declarations as fields" in {
+                val fs = qt.fields(moduleTree)
+                assert(fs.keySet == Set(field("exposing"), field("imports"), field("declarations")))
+                assert(fs(field("exposing")) == Seq(moduleTree.exposing))
+                assert(fs(field("imports")) == moduleTree.imports.toSeq)
+                assert(fs(field("declarations")) == moduleTree.declarations.toSeq)
+            }
+        }
+        "text" - {
+            "IntLiteral stringifies its value" in {
                 val lit = IntLiteral(7L)(Span.zero)
-                assertTrue(qt.text(lit).contains("7"))
-            },
-            test("StringLiteral returns its raw string") {
+                assert(qt.text(lit).contains("7"))
+            }
+            "StringLiteral returns its raw string" in {
                 val lit = StringLiteral("hello")(Span.zero)
-                assertTrue(qt.text(lit).contains("hello"))
-            },
-            test("QualifiedName returns its dotted full name") {
-                assertTrue(qt.text(moduleTree.name).contains("App"))
-            },
-            test("ValueDeclaration surfaces its name") {
+                assert(qt.text(lit).contains("hello"))
+            }
+            "QualifiedName returns its dotted full name" in
+                assert(qt.text(moduleTree.name).contains("App"))
+            "ValueDeclaration surfaces its name" in {
                 val valueDecl = moduleTree.declarations
                     .collectFirst { case v: ValueDeclaration => v }
                     .getOrElse(throw new AssertionError("no value declaration"))
-                assertTrue(qt.text(valueDecl).contains("main"))
+                assert(qt.text(valueDecl).contains("main"))
             }
-        ),
-        suite("integration with Matcher")(
-            test("a node-pattern query surfaces each value declaration") {
+        }
+        "integration with Matcher" - {
+            "a node-pattern query surfaces each value declaration" in {
                 val query = QueryParser.parse("(ValueDeclaration) @v") match
                     case Success(q) => q
                     case Failure(e) => throw new AssertionError(s"bad query: $e")
                 val ms    = Matcher.matches(query, root).toList
                 val names = ms.flatMap(_.captures.get(cap("v"))).collect { case v: ValueDeclaration => v.name }
-                assertTrue(names.toSet == Set("main"))
+                assert(names.toSet == Set("main"))
             }
-        )
-    )
+        }
+    }

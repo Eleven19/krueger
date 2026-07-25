@@ -1,21 +1,21 @@
 package io.eleven19.krueger.lexer
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.compiler.{CompileError, DiagnosticCode}
 
-object ElmTokenizerSpec extends ZIOSpecDefault:
+class ElmTokenizerSpec extends Test[Any]:
 
     private def valueOf(result: ElmTokenizer.TokenizeResult[Vector[ElmToken]]): Vector[ElmToken] =
         result.value match
             case Right(tokens) => tokens
             case Left(errors)  => throw new AssertionError(s"expected tokens, got errors: $errors")
 
-    def spec = suite("ElmTokenizer")(
-        test("tokenizes keywords, identifiers, operators, literals, punctuation, and spans") {
+    "ElmTokenizer" - {
+        "tokenizes keywords, identifiers, operators, literals, punctuation, and spans" in {
             val tokens = valueOf(ElmTokenizer.run("""module Main exposing (main = "hi")"""))
 
-            assertTrue(
+            assert(
                 tokens.map(_.kind) == Vector(
                     ElmTokenKind.Keyword,
                     ElmTokenKind.UpperIdentifier,
@@ -25,7 +25,9 @@ object ElmTokenizerSpec extends ZIOSpecDefault:
                     ElmTokenKind.Operator,
                     ElmTokenKind.StringLiteral,
                     ElmTokenKind.Punctuation
-                ),
+                )
+            )
+            assert(
                 tokens.map(t => (t.lexeme, t.start, t.end)) == Vector(
                     ("module", 0, 6),
                     ("Main", 7, 11),
@@ -37,49 +39,47 @@ object ElmTokenizerSpec extends ZIOSpecDefault:
                     (")", 33, 34)
                 )
             )
-        },
-        test("excludes trivia by default and includes whitespace, newlines, and comments when configured") {
-            val source = "main = 1 -- greeting\nnext = 2"
+        }
+        "excludes trivia by default and includes whitespace, newlines, and comments when configured" in {
+            val source        = "main = 1 -- greeting\nnext = 2"
             val defaultTokens = valueOf(ElmTokenizer.run(source))
-            val triviaTokens = valueOf(ElmTokenizer.run(source, ElmTokenizerConfig(includeTrivia = true, recoverUnknown = true)))
+            val triviaTokens =
+                valueOf(ElmTokenizer.run(source, ElmTokenizerConfig(includeTrivia = true, recoverUnknown = true)))
 
-            assertTrue(
+            assert(
                 !defaultTokens.exists(t =>
                     t.kind == ElmTokenKind.Whitespace || t.kind == ElmTokenKind.Newline || t.kind == ElmTokenKind.Comment
-                ),
-                triviaTokens.exists(t => t.kind == ElmTokenKind.Whitespace && t.lexeme == " "),
-                triviaTokens.exists(t => t.kind == ElmTokenKind.Comment && t.lexeme == "-- greeting"),
-                triviaTokens.exists(t => t.kind == ElmTokenKind.Newline && t.lexeme == "\n")
+                )
             )
-        },
-        test("matches longest operators before shorter prefixes") {
+            assert(triviaTokens.exists(t => t.kind == ElmTokenKind.Whitespace && t.lexeme == " "))
+            assert(triviaTokens.exists(t => t.kind == ElmTokenKind.Comment && t.lexeme == "-- greeting"))
+            assert(triviaTokens.exists(t => t.kind == ElmTokenKind.Newline && t.lexeme == "\n"))
+        }
+        "matches longest operators before shorter prefixes" in {
             val tokens = valueOf(ElmTokenizer.run("a -> b |> c"))
 
-            assertTrue(tokens.filter(_.kind == ElmTokenKind.Operator).map(_.lexeme) == Vector("->", "|>"))
-        },
-        test("recovers unknown input with a token and diagnostic log when configured") {
+            assert(tokens.filter(_.kind == ElmTokenKind.Operator).map(_.lexeme) == Vector("->", "|>"))
+        }
+        "recovers unknown input with a token and diagnostic log when configured" in {
             val result = ElmTokenizer.run("main @ value")
             val tokens = valueOf(result)
 
-            assertTrue(
-                tokens.exists(t => t.kind == ElmTokenKind.Unknown && t.lexeme == "@"),
-                result.logs.exists(_.contains("Recovered unknown token '@' at 5"))
-            )
-        },
-        test("uses the error channel for unrecovered unknown input") {
-            val result = ElmTokenizer.run("main @ value", ElmTokenizerConfig(includeTrivia = false, recoverUnknown = false))
-
-            assertTrue(
-                result.value.isLeft,
-                result.errors.exists {
-                    case CompileError.ParseError("tokenize", diagnostic) =>
-                        diagnostic.code == DiagnosticCode.TokenizerUnexpectedCharacter &&
-                        diagnostic.message.contains("I ran into an unexpected character") &&
-                        diagnostic.message.contains("@") &&
-                        diagnostic.span.start == 5 &&
-                        diagnostic.span.end == 6
-                    case _ => false
-                }
-            )
+            assert(tokens.exists(t => t.kind == ElmTokenKind.Unknown && t.lexeme == "@"))
+            assert(result.logs.exists(_.contains("Recovered unknown token '@' at 5")))
         }
-    )
+        "uses the error channel for unrecovered unknown input" in {
+            val result =
+                ElmTokenizer.run("main @ value", ElmTokenizerConfig(includeTrivia = false, recoverUnknown = false))
+
+            assert(result.value.isLeft)
+            assert(result.errors.exists {
+                case CompileError.ParseError("tokenize", diagnostic) =>
+                    diagnostic.code == DiagnosticCode.TokenizerUnexpectedCharacter &&
+                    diagnostic.message.contains("I ran into an unexpected character") &&
+                    diagnostic.message.contains("@") &&
+                    diagnostic.span.start == 5 &&
+                    diagnostic.span.end == 6
+                case _ => false
+            })
+        }
+    }

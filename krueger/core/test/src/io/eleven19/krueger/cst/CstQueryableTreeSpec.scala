@@ -1,7 +1,7 @@
 package io.eleven19.krueger.cst
 
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Krueger
 import io.eleven19.krueger.Span
@@ -12,7 +12,7 @@ import io.eleven19.krueger.trees.NodeTypeName
 import io.eleven19.krueger.trees.QueryableTree
 import io.eleven19.krueger.trees.query.*
 
-object CstQueryableTreeSpec extends ZIOSpecDefault:
+class CstQueryableTreeSpec extends Test[Any]:
 
     private def parse(src: String): CstModule = Krueger.parseCst(src) match
         case Success(m)   => m
@@ -35,89 +35,82 @@ object CstQueryableTreeSpec extends ZIOSpecDefault:
     private def field(s: String): FieldName = FieldName.make(s).toOption.get
     private def cap(s: String): CaptureName = CaptureName.make(s).toOption.get
 
-    def spec = suite("QueryableTree[CstNode]")(
-        suite("nodeType")(
-            test("uses simple class name for concrete variants") {
-                assertTrue(
-                    typeNameOf(moduleTree) == "CstModule",
-                    typeNameOf(moduleTree.moduleDecl) == "CstModuleDeclaration",
-                    typeNameOf(moduleTree.moduleDecl.name) == "CstQualifiedName"
-                )
-            },
-            test("distinguishes value declarations from other declaration kinds") {
-                val valueDecls = moduleTree.declarations.collect { case v: CstValueDeclaration => v }
-                assertTrue(
-                    valueDecls.size == 1,
-                    valueDecls.head.name.value == "main",
-                    valueDecls.forall(v => typeNameOf(v) == "CstValueDeclaration")
-                )
+    "QueryableTree[CstNode]" - {
+        "nodeType" - {
+            "uses simple class name for concrete variants" in {
+                assert(typeNameOf(moduleTree) == "CstModule")
+                assert(typeNameOf(moduleTree.moduleDecl) == "CstModuleDeclaration")
+                assert(typeNameOf(moduleTree.moduleDecl.name) == "CstQualifiedName")
             }
-        ),
-        suite("children")(
-            test("match CstVisitor.children for every node in the parsed module") {
+            "distinguishes value declarations from other declaration kinds" in {
+                val valueDecls = moduleTree.declarations.collect { case v: CstValueDeclaration => v }
+                assert(valueDecls.size == 1)
+                assert(valueDecls.head.name.value == "main")
+                assert(valueDecls.forall(v => typeNameOf(v) == "CstValueDeclaration"))
+            }
+        }
+        "children" - {
+            "match CstVisitor.children for every node in the parsed module" in {
                 val mismatches = CstVisitor.collect(moduleTree) {
                     case n if qt.children(n) != CstVisitor.children(n) => n
                 }
-                assertTrue(mismatches.isEmpty)
+                assert(mismatches.isEmpty)
             }
-        ),
-        suite("fields")(
-            test("CstValueDeclaration exposes name, body, patterns, annotation") {
+        }
+        "fields" - {
+            "CstValueDeclaration exposes name, body, patterns, annotation" in {
                 val valueDecl = moduleTree.declarations
                     .collectFirst { case v: CstValueDeclaration =>
                         v
                     }
                     .getOrElse(throw new AssertionError("no value declaration"))
                 val fs = qt.fields(valueDecl)
-                assertTrue(
-                    fs.keySet == Set(field("annotation"), field("name"), field("patterns"), field("body")),
-                    fs(field("name")) == Seq(valueDecl.name),
-                    fs(field("body")) == Seq(valueDecl.body),
-                    fs(field("patterns")) == valueDecl.patterns.toSeq,
-                    fs(field("annotation")) == valueDecl.annotation.toSeq
-                )
-            },
-            test("CstModule exposes moduleDecl, imports, declarations") {
+                assert(fs.keySet == Set(field("annotation"), field("name"), field("patterns"), field("body")))
+                assert(fs(field("name")) == Seq(valueDecl.name))
+                assert(fs(field("body")) == Seq(valueDecl.body))
+                assert(fs(field("patterns")) == valueDecl.patterns.toSeq)
+                assert(fs(field("annotation")) == valueDecl.annotation.toSeq)
+            }
+            "CstModule exposes moduleDecl, imports, declarations" in {
                 val fs = qt.fields(moduleTree)
-                assertTrue(
-                    fs.keySet.contains(field("moduleDecl")),
-                    fs.keySet.contains(field("imports")),
-                    fs.keySet.contains(field("declarations")),
-                    fs(field("moduleDecl")) == Seq(moduleTree.moduleDecl),
-                    fs(field("imports")) == moduleTree.imports.toSeq,
-                    fs(field("declarations")) == moduleTree.declarations.toSeq
-                )
-            },
-            test("CstName has no fields") {
-                val name = moduleTree.moduleDecl.name.parts.head
-                assertTrue(qt.fields(name).isEmpty)
+                assert(fs.keySet.contains(field("moduleDecl")))
+                assert(fs.keySet.contains(field("imports")))
+                assert(fs.keySet.contains(field("declarations")))
+                assert(fs(field("moduleDecl")) == Seq(moduleTree.moduleDecl))
+                assert(fs(field("imports")) == moduleTree.imports.toSeq)
+                assert(fs(field("declarations")) == moduleTree.declarations.toSeq)
             }
-        ),
-        suite("text")(
-            test("CstName returns its value") {
+            "CstName has no fields" in {
                 val name = moduleTree.moduleDecl.name.parts.head
-                assertTrue(qt.text(name).contains(name.value))
-            },
-            test("CstIntLiteral stringifies its value") {
+                assert(qt.fields(name).isEmpty)
+            }
+        }
+        "text" - {
+            "CstName returns its value" in {
+                val name = moduleTree.moduleDecl.name.parts.head
+                assert(qt.text(name).contains(name.value))
+            }
+            "CstIntLiteral stringifies its value" in {
                 val intLit = CstIntLiteral(42L)(Span.zero)
-                assertTrue(qt.text(intLit).contains("42"))
-            },
-            test("CstStringLiteral returns its raw string") {
-                val strLit = CstStringLiteral("hi")(Span.zero)
-                assertTrue(qt.text(strLit).contains("hi"))
-            },
-            test("compound nodes return None") {
-                assertTrue(qt.text(moduleTree).isEmpty, qt.text(moduleTree.moduleDecl).isEmpty)
+                assert(qt.text(intLit).contains("42"))
             }
-        ),
-        suite("integration with Matcher")(
-            test("a node-pattern query surfaces every value declaration") {
+            "CstStringLiteral returns its raw string" in {
+                val strLit = CstStringLiteral("hi")(Span.zero)
+                assert(qt.text(strLit).contains("hi"))
+            }
+            "compound nodes return None" in {
+                assert(qt.text(moduleTree).isEmpty)
+                assert(qt.text(moduleTree.moduleDecl).isEmpty)
+            }
+        }
+        "integration with Matcher" - {
+            "a node-pattern query surfaces every value declaration" in {
                 val query = QueryParser.parse("(CstValueDeclaration name: (CstName) @n)") match
                     case Success(q) => q
                     case Failure(e) => throw new AssertionError(s"bad query: $e")
                 val ms    = Matcher.matches(query, root).toList
                 val names = ms.flatMap(_.captures.get(cap("n"))).collect { case n: CstName => n.value }
-                assertTrue(names.toSet == Set("main"))
+                assert(names.toSet == Set("main"))
             }
-        )
-    )
+        }
+    }

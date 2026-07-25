@@ -1,11 +1,11 @@
 package io.eleven19.krueger
 
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.cst.CommentKind
 
-object KruegerSpec extends ZIOSpecDefault:
+class KruegerSpec extends Test[Any]:
 
     private val minimal = "module Main exposing (..)\n"
 
@@ -27,24 +27,22 @@ object KruegerSpec extends ZIOSpecDefault:
             case Success(m)   => m
             case Failure(msg) => throw new AssertionError(s"parse failed: $msg\nSource:\n$src")
 
-    def spec = suite("Krueger")(
-        test("parseCst succeeds on minimal module") {
+    "Krueger" - {
+        "parseCst succeeds on minimal module" in {
             val m = parseCstOrFail(minimal)
-            assertTrue(m.moduleDecl.name.parts.map(_.value) == List("Main"))
-        },
-        test("parseAst succeeds on minimal module") {
+            assert(m.moduleDecl.name.parts.map(_.value) == List("Main"))
+        }
+        "parseAst succeeds on minimal module" in {
             val m = parseAstOrFail(minimal)
-            assertTrue(m.name.fullName == "Main")
-        },
-        test("parseCst succeeds on richer fixture") {
+            assert(m.name.fullName == "Main")
+        }
+        "parseCst succeeds on richer fixture" in {
             val m = parseCstOrFail(richer)
-            assertTrue(
-                m.moduleDecl.name.parts.map(_.value) == List("App"),
-                m.imports.size == 1,
-                m.declarations.size == 1
-            )
-        },
-        test("parseCst differentiates line, block, and doc comments") {
+            assert(m.moduleDecl.name.parts.map(_.value) == List("App"))
+            assert(m.imports.size == 1)
+            assert(m.declarations.size == 1)
+        }
+        "parseCst differentiates line, block, and doc comments" in {
             val m = parseCstOrFail(
                 """module App exposing (..)
                   |
@@ -62,25 +60,21 @@ object KruegerSpec extends ZIOSpecDefault:
                 .map(_.text.trim)
             // Non-doc comments remain in the module trivia
             val moduleComments = m.trivia.comments.filterNot(_.kind == CommentKind.Doc)
-            assertTrue(
-                moduleComments.map(_.kind) == IndexedSeq(CommentKind.Line, CommentKind.Block),
-                moduleComments.map(_.text.trim) == IndexedSeq("regular line", "regular block"),
-                declDoc.contains("module docs")
-            )
-        },
-        test("parseAst lowers imports and declarations") {
+            assert(moduleComments.map(_.kind) == IndexedSeq(CommentKind.Line, CommentKind.Block))
+            assert(moduleComments.map(_.text.trim) == IndexedSeq("regular line", "regular block"))
+            assert(declDoc.contains("module docs"))
+        }
+        "parseAst lowers imports and declarations" in {
             val m = parseAstOrFail(richer)
-            assertTrue(
-                m.imports.map(_.moduleName.fullName) == List("Html"),
-                m.declarations.size == 1
-            )
-        },
-        test("parseCst fails on malformed input") {
+            assert(m.imports.map(_.moduleName.fullName) == List("Html"))
+            assert(m.declarations.size == 1)
+        }
+        "parseCst fails on malformed input" in {
             Krueger.parseCst("module !!!") match
-                case Failure(_) => assertCompletes
+                case Failure(_) => succeed
                 case Success(_) => throw new AssertionError("expected failure, got success")
-        },
-        test("parseCst preserves every top-level value declaration") {
+        }
+        "parseCst preserves every top-level value declaration" in {
             val src =
                 """module M exposing (..)
                   |
@@ -94,9 +88,9 @@ object KruegerSpec extends ZIOSpecDefault:
             val names = m.declarations.collect { case v: io.eleven19.krueger.cst.CstValueDeclaration =>
                 v.name.value
             }
-            assertTrue(names == IndexedSeq("x", "y", "z"))
-        },
-        test("parseAst preserves every top-level value declaration") {
+            assert(names == IndexedSeq("x", "y", "z"))
+        }
+        "parseAst preserves every top-level value declaration" in {
             val src =
                 """module M exposing (..)
                   |
@@ -110,6 +104,6 @@ object KruegerSpec extends ZIOSpecDefault:
             val names = m.declarations.collect { case v: io.eleven19.krueger.ast.ValueDeclaration =>
                 v.name
             }
-            assertTrue(names == IndexedSeq("x", "y", "z"))
+            assert(names == IndexedSeq("x", "y", "z"))
         }
-    )
+    }

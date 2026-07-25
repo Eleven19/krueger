@@ -1,30 +1,28 @@
 package io.eleven19.krueger.compiler
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.parser.{DiagnosticBody, ParseDiagnosticErrorBuilder}
 
-object ParseDiagnosticSpec extends ZIOSpecDefault:
+class ParseDiagnosticSpec extends Test[Any]:
 
-    def spec = suite("ParseDiagnostic")(
-        test("classifies unexpected end of input as ELM-P001") {
+    "ParseDiagnostic" - {
+        "classifies unexpected end of input as ELM-P001" in {
             val diagnostic = ParseDiagnostic.unexpectedEndOfInput(
                 source = "module M",
                 line = 1,
                 column = 9,
                 expected = List("exposing", "where")
             )
-            assertTrue(
-                diagnostic.code == DiagnosticCode.UnexpectedEndOfInput,
-                diagnostic.span.line == 1,
-                diagnostic.span.column == 9,
-                diagnostic.span.start == 8,
-                diagnostic.span.end == 8,
-                diagnostic.expected == List("exposing", "where"),
-                diagnostic.suggestion.isEmpty
-            )
-        },
-        test("classifies unexpected token as ELM-P002") {
+            assert(diagnostic.code == DiagnosticCode.UnexpectedEndOfInput)
+            assert(diagnostic.span.line == 1)
+            assert(diagnostic.span.column == 9)
+            assert(diagnostic.span.start == 8)
+            assert(diagnostic.span.end == 8)
+            assert(diagnostic.expected == List("exposing", "where"))
+            assert(diagnostic.suggestion.isEmpty)
+        }
+        "classifies unexpected token as ELM-P002" in {
             val diagnostic = ParseDiagnostic.unexpectedToken(
                 source = "x = @",
                 line = 1,
@@ -33,30 +31,26 @@ object ParseDiagnosticSpec extends ZIOSpecDefault:
                 unexpected = "@",
                 expected = List("identifier", "digit")
             )
-            assertTrue(
-                diagnostic.code == DiagnosticCode.UnexpectedToken,
-                diagnostic.span.start == 4,
-                diagnostic.span.end == 5,
-                diagnostic.message.contains("unexpected")
-            )
-        },
-        test("tokenizer unexpected character uses ELM-T001") {
+            assert(diagnostic.code == DiagnosticCode.UnexpectedToken)
+            assert(diagnostic.span.start == 4)
+            assert(diagnostic.span.end == 5)
+            assert(diagnostic.message.contains("unexpected"))
+        }
+        "tokenizer unexpected character uses ELM-T001" in {
             val diagnostic = ParseDiagnostic.tokenizerUnexpectedCharacter(
                 source = "main @",
                 offset = 5,
                 lexeme = "@"
             )
-            assertTrue(
-                diagnostic.code == DiagnosticCode.TokenizerUnexpectedCharacter,
-                diagnostic.span.start == 5,
-                diagnostic.span.end == 6,
-                diagnostic.span.line == 1,
-                diagnostic.span.column == 6,
-                diagnostic.message.contains("I ran into an unexpected character"),
-                diagnostic.message.contains("@")
-            )
-        },
-        test("suggestion helper recognizes missing in after let") {
+            assert(diagnostic.code == DiagnosticCode.TokenizerUnexpectedCharacter)
+            assert(diagnostic.span.start == 5)
+            assert(diagnostic.span.end == 6)
+            assert(diagnostic.span.line == 1)
+            assert(diagnostic.span.column == 6)
+            assert(diagnostic.message.contains("I ran into an unexpected character"))
+            assert(diagnostic.message.contains("@"))
+        }
+        "suggestion helper recognizes missing in after let" in {
             val diagnostic = ParseDiagnosticErrorBuilder("module M\n\nx = 1").format(
                 (3, 1),
                 (),
@@ -67,8 +61,6 @@ object ParseDiagnosticSpec extends ZIOSpecDefault:
                     errorWidth = 0
                 )
             )
-            assertTrue(
-                diagnostic.suggestion.contains("Did you forget `in` after a `let` binding?")
-            )
+            assert(diagnostic.suggestion.contains("Did you forget `in` after a `let` binding?"))
         }
-    )
+    }

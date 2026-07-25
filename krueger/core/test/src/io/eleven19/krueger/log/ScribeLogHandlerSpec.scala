@@ -1,13 +1,13 @@
 package io.eleven19.krueger.log
 
 import kyo.*
-import zio.test.*
+import kyo.test.*
 
-object ScribeLogHandlerSpec extends ZIOSpecDefault:
+class ScribeLogHandlerSpec extends Test[Any]:
 
-    def spec = suite("ScribeLogHandler / InMemoryLogRecorder")(
+    "ScribeLogHandler / InMemoryLogRecorder" - {
 
-        test("InMemoryLogRecorder captures every level emitted via Kyo Log"):
+        "InMemoryLogRecorder captures every level emitted via Kyo Log" in {
             val recorder = InMemoryLogRecorder.unsafeMake()
             val program =
                 Log.let(InMemoryLogRecorder.layer(recorder)) {
@@ -19,12 +19,12 @@ object ScribeLogHandlerSpec extends ZIOSpecDefault:
                         _ <- Log.error("error-msg")
                     yield ()
                 }
-            val _ = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
+            val _      = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
             val events = recorder.snapshot()
-            assertTrue(events.map(_.message) == List("trace-msg", "debug-msg", "info-msg", "warn-msg", "error-msg"))
-        ,
+            assert(events.map(_.message) == List("trace-msg", "debug-msg", "info-msg", "warn-msg", "error-msg"))
+        }
 
-        test("InMemoryLogRecorder preserves emission order"):
+        "InMemoryLogRecorder preserves emission order" in {
             val recorder = InMemoryLogRecorder.unsafeMake()
             val program =
                 Log.let(InMemoryLogRecorder.layer(recorder)) {
@@ -35,10 +35,10 @@ object ScribeLogHandlerSpec extends ZIOSpecDefault:
                     yield ()
                 }
             val _ = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
-            assertTrue(recorder.snapshot().map(_.message) == List("first", "second", "third"))
-        ,
+            assert(recorder.snapshot().map(_.message) == List("first", "second", "third"))
+        }
 
-        test("ScribeLogHandler does not throw on every level"):
+        "ScribeLogHandler does not throw on every level" in {
             val program =
                 Log.let(ScribeLogLayer.default) {
                     for
@@ -50,5 +50,6 @@ object ScribeLogHandlerSpec extends ZIOSpecDefault:
                     yield ()
                 }
             val _ = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
-            assertCompletes
-    )
+            succeed
+        }
+    }

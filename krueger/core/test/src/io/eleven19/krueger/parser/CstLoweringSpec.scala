@@ -1,12 +1,12 @@
 package io.eleven19.krueger.parser
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.Span
 import io.eleven19.krueger.cst.*
 import io.eleven19.krueger.ast
 
-object CstLoweringSpec extends ZIOSpecDefault:
+class CstLoweringSpec extends Test[Any]:
 
     private val sp                 = Span.zero
     private def n(name: String)    = CstName(name)(sp)
@@ -19,21 +19,19 @@ object CstLoweringSpec extends ZIOSpecDefault:
             IndexedSeq(decl)
         )(sp)
 
-    def spec = suite("CstLowering")(
-        test("lowerModule maps module name, imports, and declarations") {
+    "CstLowering" - {
+        "lowerModule maps module name, imports, and declarations" in {
             val cst = CstModule(
                 CstModuleDeclaration(ModuleType.Plain, qn("Main"), CstExposingAll()(sp))(sp),
                 IndexedSeq(CstImport(qn("List"), None, None)(sp)),
                 IndexedSeq.empty
             )(sp)
             val m = CstLowering.lowerModule(cst)
-            assertTrue(
-                m.name.fullName == "Main",
-                m.exposing.isInstanceOf[ast.ExposingAll],
-                m.imports.map(_.moduleName.fullName) == IndexedSeq("List")
-            )
-        },
-        test("lowerModule lowers an explicit exposing list") {
+            assert(m.name.fullName == "Main")
+            assert(m.exposing.isInstanceOf[ast.ExposingAll])
+            assert(m.imports.map(_.moduleName.fullName) == IndexedSeq("List"))
+        }
+        "lowerModule lowers an explicit exposing list" in {
             val items = List[CstExposedItem](
                 CstExposedValue(n("foo"))(sp),
                 CstExposedOperator(n("++"))(sp),
@@ -52,37 +50,35 @@ object CstLoweringSpec extends ZIOSpecDefault:
             val types  = exp.collect { case t: ast.ExposedType => (t.name, t.exposeConstructors) }
             val values = exp.collect { case v: ast.ExposedValue => v.name }
             val ops    = exp.collect { case o: ast.ExposedOperator => o.name }
-            assertTrue(
-                values == List("foo"),
-                ops == List("++"),
-                types == List(("Foo", true), ("Bar", false))
-            )
-        },
-        test("lowerQualifiedName flattens parts via fullName") {
+            assert(values == List("foo"))
+            assert(ops == List("++"))
+            assert(types == List(("Foo", true), ("Bar", false)))
+        }
+        "lowerQualifiedName flattens parts via fullName" in {
             val cst = CstModule(
                 CstModuleDeclaration(ModuleType.Plain, qn("Http", "Body"), CstExposingAll()(sp))(sp),
                 IndexedSeq.empty,
                 IndexedSeq.empty
             )(sp)
-            assertTrue(CstLowering.lowerModule(cst).name.fullName == "Http.Body")
-        },
-        test("lowerPattern strips CstParenthesizedPattern") {
+            assert(CstLowering.lowerModule(cst).name.fullName == "Http.Body")
+        }
+        "lowerPattern strips CstParenthesizedPattern" in {
             val inner   = CstVariablePattern(n("x"))(sp)
             val wrapped = CstParenthesizedPattern(inner)(sp)
             val lowered = CstLowering.lowerPattern(wrapped)
-            assertTrue(lowered == ast.VariablePattern("x")(sp))
-        },
-        test("lowerPattern strips nested parens") {
+            assert(lowered == ast.VariablePattern("x")(sp))
+        }
+        "lowerPattern strips nested parens" in {
             val nested  = CstParenthesizedPattern(CstParenthesizedPattern(CstVariablePattern(n("y"))(sp))(sp))(sp)
             val lowered = CstLowering.lowerPattern(nested)
-            assertTrue(lowered == ast.VariablePattern("y")(sp))
-        },
-        test("lowerExpression preserves CstParenthesized as ast.Parenthesized") {
+            assert(lowered == ast.VariablePattern("y")(sp))
+        }
+        "lowerExpression preserves CstParenthesized as ast.Parenthesized" in {
             val wrapped = CstParenthesized(CstIntLiteral(1L)(sp))(sp)
             val lowered = CstLowering.lowerExpression(wrapped)
-            assertTrue(lowered.isInstanceOf[ast.Parenthesized])
-        },
-        test("lowerLetBinding uses variable name when pattern is a variable") {
+            assert(lowered.isInstanceOf[ast.Parenthesized])
+        }
+        "lowerLetBinding uses variable name when pattern is a variable" in {
             val decl = CstValueDeclaration(
                 None,
                 n("main"),
@@ -101,9 +97,9 @@ object CstLoweringSpec extends ZIOSpecDefault:
             )(sp)
             val m     = CstLowering.lowerModule(moduleWithDecl(decl))
             val letIn = m.declarations.head.asInstanceOf[ast.ValueDeclaration].body.asInstanceOf[ast.LetIn]
-            assertTrue(letIn.bindings.head.name == "x")
-        },
-        test("lowerLetBinding falls back to <pattern> for non-variable patterns") {
+            assert(letIn.bindings.head.name == "x")
+        }
+        "lowerLetBinding falls back to <pattern> for non-variable patterns" in {
             val decl = CstValueDeclaration(
                 None,
                 n("main"),
@@ -122,9 +118,9 @@ object CstLoweringSpec extends ZIOSpecDefault:
             )(sp)
             val m     = CstLowering.lowerModule(moduleWithDecl(decl))
             val letIn = m.declarations.head.asInstanceOf[ast.ValueDeclaration].body.asInstanceOf[ast.LetIn]
-            assertTrue(letIn.bindings.head.name == "<pattern>")
-        },
-        test("lowerDeclaration carries a value's type annotation onto the AST") {
+            assert(letIn.bindings.head.name == "<pattern>")
+        }
+        "lowerDeclaration carries a value's type annotation onto the AST" in {
             val annotated = CstValueDeclaration(
                 annotation = Some(
                     CstTypeAnnotation(
@@ -137,16 +133,14 @@ object CstLoweringSpec extends ZIOSpecDefault:
                 body = CstIntLiteral(42L)(sp)
             )(sp)
             val lowered = CstLowering.lowerDeclaration(annotated).asInstanceOf[ast.ValueDeclaration]
-            assertTrue(
-                lowered.name == "foo",
-                lowered.typeAnnotation.exists(_.isInstanceOf[ast.TypeReference])
-            )
-        },
-        test("lowerTypeExpression lowers function types") {
+            assert(lowered.name == "foo")
+            assert(lowered.typeAnnotation.exists(_.isInstanceOf[ast.TypeReference]))
+        }
+        "lowerTypeExpression lowers function types" in {
             val a       = CstTypeVariable(n("a"))(sp)
             val b       = CstTypeVariable(n("b"))(sp)
             val t       = CstFunctionType(a, b)(sp)
             val lowered = CstLowering.lowerTypeExpression(t)
-            assertTrue(lowered.isInstanceOf[ast.FunctionType])
+            assert(lowered.isInstanceOf[ast.FunctionType])
         }
-    )
+    }
