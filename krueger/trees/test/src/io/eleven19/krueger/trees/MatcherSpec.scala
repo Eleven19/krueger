@@ -1,11 +1,11 @@
 package io.eleven19.krueger.trees
 
-import zio.test.*
+import kyo.test.*
 
 import io.eleven19.krueger.trees.ToyTree.*
 import io.eleven19.krueger.trees.query.*
 
-object MatcherSpec extends ZIOSpecDefault:
+class MatcherSpec extends Test[Any]:
 
     private def q(src: String): Query = QueryParser.parse(src) match
         case parsley.Success(x) => x
@@ -23,176 +23,185 @@ object MatcherSpec extends ZIOSpecDefault:
     private val named: ToyTree   = Named(name = leafHi, body = leafBye)
     private val branch: ToyTree  = Branch(Seq(leafHi, named, leafYo))
 
-    def spec = suite("Matcher")(
-        suite("structural matching")(
-            test("a bare node pattern matches every node of that type") {
+    "Matcher" - {
+        "structural matching" - {
+            "a bare node pattern matches every node of that type" in {
                 val ms = Matcher.matches(q("(Leaf)"), branch).toList
-                assertTrue(ms.size == 4) // leafHi, leafHi inside named, leafBye inside named, leafYo
-            },
-            test("a wildcard matches every node") {
+                assert(ms.size == 4) // leafHi, leafHi inside named, leafBye inside named, leafYo
+            }
+            "a wildcard matches every node" in {
                 val ms = Matcher.matches(q("_"), named).toList
-                assertTrue(ms.size == 3) // named, leafHi, leafBye
-            },
-            test("a wildcard can be captured") {
+                assert(ms.size == 3) // named, leafHi, leafBye
+            }
+            "a wildcard can be captured" in {
                 val ms = Matcher.matches(q("_ @x"), leafHi).toList
-                assertTrue(ms.size == 1, ms.head.captures.get(xCap).contains(leafHi))
-            },
-            test("no match yields an empty lazy list") {
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(xCap).contains(leafHi))
+            }
+            "no match yields an empty lazy list" in {
                 val ms = Matcher.matches(q("(Branch)"), leafHi)
-                assertTrue(ms.isEmpty)
-            },
-            test("multiple top-level patterns return combined matches") {
+                assert(ms.isEmpty)
+            }
+            "multiple top-level patterns return combined matches" in {
                 val ms = Matcher.matches(q("(Named) (Leaf)"), branch).toList
-                assertTrue(ms.size == 5)
-            },
-            test("multiple top-level patterns preserve pattern-order grouping") {
-                val ms = Matcher.matches(q("(Named) @n (Leaf) @l"), branch).toList
+                assert(ms.size == 5)
+            }
+            "multiple top-level patterns preserve pattern-order grouping" in {
+                val ms           = Matcher.matches(q("(Named) @n (Leaf) @l"), branch).toList
                 val firstIsNamed = ms.head.captures.contains(nCap)
                 val namedCount   = ms.count(_.captures.contains(nCap))
                 val leafCount    = ms.count(_.captures.contains(lCap))
                 val splitAt      = namedCount
                 val grouped = ms.take(splitAt).forall(_.captures.contains(nCap)) &&
                     ms.drop(splitAt).forall(_.captures.contains(lCap))
-                assertTrue(firstIsNamed, namedCount == 1, leafCount == 4, grouped)
-            },
-            test("alternation matches either branch deterministically") {
-                val ms = Matcher.matches(q("[(Named) @n (Leaf) @l]"), branch).toList
+                assert(firstIsNamed)
+                assert(namedCount == 1)
+                assert(leafCount == 4)
+                assert(grouped)
+            }
+            "alternation matches either branch deterministically" in {
+                val ms         = Matcher.matches(q("[(Named) @n (Leaf) @l]"), branch).toList
                 val namedCount = ms.count(_.captures.contains(nCap))
                 val leafCount  = ms.count(_.captures.contains(lCap))
-                assertTrue(ms.size == 5, namedCount == 1, leafCount == 4)
-            },
-            test("alternation favors first matching branch for same node") {
+                assert(ms.size == 5)
+                assert(namedCount == 1)
+                assert(leafCount == 4)
+            }
+            "alternation favors first matching branch for same node" in {
                 val ms = Matcher.matches(q("[_ @n (Leaf) @l]"), leafHi).toList
-                assertTrue(ms.size == 1, ms.head.captures.contains(nCap), !ms.head.captures.contains(lCap))
+                assert(ms.size == 1)
+                assert(ms.head.captures.contains(nCap))
+                assert(!ms.head.captures.contains(lCap))
             }
-        ),
-        suite("fields")(
-            test("field pattern constrains a named child") {
+        }
+        "fields" - {
+            "field pattern constrains a named child" in {
                 val ms = Matcher.matches(q("(Named name: (Leaf) @n)"), branch).toList
-                assertTrue(ms.size == 1, ms.head.captures.get(nCap).contains(leafHi))
-            },
-            test("negated field constraint matches when field is absent") {
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(nCap).contains(leafHi))
+            }
+            "negated field constraint matches when field is absent" in {
                 val ms = Matcher.matches(q("(Leaf !name)"), branch).toList
-                assertTrue(ms.size == 4)
-            },
-            test("field pattern with multiple fields binds each capture") {
+                assert(ms.size == 4)
+            }
+            "field pattern with multiple fields binds each capture" in {
                 val ms = Matcher.matches(q("(Named name: (Leaf) @n body: (Leaf) @b)"), branch).toList
-                assertTrue(
-                    ms.size == 1,
-                    ms.head.captures.get(nCap).contains(leafHi),
-                    ms.head.captures.get(bCap).contains(leafBye)
-                )
-            },
-            test("negated field constraint fails when field is present") {
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(nCap).contains(leafHi))
+                assert(ms.head.captures.get(bCap).contains(leafBye))
+            }
+            "negated field constraint fails when field is present" in {
                 val ms = Matcher.matches(q("(Named !name)"), branch).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("field pattern fails when sub-pattern does not match") {
+                assert(ms.isEmpty)
+            }
+            "field pattern fails when sub-pattern does not match" in {
                 val ms = Matcher.matches(q("(Named name: (Branch))"), named).toList
-                assertTrue(ms.isEmpty)
+                assert(ms.isEmpty)
             }
-        ),
-        suite("ordered child matching")(
-            test("unfielded child patterns match children in order") {
+        }
+        "ordered child matching" - {
+            "unfielded child patterns match children in order" in {
                 val ms = Matcher.matches(q("(Branch (Leaf) @n (Named) @b)"), branch).toList
-                assertTrue(
-                    ms.size == 1,
-                    ms.head.captures.get(nCap).contains(leafHi),
-                    ms.head.captures.get(bCap).contains(named)
-                )
-            },
-            test("unfielded child patterns fail when ordered sequence cannot be found") {
-                val ms = Matcher.matches(q("(Branch (Named) @b (Named) @n)"), branch).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("field and unfielded child patterns can be mixed") {
-                val ms = Matcher.matches(q("(Named name: (Leaf) @n (Leaf) @b)"), named).toList
-                assertTrue(
-                    ms.size == 1,
-                    ms.head.captures.get(nCap).contains(leafHi),
-                    ms.head.captures.get(bCap).contains(leafBye)
-                )
-            },
-            test("ordered child matching is deterministic when multiple alignments are possible") {
-                val root: ToyTree = Branch(Seq(Leaf("a"), Leaf("b"), Leaf("c")))
-                val ms   = Matcher.matches(q("(Branch (Leaf) @n (Leaf) @b)"), root).toList
-                val capN = ms.head.captures(nCap)
-                val capB = ms.head.captures(bCap)
-                assertTrue(ms.size == 1, capN == Leaf("a"), capB == Leaf("b"))
-            },
-            test("anchored child patterns require immediate sibling adjacency") {
-                val ms = Matcher.matches(q("(Branch (Leaf) @n . (Named) @b)"), branch).toList
-                assertTrue(
-                    ms.size == 1,
-                    ms.head.captures.get(nCap).contains(leafHi),
-                    ms.head.captures.get(bCap).contains(named)
-                )
-            },
-            test("anchored child patterns fail when only non-adjacent match exists") {
-                val ms = Matcher.matches(q("(Branch (Leaf) @n . (Leaf) @b)"), branch).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("optional child quantifier allows missing child") {
-                val ms = Matcher.matches(q("(Named (Leaf) @n?)"), named).toList
-                assertTrue(ms.size == 1, ms.head.captures.get(nCap).contains(leafHi))
-            },
-            test("one-or-more child quantifier requires at least one match") {
-                val ms = Matcher.matches(q("(Named (Branch)+)"), named).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("zero-or-more child quantifier allows zero matches") {
-                val ms = Matcher.matches(q("(Named (Branch)*)"), named).toList
-                assertTrue(ms.size == 1)
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(nCap).contains(leafHi))
+                assert(ms.head.captures.get(bCap).contains(named))
             }
-        ),
-        suite("predicates")(
-            test("#eq? on text succeeds when both captures have identical text") {
+            "unfielded child patterns fail when ordered sequence cannot be found" in {
+                val ms = Matcher.matches(q("(Branch (Named) @b (Named) @n)"), branch).toList
+                assert(ms.isEmpty)
+            }
+            "field and unfielded child patterns can be mixed" in {
+                val ms = Matcher.matches(q("(Named name: (Leaf) @n (Leaf) @b)"), named).toList
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(nCap).contains(leafHi))
+                assert(ms.head.captures.get(bCap).contains(leafBye))
+            }
+            "ordered child matching is deterministic when multiple alignments are possible" in {
+                val root: ToyTree = Branch(Seq(Leaf("a"), Leaf("b"), Leaf("c")))
+                val ms            = Matcher.matches(q("(Branch (Leaf) @n (Leaf) @b)"), root).toList
+                val capN          = ms.head.captures(nCap)
+                val capB          = ms.head.captures(bCap)
+                assert(ms.size == 1)
+                assert(capN == Leaf("a"))
+                assert(capB == Leaf("b"))
+            }
+            "anchored child patterns require immediate sibling adjacency" in {
+                val ms = Matcher.matches(q("(Branch (Leaf) @n . (Named) @b)"), branch).toList
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(nCap).contains(leafHi))
+                assert(ms.head.captures.get(bCap).contains(named))
+            }
+            "anchored child patterns fail when only non-adjacent match exists" in {
+                val ms = Matcher.matches(q("(Branch (Leaf) @n . (Leaf) @b)"), branch).toList
+                assert(ms.isEmpty)
+            }
+            "optional child quantifier allows missing child" in {
+                val ms = Matcher.matches(q("(Named (Leaf) @n?)"), named).toList
+                assert(ms.size == 1)
+                assert(ms.head.captures.get(nCap).contains(leafHi))
+            }
+            "one-or-more child quantifier requires at least one match" in {
+                val ms = Matcher.matches(q("(Named (Branch)+)"), named).toList
+                assert(ms.isEmpty)
+            }
+            "zero-or-more child quantifier allows zero matches" in {
+                val ms = Matcher.matches(q("(Named (Branch)*)"), named).toList
+                assert(ms.size == 1)
+            }
+        }
+        "predicates" - {
+            "#eq? on text succeeds when both captures have identical text" in {
                 val root: ToyTree = Branch(Seq(Leaf("same"), Leaf("same")))
                 val pairQuery     = q("(Leaf) @l (#eq? @l \"same\")")
                 val pairMs        = Matcher.matches(pairQuery, root).toList
-                assertTrue(pairMs.size == 2)
-            },
-            test("#eq? fails when the capture text does not match the literal") {
+                assert(pairMs.size == 2)
+            }
+            "#eq? fails when the capture text does not match the literal" in {
                 val ms = Matcher.matches(q("(Leaf) @l (#eq? @l \"other\")"), leafHi).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("#match? passes captures whose text matches the regex") {
+                assert(ms.isEmpty)
+            }
+            "#match? passes captures whose text matches the regex" in {
                 val ms = Matcher.matches(q("(Leaf) @l (#match? @l \"^h\")"), branch).toList
                 // Only leaves whose text starts with 'h' — that's leafHi (twice: top-level + inside named)
                 val leafValues = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
-                assertTrue(ms.size == 2, leafValues.forall(_.startsWith("h")))
-            },
-            test("#match? filters out captures whose text does not match") {
-                val ms = Matcher.matches(q("(Leaf) @l (#match? @l \"^z\")"), branch).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("#not-eq? keeps captures whose text differs from the literal") {
-                val ms = Matcher.matches(q("(Leaf) @l (#not-eq? @l \"hi\")"), branch).toList
-                val values = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
-                assertTrue(ms.size == 2, values.forall(_ != "hi"))
-            },
-            test("#not-match? keeps captures whose text does not match regex") {
-                val ms = Matcher.matches(q("(Leaf) @l (#not-match? @l \"^h\")"), branch).toList
-                val values = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
-                assertTrue(ms.size == 2, values.forall(v => !v.startsWith("h")))
-            },
-            test("#eq? deterministically fails when capture has no text") {
-                val ms = Matcher.matches(q("(Named) @n (#eq? @n \"hi\")"), branch).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("#match? deterministically fails when capture has no text") {
-                val ms = Matcher.matches(q("(Named) @n (#match? @n \"^h\")"), branch).toList
-                assertTrue(ms.isEmpty)
-            },
-            test("multi-pattern predicate does not produce hidden success for non-captured matches") {
-                val ms = Matcher.matches(q("(Named) (Leaf) @l (#eq? @l \"bye\")"), branch).toList
-                val onlyLeafCapture = ms.forall(_.captures.keySet == Set(lCap))
-                val leafValues = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
-                assertTrue(ms.size == 1, onlyLeafCapture, leafValues == List("bye"))
+                assert(ms.size == 2)
+                assert(leafValues.forall(_.startsWith("h")))
             }
-        ),
-        suite("custom predicates")(
-            test("a user-registered predicate is evaluated like the built-ins") {
+            "#match? filters out captures whose text does not match" in {
+                val ms = Matcher.matches(q("(Leaf) @l (#match? @l \"^z\")"), branch).toList
+                assert(ms.isEmpty)
+            }
+            "#not-eq? keeps captures whose text differs from the literal" in {
+                val ms     = Matcher.matches(q("(Leaf) @l (#not-eq? @l \"hi\")"), branch).toList
+                val values = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
+                assert(ms.size == 2)
+                assert(values.forall(_ != "hi"))
+            }
+            "#not-match? keeps captures whose text does not match regex" in {
+                val ms     = Matcher.matches(q("(Leaf) @l (#not-match? @l \"^h\")"), branch).toList
+                val values = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
+                assert(ms.size == 2)
+                assert(values.forall(v => !v.startsWith("h")))
+            }
+            "#eq? deterministically fails when capture has no text" in {
+                val ms = Matcher.matches(q("(Named) @n (#eq? @n \"hi\")"), branch).toList
+                assert(ms.isEmpty)
+            }
+            "#match? deterministically fails when capture has no text" in {
+                val ms = Matcher.matches(q("(Named) @n (#match? @n \"^h\")"), branch).toList
+                assert(ms.isEmpty)
+            }
+            "multi-pattern predicate does not produce hidden success for non-captured matches" in {
+                val ms              = Matcher.matches(q("(Named) (Leaf) @l (#eq? @l \"bye\")"), branch).toList
+                val onlyLeafCapture = ms.forall(_.captures.keySet == Set(lCap))
+                val leafValues      = ms.map(_.captures(lCap)).collect { case Leaf(v) => v }
+                assert(ms.size == 1)
+                assert(onlyLeafCapture)
+                assert(leafValues == List("bye"))
+            }
+        }
+        "custom predicates" - {
+            "a user-registered predicate is evaluated like the built-ins" in {
                 val customRegistry = PredicateRegistry.default.withPredicate(
                     PredicateName.Eq,
                     new PredicateImpl:
@@ -207,7 +216,7 @@ object MatcherSpec extends ZIOSpecDefault:
                         customRegistry
                     )
                     .toList
-                assertTrue(ms.isEmpty) // default would match; the override forces false
+                assert(ms.isEmpty) // default would match; the override forces false
             }
-        )
-    )
+        }
+    }

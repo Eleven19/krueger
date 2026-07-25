@@ -2,9 +2,10 @@ package io.eleven19.krueger.trees.query
 
 import kyo.*
 import parsley.{Failure, Success}
-import zio.test.*
+import kyo.test.*
 
-object KyoQueryVisitorSpec extends ZIOSpecDefault:
+class KyoQueryVisitorSpec extends Test[Any]:
+
     private val sampleSource: String =
         "(NodeA name: (NodeB) @child) @parent"
 
@@ -20,33 +21,42 @@ object KyoQueryVisitorSpec extends ZIOSpecDefault:
         case QueryNode.PredicateNode(_)    => "predicate"
         case QueryNode.PredicateArgNode(_) => "arg"
 
-    def spec = suite("KyoQueryVisitor")(
-        test("visit invokes callback for every query node in pre-order"):
-            val out = KyoQueryVisitor.fold(parsedQuery, 0) { (acc, _) => (acc + 1): Int < Any }.eval
-            assertTrue(out > 0)
-        ,
-        test("visit order matches the pure QueryVisitor traversal order"):
+    "KyoQueryVisitor" - {
+        "visit invokes callback for every query node in pre-order" in {
+            val out = KyoQueryVisitor.fold(parsedQuery, 0)((acc, _) => (acc + 1): Int < Any).eval
+            assert(out > 0)
+        }
+        "visit order matches the pure QueryVisitor traversal order" in {
             val pureOrder = QueryVisitor.foldLeft(parsedQuery, Vector.empty[String]) { (acc, n) =>
                 acc :+ tag(n)
             }
-            val kyoOrder = KyoQueryVisitor.fold(parsedQuery, Vector.empty[String]) { (acc, n) =>
-                (acc :+ tag(n)): Vector[String] < Any
-            }.eval
-            assertTrue(kyoOrder == pureOrder)
-        ,
-        test("visit on the root pattern alone matches pure traversal of that subtree"):
+            val kyoOrder = KyoQueryVisitor
+                .fold(parsedQuery, Vector.empty[String]) { (acc, n) =>
+                    (acc :+ tag(n)): Vector[String] < Any
+                }
+                .eval
+            assert(kyoOrder == pureOrder)
+        }
+        "visit on the root pattern alone matches pure traversal of that subtree" in {
             val rootPattern = parsedQuery.root
-            val pureOrder = QueryVisitor.foldLeft(Query(rootPattern, Nil), Vector.empty[String]) { (acc, n) =>
-                acc :+ tag(n)
-            }.drop(1) // drop the synthetic root since pattern-only visit starts from PatternNode
-            val kyoOrder = KyoQueryVisitor.fold(rootPattern, Vector.empty[String]) { (acc, n) =>
-                (acc :+ tag(n)): Vector[String] < Any
-            }.eval
-            assertTrue(kyoOrder == pureOrder)
-        ,
-        test("Abort.fail in callback short-circuits visitation"):
-            val out = Abort.run[String] {
-                KyoQueryVisitor.visit(parsedQuery)(_ => Abort.fail("stop"))
-            }.eval
-            assertTrue(out.toString.contains("stop"))
-    )
+            val pureOrder = QueryVisitor
+                .foldLeft(Query(rootPattern, Nil), Vector.empty[String]) { (acc, n) =>
+                    acc :+ tag(n)
+                }
+                .drop(1) // drop the synthetic root since pattern-only visit starts from PatternNode
+            val kyoOrder = KyoQueryVisitor
+                .fold(rootPattern, Vector.empty[String]) { (acc, n) =>
+                    (acc :+ tag(n)): Vector[String] < Any
+                }
+                .eval
+            assert(kyoOrder == pureOrder)
+        }
+        "Abort.fail in callback short-circuits visitation" in {
+            val out = Abort
+                .run[String] {
+                    KyoQueryVisitor.visit(parsedQuery)(_ => Abort.fail("stop"))
+                }
+                .eval
+            assert(out.toString.contains("stop"))
+        }
+    }
