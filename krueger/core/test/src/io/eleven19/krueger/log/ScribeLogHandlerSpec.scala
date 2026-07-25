@@ -19,9 +19,10 @@ class ScribeLogHandlerSpec extends Test[Any]:
                         _ <- Log.error("error-msg")
                     yield ()
                 }
-            val _      = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
-            val events = recorder.snapshot()
-            assert(events.map(_.message) == List("trace-msg", "debug-msg", "info-msg", "warn-msg", "error-msg"))
+            program.andThen(Log.flush).map { _ =>
+                val events = recorder.snapshot()
+                assert(events.map(_.message) == List("trace-msg", "debug-msg", "info-msg", "warn-msg", "error-msg"))
+            }
         }
 
         "InMemoryLogRecorder preserves emission order" in {
@@ -34,8 +35,10 @@ class ScribeLogHandlerSpec extends Test[Any]:
                         _ <- Log.info("third")
                     yield ()
                 }
-            val _ = Sync.Unsafe.evalOrThrow(Memo.run(program))(using summon[Frame], AllowUnsafe.embrace.danger)
-            assert(recorder.snapshot().map(_.message) == List("first", "second", "third"))
+            program.andThen(Log.flush).map { _ =>
+                val events = recorder.snapshot()
+                assert(events.map(_.message) == List("first", "second", "third"))
+            }
         }
 
         "ScribeLogHandler does not throw on every level" in {
