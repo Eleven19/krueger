@@ -107,7 +107,9 @@ object `package` extends _root_.build.CommonScalaModule with _root_.build.Common
 
         object test extends ScalaJSTests with _root_.build.CommonScalaTestModule with _root_.build.KyoTestWasmModule {
             override def sources = Task.Sources(
-                moduleDir / os.up / "test" / "src"
+                // `moduleDir` is `<repo>/krueger/webapp-wasm/wasm/test` here.
+                // Reuse the shared facade tests without duplicating sources.
+                moduleDir / os.up / os.up / "test" / "src"
             )
         }
     }
