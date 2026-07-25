@@ -22,14 +22,19 @@ final class InMemoryLogRecorder private (private val buffer: mutable.ArrayBuffer
 
 object InMemoryLogRecorder:
 
+    private val DefaultName = "krueger.in-memory-log-recorder"
+
     def unsafeMake(): InMemoryLogRecorder =
         new InMemoryLogRecorder(mutable.ArrayBuffer.empty)
 
     def layer(recorder: InMemoryLogRecorder): Log =
-        Log(new Log.Unsafe:
+        Log(unsafe(recorder, DefaultName))
+
+    private def unsafe(recorder: InMemoryLogRecorder, loggerName: String): Log.Unsafe =
+        new Log.Unsafe:
             def level: Log.Level                   = Log.Level.trace
-            def name: String                       = "krueger.in-memory-log-recorder"
-            def withName(name: String): Log.Unsafe = this
+            def name: String                       = loggerName
+            def withName(name: String): Log.Unsafe = unsafe(recorder, name)
 
             def trace(msg: => String)(using frame: Frame, allow: AllowUnsafe): Unit =
                 recorder.append(LogRecord(Log.Level.trace, msg))
@@ -59,4 +64,4 @@ object InMemoryLogRecorder:
                 recorder.append(LogRecord(Log.Level.error, msg))
 
             def error(msg: => String, t: => Throwable)(using frame: Frame, allow: AllowUnsafe): Unit =
-                recorder.append(LogRecord(Log.Level.error, msg, Some(t))))
+                recorder.append(LogRecord(Log.Level.error, msg, Some(t)))
