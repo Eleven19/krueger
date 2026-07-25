@@ -101,12 +101,14 @@ class ScribeLogHandlerSpec extends Test[Any]:
                         success  <- Log.init(successName)
                         distinct <- Log.init(distinctName)
                         edge     <- Log.init(edgeName)
-                    yield List(success.name, distinct.name, edge.name)
+                        empty    <- Log.init("")
+                    yield (List(success.name, distinct.name, edge.name), empty.name)
                 }
 
-            program.map { names =>
+            program.map { case (names, emptyName) =>
                 requested.flatMap(Logger.get).foreach(_.remove())
                 assert(names == requested)
+                assert(emptyName == "")
             }
         }
 
