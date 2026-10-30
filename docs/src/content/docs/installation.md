@@ -6,30 +6,15 @@ description: Add Krueger to your build.
 ## Requirements
 
 - JDK 25+ (Temurin recommended)
-- [Mill](https://mill-build.org/) 1.2.0-RC1+ (only if you build Krueger from source)
+- sbt 2.0.11, bootstrapped by `./sbt` when building from source
 - For Scala Native: `clang`, `libunwind`, and a boehm-gc library (`libgc` on Linux)
 
 ## Add the dependency
 
-### Mill
-
-In Mill 1.2.0-RC1+, add the dependency inside a `package.mill` module's
-`mvnDeps`:
-
-```scala
-def mvnDeps = Seq(
-  mvn"io.eleven19.krueger::krueger-core:VERSION"
-)
-```
-
-> Mill 1.x uses `mvn"…"` (the former `ivy"…"` macro was renamed in the
-> 1.0 release) and loads build definitions from `package.mill` files —
-> `build.sc` is no longer supported.
-
 ### sbt
 
 ```scala
-"io.eleven19.krueger" %% "krueger-core" % "VERSION"
+libraryDependencies += "io.eleven19.krueger" %% "krueger-core" % "VERSION"
 ```
 
 ### Maven

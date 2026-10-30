@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "svelte-kit sync && vite build",
-    "build:wasm": "cd ../.. && ./mill krueger.webapp-wasm.writeToWasmSite",
+    "build:wasm": "cd ../.. && ./sbt --batch stageWasm",
     "build:full": "npm run build:wasm && npm run build",
     "preview": "vite preview",
     "test": "npm run build:wasm && vitest run",

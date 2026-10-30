@@ -33,11 +33,6 @@ jobs:
   publish:
     needs: metadata
     runs-on: ubuntu-latest
-    env:
-      SONATYPE_USERNAME: ${{ secrets.ELEVEN19_SONATYPE_USERNAME }}
-      SONATYPE_PASSWORD: ${{ secrets.ELEVEN19_SONATYPE_PASSWORD }}
-      PGP_SECRET: ${{ secrets.ELEVEN19_IO_PGP_SECRET_BASE64 }}
-      PGP_PASSPHRASE: ${{ secrets.ELEVEN19_IO_PGP_PASSPHRASE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -46,14 +41,24 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Install Scala Native toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y clang libunwind-dev libgc-dev
 
+      - name: Qualify the publication candidate
+        env:
+          PUBLISH_VERSION: ${{ needs.metadata.outputs.version }}
+        run: scripts/ci/qualify.sh
+
       - name: Publish to Maven Central
+        env:
+          SONATYPE_USERNAME: ${{ secrets.ELEVEN19_SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.ELEVEN19_SONATYPE_PASSWORD }}
+          PGP_SECRET: ${{ secrets.ELEVEN19_IO_PGP_SECRET_BASE64 }}
+          PGP_PASSPHRASE: ${{ secrets.ELEVEN19_IO_PGP_PASSPHRASE }}
         shell: bash
         run: scripts/ci/publish-central.sh "${{ needs.metadata.outputs.version }}"

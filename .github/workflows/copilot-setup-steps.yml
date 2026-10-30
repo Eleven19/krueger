@@ -51,5 +51,8 @@ jobs:
           sudo tar -xzf /tmp/beads.tar.gz -C /usr/local/bin bd
           bd --version
 
-      - name: Compile all modules (Mill + Coursier cache)
-        run: ./mill __.compile
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
+
+      - name: Compile all modules (sbt + Coursier cache)
+        run: ./sbt --batch compileAll

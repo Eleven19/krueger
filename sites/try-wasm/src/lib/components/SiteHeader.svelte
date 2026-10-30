@@ -16,7 +16,7 @@
    *   prod base = "/krueger/try"  -> sibling root = "/krueger"
    *   dev base  = ""              -> sibling root = ""
    * (cross-app links won't resolve in `vite dev` of try-wasm in isolation
-   * — Astro is the canonical host. Run `mill docs.prepareLocalDevSite`
+   * — Astro is the canonical host. Run `./sbt --batch prepareLocalDevSite`
    * + `astro dev` for a local mirror.)
    *
    * `centerTitle` is an optional page-specific eyebrow that the playground

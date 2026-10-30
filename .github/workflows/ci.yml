@@ -24,14 +24,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Check formatting
-        run: ./mill krueger.core.jvm.checkFormat
+        run: ./sbt --batch scalafmtCheckAll scalafmtSbtCheck
 
-      - name: Check itest formatting
-        run: ./mill krueger.itest.checkFormat
+      - name: Check build and workflow contracts
+        run: node --test scripts/tests/site-staging.test.mjs scripts/tests/ci-results.test.mjs scripts/tests/publish.test.mjs scripts/tests/workflows.test.mjs scripts/tests/test-reports.test.mjs scripts/tests/designs.test.mjs
 
   build:
     name: Build & Test
@@ -48,20 +48,25 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Compile JVM modules
-        run: ./mill krueger.core.jvm.compile
+        run: ./sbt --batch coreJvm/compile
 
       - name: Run JVM tests
-        run: ./mill krueger.core.jvm.test
+        run: ./sbt --batch testJvmFull
 
       - name: Stage webapp-wasm artifacts for itest
-        run: ./mill krueger.webapp-wasm.writeToWasmSite
+        run: ./sbt --batch stageWasm
 
       - name: Run BDD integration tests
-        run: ./mill krueger.itest
+        run: ./sbt --batch testIntegrationFull
+
+      - name: Verify real test, empty-suite and formatting failures
+        run: |
+          node --test scripts/tests/sbt-failure.test.mjs
+          node --test --test-name-pattern='qualification rejects' scripts/tests/sbt-build.test.mjs
 
   build-js:
     name: Build & Test (Scala.js)
@@ -81,23 +86,14 @@ jobs:
           cache: "npm"
           cache-dependency-path: docs/package-lock.json
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Compile JS modules
-        run: ./mill krueger.core.js.compile
+        run: ./sbt --batch coreJs/compile
 
-      - name: Run core Scala.js tests
-        run: ./mill krueger.core.js.test
-
-      - name: Run trees Scala.js tests
-        run: ./mill krueger.trees.js.test
-
-      - name: Run compiler-api Scala.js tests
-        run: ./mill krueger.compiler-api.js.test
-
-      - name: Run webapp-wasm Scala.js tests
-        run: ./mill krueger.webapp-wasm.test
+      - name: Run all Scala.js tests
+        run: ./sbt --batch testJsFull
 
       - name: Install docs npm dependencies
         run: npm ci
@@ -109,12 +105,12 @@ jobs:
 
       - name: Run headless browser compiler facade parity check (JS-linked)
         run: |
-          ./mill krueger.webapp-wasm.fullLinkJS
-          npm --prefix docs run test:webapp-wasm-browser -- -- out/krueger/webapp-wasm/fullLinkJS.dest
+          ./sbt --batch webappJs/fullLinkJS
+          npm --prefix docs run test:webapp-wasm-browser -- -- target/out/linked/webapp-js
 
       - name: Run Wasm-linked compiler facade smoke
         run: |
-          ./mill krueger.webapp-wasm.wasm.fullLinkJS
+          ./sbt --batch testWasmFull webappWasm/fullLinkJS
           npm --prefix docs run test:wasm-facade-smoke
 
   build-native:
@@ -134,14 +130,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang libunwind-dev libgc-dev
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Compile Native modules
-        run: ./mill krueger.core.native.compile
+        run: ./sbt --batch coreNative/compile
 
       - name: Run Native tests
-        run: ./mill krueger.core.native.test
+        run: ./sbt --batch testNativeFull
 
   build-docs:
     name: Build Docs Site (Scaladoc + playground + Astro)
@@ -163,26 +159,13 @@ jobs:
             docs/package-lock.json
             sites/try-wasm/package-lock.json
 
-      - name: Cache Coursier
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/coursier
-          key: ${{ runner.os }}-coursier-${{ hashFiles('build.mill.yaml', 'krueger/**/package.mill', 'krueger/**/package.mill.yaml', 'docs/package.mill', 'mill-build/**') }}
-          restore-keys: |
-            ${{ runner.os }}-coursier-
-
-      - name: Cache Mill out
-        uses: actions/cache@v4
-        with:
-          path: out
-          key: ${{ runner.os }}-mill-docs-${{ hashFiles('build.mill.yaml', 'krueger/**/package.mill', 'krueger/**/package.mill.yaml', 'docs/package.mill', 'mill-build/**', 'VERSION') }}
-          restore-keys: |
-            ${{ runner.os }}-mill-docs-
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Build full site (Scaladoc, playground, Astro, try-wasm stitch)
-        run: ./mill docs.site
+        run: ./sbt --batch site
 
-      - name: Verify docs.site outputs
+      - name: Verify full site outputs
         run: |
           set -euo pipefail
           missing=0
@@ -202,6 +185,9 @@ jobs:
           done
           exit $missing
 
+      - name: Verify linker prerequisites and Maven POM identities
+        run: node --test --test-name-pattern='integration receives' scripts/tests/sbt-build.test.mjs
+
       - name: Upload docs/dist as build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -209,3 +195,18 @@ jobs:
           path: docs/dist
           retention-days: 7
           if-no-files-found: error
+
+  required:
+    name: CI required
+    if: ${{ always() }}
+    needs: [lint, build, build-js, build-native, build-docs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Require every selected category
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/ci/check-results.mjs lint build build-js build-native build-docs

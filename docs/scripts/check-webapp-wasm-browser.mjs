@@ -9,7 +9,7 @@ import { chromium } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
-const defaultFacadeDir = resolve(repoRoot, 'out', 'krueger', 'webapp-wasm', 'fullLinkJS.dest');
+const defaultFacadeDir = resolve(repoRoot, 'target/out/linked/webapp-js');
 const facadeArg = process.argv.find((arg, index) => index > 1 && arg !== '--');
 const configuredFacadeDir = facadeArg ?? process.env.KRUEGER_WEBAPP_WASM_FACADE_DIR;
 const facadeDir = configuredFacadeDir
@@ -23,7 +23,7 @@ function fail(message) {
 }
 
 await access(entrypoint).catch(() => {
-    fail(`missing ${entrypoint}; run \`./mill krueger.webapp-wasm.fullLinkJS\` first`);
+    fail(`missing ${entrypoint}; run \`./sbt --batch webappJs/fullLinkJS\` first`);
 });
 
 const contentTypes = new Map([

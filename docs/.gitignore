@@ -5,10 +5,10 @@ dist/
 .env.production
 .DS_Store
 
-# Generated Scaladoc trees and landing page written by `./mill docs.writeToDocsPublic`.
+# Generated Scaladoc trees and landing page written by `./sbt --batch apiDocs`.
 # Astro copies `public/` verbatim into `dist/`, so these are regenerated on every build.
 /public/api/
 
-# SvelteKit playground static output mirrored by `./mill docs.prepareLocalDevSite`.
+# SvelteKit playground static output mirrored by `./sbt --batch prepareLocalDevSite`.
 # (Source lives in `sites/try-wasm/`; deployment URL is `/krueger/try/`.)
 /public/try/

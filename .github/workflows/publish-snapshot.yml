@@ -15,11 +15,6 @@ jobs:
   publish:
     name: Publish SNAPSHOT
     runs-on: ubuntu-latest
-    env:
-      SONATYPE_USERNAME: ${{ secrets.ELEVEN19_SONATYPE_USERNAME }}
-      SONATYPE_PASSWORD: ${{ secrets.ELEVEN19_SONATYPE_PASSWORD }}
-      PGP_SECRET: ${{ secrets.ELEVEN19_IO_PGP_SECRET_BASE64 }}
-      PGP_PASSPHRASE: ${{ secrets.ELEVEN19_IO_PGP_PASSPHRASE }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,8 +25,8 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Install Scala Native toolchain
         run: |
@@ -47,7 +42,16 @@ jobs:
           echo "publish_version=$version" >> "$GITHUB_OUTPUT"
           echo "Publishing version: $version"
 
+      - name: Qualify the publication candidate
+        env:
+          PUBLISH_VERSION: ${{ steps.version.outputs.publish_version }}
+        run: scripts/ci/qualify.sh
+
       - name: Publish SNAPSHOT to Maven Central
-        if: env.SONATYPE_USERNAME != ''
+        env:
+          SONATYPE_USERNAME: ${{ secrets.ELEVEN19_SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.ELEVEN19_SONATYPE_PASSWORD }}
+          PGP_SECRET: ${{ secrets.ELEVEN19_IO_PGP_SECRET_BASE64 }}
+          PGP_PASSPHRASE: ${{ secrets.ELEVEN19_IO_PGP_PASSPHRASE }}
         shell: bash
         run: scripts/ci/publish-central.sh "${{ steps.version.outputs.publish_version }}"

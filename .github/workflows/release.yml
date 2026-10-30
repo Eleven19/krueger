@@ -45,8 +45,8 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Setup Mill caches
-        uses: ./.github/actions/setup-mill-caches
+      - name: Setup sbt caches
+        uses: ./.github/actions/setup-sbt-caches
 
       - name: Install Scala Native toolchain
         run: |
@@ -54,10 +54,12 @@ jobs:
           sudo apt-get install -y clang libunwind-dev libgc-dev
 
       - name: Compile all modules
-        run: ./mill __.compile
+        run: ./sbt --batch compileAll
 
       - name: Run tests
-        run: ./mill __.test
+        env:
+          PUBLISH_VERSION: ${{ needs.metadata.outputs.version }}
+        run: scripts/ci/qualify.sh
 
   publish:
     needs:

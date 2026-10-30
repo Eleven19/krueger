@@ -217,3 +217,22 @@ bd close <id>         # Complete work
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+## Build qualification
+
+Use JDK 25 and Node 24. `./sbt` bootstraps pinned sbt 2.0.11; the project
+compiler remains Scala 3.9.0. See `docs/src/content/docs/build.md` for setup,
+task mappings, artifact paths and the complete developer recipe.
+
+- Compile: `./sbt --batch compile`; include test/API sources with `./sbt --batch compileAll`.
+- Format: `./sbt --batch scalafmtAll scalafmtSbt`.
+- Check formatting: `./sbt --batch scalafmtCheckAll scalafmtSbtCheck`.
+- Full unit/BDD qualification: `./sbt --batch qualifyAll`.
+- Full candidate qualification including site and browsers: `scripts/ci/qualify.sh`.
+- Site: `./sbt --batch site`; local preview preparation: `./sbt --batch prepareLocalDevSite`.
+- Packaging without remote publication: `./sbt --batch publishLocal`.
+
+sbt 2 `test` is incremental. Use the `test*Full` aliases or `qualifyAll` for
+qualification. Do not accept empty suite discovery as success. Staging tasks
+are uncached and restore deleted output. Never invoke Central promotion to
+test packaging.

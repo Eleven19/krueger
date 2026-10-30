@@ -42,7 +42,7 @@ object TestDriver:
         val artifactDir = Path.of(
             Option(System.getProperty("krueger.webapp-wasm.facade.dir")).getOrElse(
                 throw AssertionError(
-                    "missing system property krueger.webapp-wasm.facade.dir; run this suite through Mill so it can inject the linked Scala.js facade path"
+                    "missing system property krueger.webapp-wasm.facade.dir; run this suite through sbt so it can inject the linked Scala.js facade path"
                 )
             )
         )

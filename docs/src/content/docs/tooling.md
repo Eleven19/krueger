@@ -9,7 +9,7 @@ WASM-backed playgrounds.
 
 ## Scala library (JVM, Scala.js, Scala Native)
 
-Use `krueger-core` (and `krueger-trees` for the query DSL) from Mill, sbt, or
+Use `krueger-core` (and `krueger-trees` for the query DSL) from sbt or
 Maven. See [Installation](/krueger/installation/) and [Usage](/krueger/usage/).
 
 The top-level entrypoint is `io.eleven19.krueger.Krueger` (`parseModule`,
