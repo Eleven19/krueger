@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,53 @@ import { after, before, test } from 'node:test';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 let workspace;
+
+const openspecVersion = '1.14.3';
+const agentSkillDirs = [
+  ['Claude Code', '.claude/skills'],
+  ['Codex and other .agents readers', '.agents/skills'],
+  ['GitHub Copilot', '.github/skills'],
+  ['Cursor', '.cursor/skills'],
+  ['Grok', '.grok/skills'],
+  ['Devin', '.devin/skills'],
+  ['Gemini CLI', '.gemini/skills'],
+  ['OpenCode', '.opencode/skills'],
+];
+const openspecSkills = [
+  'openspec-explore', 'openspec-propose', 'openspec-apply-change',
+  'openspec-update-change', 'openspec-sync-specs', 'openspec-archive-change',
+];
+
+function agentSkillProblems(base) {
+  const problems = [];
+  for (const [agent, dir] of agentSkillDirs) {
+    for (const skill of openspecSkills) {
+      const path = join(dir, skill, 'SKILL.md');
+      if (!existsSync(join(base, path))) {
+        problems.push(`${agent}: missing ${path}`);
+        continue;
+      }
+      const version = readFileSync(join(base, path), 'utf8').match(/generatedBy:\s*"?([^"\s]+)"?/)?.[1];
+      if (version !== openspecVersion) {
+        problems.push(`${agent}: ${path} generatedBy ${version ?? 'none'}, expected ${openspecVersion}`);
+      }
+    }
+  }
+  return problems;
+}
+
+function skillFixture(skip = []) {
+  const base = mkdtempSync(join(tmpdir(), 'krueger-openspec-agents-'));
+  for (const [, dir] of agentSkillDirs) {
+    for (const skill of openspecSkills) {
+      if (skip.includes(`${dir}/${skill}`)) continue;
+      mkdirSync(join(base, dir, skill), { recursive: true });
+      writeFileSync(join(base, dir, skill, 'SKILL.md'),
+        `---\nname: ${skill}\nmetadata:\n  generatedBy: "${openspecVersion}"\n---\n`);
+    }
+  }
+  return base;
+}
 
 function run(args, cwd = workspace) {
   return spawnSync('openspec', args, {
@@ -102,4 +149,47 @@ test('an unknown schema fails instead of silently selecting the default', () => 
   const result = run(['schema', 'which', 'missing-krueger-schema']);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr + result.stdout, /missing-krueger-schema/);
+});
+
+test('every supported agent has the generated OpenSpec skills', () => {
+  assert.deepEqual(agentSkillProblems(root), []);
+});
+
+test('a missing agent skill is reported with its agent and path, in agent order', () => {
+  const base = skillFixture(['.gemini/skills/openspec-propose', '.claude/skills/openspec-explore']);
+  try {
+    assert.deepEqual(agentSkillProblems(base), [
+      'Claude Code: missing .claude/skills/openspec-explore/SKILL.md',
+      'Gemini CLI: missing .gemini/skills/openspec-propose/SKILL.md',
+    ]);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('a skill from another OpenSpec version is reported', () => {
+  const base = skillFixture();
+  try {
+    const path = join(base, '.cursor/skills/openspec-sync-specs/SKILL.md');
+    writeFileSync(path, readFileSync(path, 'utf8').replace(openspecVersion, '1.13.0'));
+    writeFileSync(join(base, '.opencode/skills/openspec-apply-change/SKILL.md'), '---\nname: x\n---\n');
+    assert.deepEqual(agentSkillProblems(base), [
+      `Cursor: .cursor/skills/openspec-sync-specs/SKILL.md generatedBy 1.13.0, expected ${openspecVersion}`,
+      `OpenCode: .opencode/skills/openspec-apply-change/SKILL.md generatedBy none, expected ${openspecVersion}`,
+    ]);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test('.agents skills target Codex and Copilot cloud-agent files stay absent', () => {
+  assert.equal(readFileSync(join(root, '.agents/skills/.openspec-target'), 'utf8').trim(), 'codex');
+  assert.match(readFileSync(join(root, 'openspec/config.yaml'), 'utf8'), /githubCopilot:\s*\n\s*cloudAgent: false/);
+  assert.ok(!existsSync(join(root, '.github/agents/openspec.agent.md')), '.github/agents/openspec.agent.md must not exist');
+});
+
+test('git does not ignore any agent skill directory', () => {
+  const paths = agentSkillDirs.map(([, dir]) => `${dir}/openspec-propose/SKILL.md`);
+  const result = spawnSync('git', ['check-ignore', '--no-index', ...paths], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.stdout.trim(), '', `ignored by .gitignore:\n${result.stdout}`);
 });

@@ -161,8 +161,11 @@ cp -rf source dest          # NOT: cp -r source dest
   the artifact with the CLI, which selects `design.html` here.
 - After archive moves a change one directory deeper, update the HTML asset
   prefixes as described in `openspec/config.yaml` and verify the page.
-- OpenSpec 1.14.3 generated the committed skills for Codex, Claude Code and
-  Copilot. Regenerate with `openspec update`; do not hand-edit generated skills.
+- OpenSpec 1.14.3 generated the committed skills for Claude Code, Codex,
+  GitHub Copilot, Cursor, Grok, Devin, Gemini CLI and OpenCode. Each agent's
+  directory is listed in [the contributor workflow](docs/conventions/openspec.md#use-openspec-from-your-agent).
+  Regenerate with `openspec update`; do not hand-edit generated skills or
+  replace them with links.
 - Validate setup changes with `openspec schema validate html-design` and
   `node --test scripts/check-openspec.mjs`.
 

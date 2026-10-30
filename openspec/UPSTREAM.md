@@ -11,7 +11,9 @@ guidance. Its HTML templates load Scala and Elm grammars, and its highlighting
 setup removes the MoonBit alias. The shared stylesheet is unchanged.
 
 OpenSpec 1.14.3 generated the `openspec-*` skills under `.agents/skills/`,
-`.claude/skills/` and `.github/skills/`. Regenerate them with `openspec update`;
+`.claude/skills/`, `.github/skills/`, `.cursor/skills/`, `.grok/skills/`,
+`.devin/skills/`, `.gemini/skills/` and `.opencode/skills/`, the same agent set
+as morphir-moonbit. Regenerate them with `openspec update`;
 put project-specific guidance in the config, schema and agent instruction files.
 
 highlight.js has separate provenance and licensing in
