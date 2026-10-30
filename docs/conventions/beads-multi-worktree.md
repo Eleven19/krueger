@@ -99,6 +99,26 @@ This is a one-time rename. Tracked as a follow-up issue and PR.
   destroying issue data. Tested on a non-production DB before applying
   to the project DB.
 
+## Schema upgrade recovery
+
+Beads 1.3.2 requires schema 66. The canonical database was upgraded from schema
+49 on 2026-10-29 and pushed to the Dolt remote. Both existing worktrees resolve
+to the same database. Issue IDs and the `krueger` prefix were preserved.
+
+Before future schema upgrades, sync with the old binary and take a Dolt-native
+backup. Only one clone migrates and publishes the schema. Other clones must
+adopt the published schema using the recovery procedure printed by Beads.
+Preserve any unpushed data before replacing a clone. Do not independently force
+the same migration on every clone.
+
+If a CLI upgrade has already blocked pull and push, first inspect the remote's
+schema and history and verify a restorable backup. Run `bd migrate --force`
+only from the designated migrator when the remote has not already migrated.
+Verify issue and dependency preservation, run `bd hooks install --beads`, then
+publish with `bd dolt push` and confirm `bd dolt pull` succeeds. The
+[upstream upgrade guide](https://github.com/gastownhall/beads/blob/v1.3.2/docs/getting-started/upgrading.md)
+explains the migration gate and adoption procedure.
+
 ## Why a Single Project Prefix Matters
 
 - **Cross-worktree references stay stable.** A bd ID written in a PR
