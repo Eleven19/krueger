@@ -100,6 +100,11 @@ npm run test:playground-e2e
 
 ## Workflow
 
+Use [OpenSpec with HTML designs](https://github.com/Eleven19/krueger/blob/main/docs/conventions/openspec.md)
+for change proposals, behavior requirements and designs for review. The project
+selects `html-design` by default. Beads tracks the work, and OpenSpec keeps the
+proposal, design and spec deltas together.
+
 Krueger follows strict Red-Green-Refactor TDD. Open an issue (or a `bd`
 ticket) before starting non-trivial work, then submit a PR against `main`.
 

@@ -146,6 +146,26 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
+## OpenSpec
+
+- Use the project-local `html-design` schema in `openspec/config.yaml`.
+  See [the contributor workflow](docs/conventions/openspec.md).
+- Commit proposals, spec deltas, `design.html` and task checklists under
+  `openspec/`. Keep `docs/superpowers/` artifacts local as required.
+- Beads is the canonical tracker. Link each change to its owning epic and each
+  numbered task group to a child bead. Follow the existing multi-worktree rules
+  and the mandatory issue template, EARS requirements and TDD workflow.
+- Use `docs/templates/agent-document.html` and the schema's design template.
+  Keep their heads in sync, reference local assets and add no embedded CSS,
+  scripts or external resources. Generated skills may say `design.md`; resolve
+  the artifact with the CLI, which selects `design.html` here.
+- After archive moves a change one directory deeper, update the HTML asset
+  prefixes as described in `openspec/config.yaml` and verify the page.
+- OpenSpec 1.14.3 generated the committed skills for Codex, Claude Code and
+  Copilot. Regenerate with `openspec update`; do not hand-edit generated skills.
+- Validate setup changes with `openspec schema validate html-design` and
+  `node --test scripts/check-openspec.mjs`.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 

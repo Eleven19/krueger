@@ -1,0 +1,34 @@
+schema: html-design
+githubCopilot:
+  cloudAgent: false
+
+context: |
+  Follow AGENTS.md and docs/conventions/beads-multi-worktree.md.
+  Beads is the canonical issue tracker. OpenSpec records proposals, behavior
+  contracts, design decisions and the task checklist linked to those issues.
+  Use strict Red-Green-Refactor for behavior changes. Requirements must cover
+  success, failure and boundary cases, with unit and BDD coverage where visible.
+  Keep docs/superpowers/ artifacts local. Commit OpenSpec changes and specs.
+
+rules:
+  specs:
+    - Use EARS-style SHALL requirements with stable REQ identifiers.
+    - Include happy, failure, edge and regression scenarios as applicable.
+    - Specify ordering determinism and stable diagnostics where observable.
+  tasks:
+    - Put failing tests before production changes in each behavior-change group.
+    - Include each group's tests and required use-case documentation in that group.
+
+operations:
+  archive:
+    guidance:
+      - >-
+        Archiving moves the change to openspec/changes/archive/<date>-<name>/.
+        In design.html, replace each "../../../docs/templates/assets/" prefix
+        with "../../../../docs/templates/assets/" so local styles and scripts
+        still load. Verify every href and src resolves from the archived page.
+      - >-
+        Update the owning bead's spec id with
+        `bd update <id> --spec-id openspec/changes/archive/<date>-<name>`.
+        Close it when its group beads are closed. Follow the multi-worktree
+        convention for prefix checks and session-boundary `bd dolt push`.

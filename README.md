@@ -90,6 +90,9 @@ mill krueger.core.native.compile
 
 ## Testing
 
+Contributors use [OpenSpec with HTML designs](docs/conventions/openspec.md) to
+propose changes, review requirements and connect implementation tasks to Beads.
+
 Krueger has two complementary test layers.
 
 ### Unit tests (kyo-test, cross-platform)
