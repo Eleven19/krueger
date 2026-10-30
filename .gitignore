@@ -7,7 +7,8 @@ out/
 # IDE
 .idea/
 .vscode/
-.cursor/
+.cursor/*
+!.cursor/skills/
 
 # Claude Code — local overrides (user-specific) and agent worktrees
 .claude/settings.local.json

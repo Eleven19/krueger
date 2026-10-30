@@ -24,13 +24,53 @@ The schema must resolve from `openspec/schemas/html-design/`, with source
 `project`. `openspec/config.yaml` selects it by default. No global OpenSpec
 configuration is needed to use this schema.
 
-The committed skills support Codex, Claude Code and GitHub Copilot. Ask the agent
-to use `openspec-propose`, `openspec-explore`, `openspec-apply-change`,
-`openspec-update-change`, `openspec-sync-specs` or `openspec-archive-change`.
-In Codex CLI, for example, invoke `$openspec-propose`; in Claude Code use
-`/openspec-propose`. Restart the agent session after installation to refresh its
-skill inventory. Generated skills may refer to `design.md`; this project's
-schema resolves that artifact to `design.html`.
+## Use OpenSpec from your agent
+
+Contributors use different coding agents, so the repository commits the same
+six skills for each supported agent: `openspec-propose`, `openspec-explore`,
+`openspec-apply-change`, `openspec-update-change`, `openspec-sync-specs` and
+`openspec-archive-change`. This is the same agent set as morphir-moonbit.
+
+| Agent | Skill directory | Invoke |
+| --- | --- | --- |
+| Claude Code | `.claude/skills/openspec-*/` | `/openspec-propose` |
+| Codex, Antigravity and other `.agents` readers | `.agents/skills/openspec-*/` | `$openspec-propose` in Codex |
+| GitHub Copilot | `.github/skills/openspec-*/` | `/openspec-propose` |
+| Cursor | `.cursor/skills/openspec-*/` | `/openspec-propose` |
+| Grok Build | `.grok/skills/openspec-*/` | `/openspec-propose` |
+| Devin Desktop (formerly Windsurf) | `.devin/skills/openspec-*/` | `/openspec-propose` |
+| Gemini CLI | `.gemini/skills/openspec-*/` | `/openspec-propose` |
+| OpenCode | `.opencode/skills/openspec-*/` | `/openspec-propose` |
+
+The `.agents/skills/` copy names both invocation forms; the other copies name
+only the slash form. `.agents/skills/.openspec-target` records `codex`. The
+Copilot cloud coding-agent files are not installed, and `openspec/config.yaml`
+records `cloudAgent: false`. `.gitignore` ignores Cursor's local state but
+keeps `.cursor/skills/` tracked.
+
+Restart the agent session after installation to refresh its skill inventory.
+Generated skills may refer to `design.md`; this project's schema resolves that
+artifact to `design.html`.
+
+For example, a contributor in Cursor and another in Claude Code can work on the
+same change. One runs `/openspec-propose improve-query-diagnostics` to write the
+proposal, specs, HTML design and tasks. The other runs
+`/openspec-apply-change improve-query-diagnostics` in a separate worktree to
+implement the task groups, and claims each group's bead before work starts.
+Both agents read the same `openspec/changes/` files and the same Beads tracker,
+so the agent choice does not change the workflow.
+
+To add an agent that OpenSpec supports, find its ID with `openspec init --help`
+and add it to the current list:
+
+```sh
+openspec init --no-copilot-cloud \
+  --tools claude,codex,github-copilot,cursor,grok,devin,gemini,opencode,<new-id>
+```
+
+Add its directory to `agentSkillDirs` in `scripts/check-openspec.mjs` and to
+this table, then run the check. If `openspec init` reflows
+`openspec/config.yaml`, restore the committed file.
 
 ## Start a change
 
