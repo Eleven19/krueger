@@ -7,7 +7,23 @@
 <!--
   Adapted for Krueger from finos/morphir-moonbit. See openspec/UPSTREAM.md.
   Agent document template (docs/templates/agent-document.html). Specs, plans and reports that a person reviews
-  start from this file: copy it, keep the <head> as it is, and write the content inside <main>
+  start from this file: copy it, keep the <head> as it is, and write the content inside <main>.
+  Styles and scripts are files in docs/templates/assets/, referenced and not embedded. In a copy, change the
+  "assets/" prefix of each href and src to the relative path from the copy to that directory, for example
+  "../../docs/templates/assets/" from .dev/beads-specs/. See AGENTS.md, "OpenSpec".
+  Code goes in <pre><code class="language-scala"> (or elm, yaml, json, bash, diff). Give sections an id and
+  list them in nav.toc.
+-->
+<link rel="stylesheet" href="../../../../docs/templates/assets/agent-document.css">
+<link rel="stylesheet" href="../../../../docs/templates/assets/highlight/styles/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="../../../../docs/templates/assets/highlight/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<script defer src="../../../../docs/templates/assets/highlight/highlight.min.js"></script>
+<script defer src="../../../../docs/templates/assets/highlight/languages/scala.min.js"></script>
+<script defer src="../../../../docs/templates/assets/highlight/languages/elm.min.js"></script>
+<script defer src="../../../../docs/templates/assets/agent-document.js"></script>
+</head>
+<body>
+<main>
 <h1>Mill to sbt 2</h1>
 <p class="meta">Bead <code>krueger-3x2</code> · 2026-10-29</p>
 <nav class="toc" aria-label="Contents"><ul><li><a href="#context">Context</a></li><li><a href="#goals">Goals</a></li><li><a href="#decisions">Decisions</a></li><li><a href="#risks">Risks</a></li><li><a href="#migration">Migration</a></li></ul></nav>

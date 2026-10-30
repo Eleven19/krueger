@@ -31,7 +31,7 @@ jobs:
         run: ./sbt --batch scalafmtCheckAll scalafmtSbtCheck
 
       - name: Check build and workflow contracts
-        run: node --test scripts/tests/site-staging.test.mjs scripts/tests/ci-results.test.mjs scripts/tests/publish.test.mjs scripts/tests/workflows.test.mjs scripts/tests/test-reports.test.mjs
+        run: node --test scripts/tests/site-staging.test.mjs scripts/tests/ci-results.test.mjs scripts/tests/publish.test.mjs scripts/tests/workflows.test.mjs scripts/tests/test-reports.test.mjs scripts/tests/designs.test.mjs
 
   build:
     name: Build & Test
