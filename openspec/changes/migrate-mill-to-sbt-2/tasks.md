@@ -3,7 +3,7 @@
 ## 1. Build and platform parity (krueger-3x2.1)
 
 - [x] 1.1 Capture Mill task and full-test baseline; add and run failing sbt load, source/resource, discovery and POM contracts before production edits.
-- [ ] 1.2 Implement pinned sbt projects and frameworks; verify JVM/JS/Native/WebGC full suites, cold/warm behavior and documented local packaging commands.
+- [x] 1.2 Implement pinned sbt projects and frameworks; verify JVM/JS/Native/WebGC full suites, cold/warm behavior and documented local packaging commands.
 
 ## 2. Generated artifacts and site (krueger-3x2.2)
 
@@ -17,7 +17,7 @@
 
 ## 4. Contributor docs and integration (krueger-3x2.4)
 
-- [ ] 4.1 Verify runnable onboarding and developer recipe; remove active Mill definitions after parity and validate the final repository checks and diff.
+- [x] 4.1 Verify runnable onboarding and developer recipe; remove active Mill definitions after parity and validate the final repository checks and diff.
 - [ ] 4.2 Push a reviewable PR with docs links and validation evidence; verify all current-head CI gates and address verified review findings.
 
 ## Workflow follow-up

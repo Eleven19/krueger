@@ -55,4 +55,4 @@ jobs:
         uses: ./.github/actions/setup-sbt-caches
 
       - name: Compile all modules (sbt + Coursier cache)
-        run: ./sbt --batch compile
+        run: ./sbt --batch compileAll

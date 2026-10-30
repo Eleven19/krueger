@@ -38,6 +38,7 @@ Run these from the repository root:
 
 ```sh
 ./sbt --batch compile
+./sbt --batch compileAll
 ./sbt --batch scalafmtAll scalafmtSbt
 ./sbt --batch scalafmtCheckAll scalafmtSbtCheck
 ./sbt --batch testJvmFull
@@ -49,6 +50,9 @@ Run these from the repository root:
 ./sbt --batch stageWasm apiDocs site
 ./sbt --batch publishLocal
 ```
+
+`compileAll` also compiles every test project and all three API projects,
+matching the previous recursive compile sweep used by setup automation.
 
 For iteration, `./sbt 'coreJvm/test *ModuleParserSpec'` runs selected suites.
 In sbt 2, `test` can reuse test results. The `test*Full` aliases explicitly

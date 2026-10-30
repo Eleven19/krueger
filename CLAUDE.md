@@ -196,7 +196,7 @@ Use JDK 25 and Node 24. `./sbt` bootstraps pinned sbt 2.0.11; the project
 compiler remains Scala 3.9.0. See `docs/src/content/docs/build.md` for setup,
 task mappings, artifact paths and the complete developer recipe.
 
-- Compile: `./sbt --batch compile`.
+- Compile: `./sbt --batch compile`; include test/API sources with `./sbt --batch compileAll`.
 - Format: `./sbt --batch scalafmtAll scalafmtSbt`.
 - Check formatting: `./sbt --batch scalafmtCheckAll scalafmtSbtCheck`.
 - Full unit/BDD qualification: `./sbt --batch qualifyAll`.

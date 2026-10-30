@@ -372,3 +372,5 @@ addCommandAlias(
     ";stageWasm;integration/verifyTests;integration/Test/testFull;integration/verifyTestReports"
 )
 addCommandAlias("qualifyAll", ";testJvmFull;testJsFull;testNativeFull;testWasmFull;testIntegrationFull")
+
+addCommandAlias("compileAll", ";compile;Test/compile;apiJvm/compile;apiJs/compile;apiNative/compile")

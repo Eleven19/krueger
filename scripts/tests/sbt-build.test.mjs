@@ -47,3 +47,11 @@ test('integration receives linked compiler paths and packaging preserves POM met
   for (const suffix of ['_3', '_sjs1_3', '_native0.5_3']) assert.ok(poms.some(p => p.includes(`<artifactId>krueger-core${suffix}</artifactId>`)));
 
 });
+
+test('compileAll preserves the Mill sweep of production, test and API projects', () => {
+  const result = spawnSync('./sbt', ['--batch', 'compileAll', 'show integration/Test/sources', 'show apiNative/Compile/sources'], { encoding: 'utf8', timeout: 600000, maxBuffer: 8 * 1024 * 1024 });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /CucumberSuite.scala/);
+  assert.match(result.stdout, /krueger\/trees\/src/);
+  assert.match(result.stdout, /krueger\/core\/src/);
+});

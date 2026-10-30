@@ -7,6 +7,7 @@ test('all active workflows use sbt and preserve the independent platform checks'
     const text = readFileSync(`.github/workflows/${name}`, 'utf8');
     assert.doesNotMatch(text, /\.\/mill|setup-mill-caches|mill-build\/|build\.mill\.yaml/, name);
   }
+  assert.match(readFileSync('.github/workflows/copilot-setup-steps.yml', 'utf8'), /sbt --batch compileAll/);
   const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
   for (const task of ['testJvmFull', 'testJsFull', 'testNativeFull', 'testWasmFull', 'testIntegrationFull', 'site']) assert.ok(ci.includes(task), `CI missing ${task}`);
   assert.match(ci, /if:.*always\(\)/);
