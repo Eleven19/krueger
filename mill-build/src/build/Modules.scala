@@ -10,14 +10,14 @@ object KruegerVersions:
     /** Minimum required Kyo version. Later snapshot or stable releases are acceptable.
       * Lower bound exists because this build introduced kyo-schema on the Kyo mainline.
       */
-    val Kyo: String = "1.0.0-RC5"
+    val Kyo: String = "1.0.0-RC7"
 
     /** Pinned scribe version for cross-platform logging (JVM + JS + Native). */
     val Scribe: String = "3.16.1"
 
 trait CommonScalaModule extends ScalaModule with scalafmt.ScalafmtModule {
   override def scalaVersion = Task {
-    "3.8.3"
+    "3.9.0"
   }
 
   override def scalacOptions = Task {
@@ -114,5 +114,5 @@ trait CommonScalaJSWasmModule
 }
 
 trait CommonScalaNativeModule extends ScalaNativeModule with scalafmt.ScalafmtModule {
-  def scalaNativeVersion = "0.5.11"
+  def scalaNativeVersion = "0.5.12"
 }
