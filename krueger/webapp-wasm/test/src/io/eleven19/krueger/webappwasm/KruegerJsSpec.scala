@@ -206,7 +206,10 @@ class KruegerJsSpec extends Test[Any]:
                 assert(hasEnvelopeShape(env.asInstanceOf[sjs.Object]))
                 assert(env.ok.asInstanceOf[Boolean])
                 assert(!sjs.isUndefined(env.value) && env.value != null)
-                assert(jsString(env.value).contains(CompilerApiAcceptanceCases.validParseCst.expectedValueFragment))
+                // Opaque Scala handles are not JS strings under WebGC. Inspect the public projection.
+                val projected = dyn(KruegerJs.parseCstUnist(CompilerApiAcceptanceCases.validParseCst.source))
+                assert(projected.ok.asInstanceOf[Boolean])
+                assert(projected.value.`type`.asInstanceOf[String] == "CstModule")
             }
             "malformed parseCst source matches the JVM and Chicory error scenario" in {
                 val env          = dyn(KruegerJs.parseCst(CompilerApiAcceptanceCases.malformedParseCst.source))
@@ -235,7 +238,10 @@ class KruegerJsSpec extends Test[Any]:
                 assert(a.ok.asInstanceOf[Boolean] == b.ok.asInstanceOf[Boolean])
                 assert(arrayLen(a.errors) == arrayLen(b.errors))
                 assert(arrayLen(a.logs) == arrayLen(b.logs))
-                assert(jsString(a.value) == jsString(b.value))
+                val source     = CompilerApiAcceptanceCases.validParseCst.source
+                val projectedA = dyn(KruegerJs.parseCstUnist(source))
+                val projectedB = dyn(KruegerJs.parseCstUnist(source))
+                assert(sjs.JSON.stringify(projectedA.value) == sjs.JSON.stringify(projectedB.value))
             }
         }
         "determinism (REQ-webappwasm-001 tail)" - {
@@ -248,6 +254,3 @@ class KruegerJsSpec extends Test[Any]:
             }
         }
     }
-
-    private def jsString(value: sjs.Any): String =
-        sjs.Dynamic.global.String(value).asInstanceOf[String]

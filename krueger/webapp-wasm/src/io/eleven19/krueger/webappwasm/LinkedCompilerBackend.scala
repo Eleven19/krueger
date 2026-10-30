@@ -8,7 +8,7 @@ import io.eleven19.krueger.trees.query.Query
 
 /** Single compile backend backed by whichever Scala.js compiler the surrounding link target produced.
   *
-  * Two link targets share this source via `package.mill`:
+  * Two link targets share this source via `build.sbt`:
   *   - `webapp-wasm` (CommonScalaJSModule) — emits a JavaScript ES module; calls go through Scala.js's JS output.
   *   - `webapp-wasm.wasm` (CommonScalaJSWasmModule) — emits a WebAssembly module; calls go through Scala.js's
   *     experimental Wasm-GC backend.

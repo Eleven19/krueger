@@ -12,27 +12,14 @@ function fail(message) {
     process.exit(1);
 }
 
-const docsMill = await readFile(resolve(repoRoot, 'docs', 'package.mill'), 'utf8');
+const sbtBuild = await readFile(resolve(repoRoot, 'build.sbt'), 'utf8');
 const docsPackage = JSON.parse(await readFile(resolve(repoRoot, 'docs', 'package.json'), 'utf8'));
 
-if (!docsMill.includes('copyWasmArtifactsToTryWasm(') ||
-    !docsMill.includes('build.krueger.`webapp-wasm`.fullLinkJS()')) {
-    fail('docs.site must stage the krueger.webapp-wasm + compiler-api.wasm artifacts (via copyWasmArtifactsToTryWasm) before Astro/SvelteKit builds');
+for (const task of ['stageWasm', 'apiDocs', 'prepareLocalDevSite', 'site']) {
+    if (!sbtBuild.includes(`${task} := Def.uncached`)) fail(`sbt must expose uncached ${task} orchestration`);
 }
 
-if (!docsMill.includes('runTryWasmNpmBuild(') || !docsMill.includes('copyTryWasmBuildInto(')) {
-    fail('docs.package.mill must build sites/try-wasm and stitch into docs output');
-}
-
-if (!docsMill.includes('prepareLocalDevSite')) {
-    fail('docs.package.mill must expose docs.prepareLocalDevSite for full local dev');
-}
-
-if (docsMill.includes('build.krueger.webapp.') || docsMill.includes('copyWebappBundleToDocsSrc')) {
-    fail('docs.package.mill must not reference the removed Laminar `webapp` module');
-}
-
-if (docsPackage.scripts['build:wasm'] !== 'cd .. && ./mill krueger.webapp-wasm.writeToWasmSite') {
+if (docsPackage.scripts['build:wasm'] !== 'cd .. && ./sbt --batch stageWasm') {
     fail('docs/package.json must expose build:wasm for local and CI orchestration');
 }
 
@@ -56,8 +43,8 @@ if (docsPackage.scripts['build:full']?.includes('npm run build:webapp')) {
     fail('docs/package.json build:full must not invoke removed build:webapp step');
 }
 
-if (docsPackage.scripts['prepare:try-wasm'] !== 'cd .. && ./mill docs.prepareLocalDevSite') {
-    fail('docs/package.json must expose prepare:try-wasm -> mill docs.prepareLocalDevSite');
+if (docsPackage.scripts['prepare:try-wasm'] !== 'cd .. && ./sbt --batch prepareLocalDevSite') {
+    fail('docs/package.json must expose prepare:try-wasm -> sbt prepareLocalDevSite');
 }
 
 if (!docsPackage.scripts['dev:full']?.includes('npm run prepare:try-wasm')) {
@@ -74,4 +61,4 @@ try {
     fail('docs/src/pages/try/index.astro must exist so Astro dev serves /try/ instead of falling through to Starlight 404');
 }
 
-console.log('check-build-orchestration: OK - docs.site, prepareLocalDevSite, and npm scripts orchestrate full site.');
+console.log('check-build-orchestration: OK - sbt site, prepareLocalDevSite, and npm scripts orchestrate full site.');

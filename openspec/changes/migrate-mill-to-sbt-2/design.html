@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mill to sbt 2: design</title>
+<!--
+  Adapted for Krueger from finos/morphir-moonbit. See openspec/UPSTREAM.md.
+  Agent document template (docs/templates/agent-document.html). Specs, plans and reports that a person reviews
+  start from this file: copy it, keep the <head> as it is, and write the content inside <main>
+<h1>Mill to sbt 2</h1>
+<p class="meta">Bead <code>krueger-3x2</code> · 2026-10-29</p>
+<nav class="toc" aria-label="Contents"><ul><li><a href="#context">Context</a></li><li><a href="#goals">Goals</a></li><li><a href="#decisions">Decisions</a></li><li><a href="#risks">Risks</a></li><li><a href="#migration">Migration</a></li></ul></nav>
+<h2 id="context">Context</h2>
+<p>See proposal.md for motivation. The active Mill graph has trees, core and compiler-api on JVM/JS/Native, compiler-api WebGC, two facade linkers, a JVM umbrella, a JUnit/Cucumber project and three combined API projects. Query code is inside trees. There is no independent testkit project.</p>
+<h2 id="goals">Goals</h2><p>Retain source layout, compiler diagnostics, versions, artifacts and existing workflow triggers. Avoid library changes and live release tests.</p>
+<h2 id="decisions">Decisions</h2>
+<h3 id="build-1">BUILD-1. Explicit platform projects</h3><p>Use sbt 2.0.11 with published sbt2 variants of Scala.js, Native and formatting plugins. Define explicit sibling projects with shared source roots instead of restructuring source files or introducing another cross-project plugin. Keep the umbrella artifact separate from the build aggregate.</p>
+<h3 id="test-1">TEST-1. Full qualification</h3><p>Use testFull for CI/release qualification, with discovery checks before execution. Keep BDD as an actual project with Test sources and resources. Preserve JUnit platform suites and all Kyo framework variants. Incremental test remains available for iteration.</p>
+<h3 id="site-1">SITE-1. Uncached orchestration</h3><p>Use checked artifact directories and uncached staging operations for external outputs. Validate producer files before replacing destinations, discard maps and references, stamp API HTML for Pagefind and rebuild npm sites in dependency order. This avoids treating an sbt task result as evidence that mutable external output still exists.</p>
+<h3 id="ci-1">CI-1. Preserve categories and enforce aggregate</h3><p>Keep lint, JVM/BDD, JS/browser, Native and docs categories with JDK 25. The baseline CI run 41001793667 succeeded in all five categories. Retain independent platform checks; add an always-running aggregate that rejects failed, cancelled and skipped dependencies. Release and Central promotion qualify their exact checkout with full tests. Retain approved triggers and secret names. Dependency caches accelerate resolution without replacing qualification evidence.</p>
+<h3 id="pub-1">PUB-1. Stable Maven identity</h3><p>Use VERSION-derived snapshot policy and explicit PUBLISH_VERSION overrides, preserve organization/artifact/platform suffixes and POM metadata, sign only in authorized publication jobs. Validate publishLocal and signed staging without remote release. Use maintained sbt2 publication plugins rather than implementing credential-bearing HTTP uploads.</p>
+<h2 id="risks">Risks</h2><table><tr><th>Risk</th><th>Mitigation</th></tr><tr><td>Cached tests or empty discovery hide missing coverage</td><td>Explicit discovery and repeated testFull runs.</td></tr><tr><td>Changed classpath and output paths</td><td>Exercise JUnit suites, resource fixtures and browser consumers; derive or stabilize linker outputs.</td></tr><tr><td>Workflow review requirements</td><td>Normal PR protections remain enforced. No admin bypass or real release test.</td></tr></table>
+<h2 id="migration">Migration</h2><p>Capture Mill baseline, add failing contract checks, migrate each producer and caller, run cold/warm qualification and local packaging, remove Mill after parity, then archive and land through protected PR checks. A revert restores the previous build without migrating library sources.</p>
+</main>
+</body>
+</html>

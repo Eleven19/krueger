@@ -3,7 +3,7 @@
 /**
  * Headless smoke test for the WASM-linked compiler facade.
  *
- * Loads the artifact at `out/krueger/webapp-wasm/wasm/fullLinkJS.dest/main.js`
+ * Loads the artifact at `target/out/linked/webapp-wasm/main.js`
  * (or a path supplied as the first CLI arg) and runs parseCst, parseQuery,
  * runQuery, prettyQuery, and tokenize through the `KruegerWasm` export.
  * Mirrors `check-webapp-wasm-browser.mjs` (which targets the JS-linked
@@ -22,14 +22,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
-const defaultArtifactDir = resolve(
-  repoRoot,
-  'out',
-  'krueger',
-  'webapp-wasm',
-  'wasm',
-  'fullLinkJS.dest'
-);
+const defaultArtifactDir = resolve(repoRoot, 'target/out/linked/webapp-wasm');
 const arg = process.argv.find((value, index) => index > 1 && value !== '--');
 const artifactDir = arg ? resolve(repoRoot, arg) : defaultArtifactDir;
 const entrypoint = resolve(artifactDir, 'main.js');
@@ -40,7 +33,7 @@ function fail(message) {
 }
 
 await access(entrypoint).catch(() => {
-  fail(`missing ${entrypoint}; run \`./mill krueger.webapp-wasm.wasm.fullLinkJS\` first`);
+  fail(`missing ${entrypoint}; run \`./sbt --batch webappWasm/fullLinkJS\` first`);
 });
 
 const flagsRequested = (process.execArgv ?? []).join(' ');

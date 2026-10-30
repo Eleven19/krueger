@@ -21,20 +21,20 @@ if (!deployWorkflow.includes('sites/try-wasm/package-lock.json')) {
   fail('deploy workflow npm cache must include the try-wasm package lock');
 }
 
-if (!deployWorkflow.includes('./mill docs.site')) {
-  fail('deploy workflow must run ./mill docs.site (full Pages artifact including try-wasm)');
+if (!deployWorkflow.includes('./sbt --batch site')) {
+  fail('deploy workflow must run ./sbt --batch site (full Pages artifact including try-wasm)');
 }
 
 if (!deployWorkflow.includes('Upload Pages artifact')) {
   fail('deploy workflow must upload the Pages artifact');
 }
 
-const millIdx = deployWorkflow.indexOf('./mill docs.site');
+const sbtIdx = deployWorkflow.indexOf('./sbt --batch site');
 const uploadIdx = deployWorkflow.indexOf('Upload Pages artifact');
-if (millIdx === -1 || uploadIdx === -1 || millIdx > uploadIdx) {
-  fail('deploy workflow must run ./mill docs.site before Upload Pages artifact');
+if (sbtIdx === -1 || uploadIdx === -1 || sbtIdx > uploadIdx) {
+  fail('deploy workflow must run ./sbt --batch site before Upload Pages artifact');
 }
 
 console.log(
-  'check-try-wasm-deploy-workflow: OK - deploy workflow runs docs.site and uploads dist (try-wasm included via Mill).'
+  'check-try-wasm-deploy-workflow: OK - deploy workflow runs docs.site and uploads dist (try-wasm included via sbt).'
 );

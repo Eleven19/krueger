@@ -1,0 +1,5 @@
+addSbtPlugin("org.scalameta"        % "sbt-scalafmt"          % "2.6.2")
+addSbtPlugin("org.scala-js"         % "sbt-scalajs"           % "1.22.0")
+addSbtPlugin("org.scala-native"     % "sbt-scala-native"      % "0.5.12")
+addSbtPlugin("com.github.sbt.junit" % "sbt-jupiter-interface" % "0.15.2")
+addSbtPlugin("com.github.sbt"       % "sbt-pgp"               % "2.3.2")

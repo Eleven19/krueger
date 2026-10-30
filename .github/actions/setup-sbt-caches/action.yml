@@ -1,0 +1,23 @@
+name: Setup sbt and dependency caches
+description: Pinned toolchains and dependency caches; qualification always uses full tests
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '25'
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.sbt/boot
+          ~/.cache/coursier
+          ~/.ivy2/cache
+          ~/.cache/krueger/sbt
+          ~/.cache/sbt
+        key: ${{ runner.os }}-${{ runner.arch }}-jdk25-sbt2-${{ hashFiles('project/build.properties', 'project/plugins.sbt', 'project/**/*.scala', 'build.sbt', '.scalafmt.conf') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-jdk25-sbt2-

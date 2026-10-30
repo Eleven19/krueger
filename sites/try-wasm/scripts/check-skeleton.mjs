@@ -24,8 +24,8 @@ const pkg = await readJson('package.json');
 const svelteConfig = await readFile(resolve(siteRoot, 'svelte.config.js'), 'utf8').catch(() => fail('missing svelte.config.js'));
 const viteConfig = await readFile(resolve(siteRoot, 'vite.config.ts'), 'utf8').catch(() => fail('missing vite.config.ts'));
 
-if (pkg.scripts?.['build:wasm'] !== 'cd ../.. && ./mill krueger.webapp-wasm.writeToWasmSite') {
-  fail('package.json must expose build:wasm that invokes Mill from the repo root');
+if (pkg.scripts?.['build:wasm'] !== 'cd ../.. && ./sbt --batch stageWasm') {
+  fail('package.json must expose build:wasm that invokes sbt from the repo root');
 }
 
 if (pkg.scripts?.['build:full'] !== 'npm run build:wasm && npm run build') {

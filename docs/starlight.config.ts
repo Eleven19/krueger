@@ -24,8 +24,8 @@ const config: StarlightUserConfig = {
   },
   // Note: the generated Scaladoc trees under `docs/public/api/{jvm,js,native}/`
   // are excluded from the Pagefind search index by stamping each emitted
-  // HTML file with `data-pagefind-ignore="true"` during the Mill task
-  // `docs.writeToDocsPublic`. Pagefind's own `excludeSelectors` is scoped to
+  // HTML file with `data-pagefind-ignore="true"` during the sbt task
+  // `apiDocs`. Pagefind's own `excludeSelectors` is scoped to
   // DOM elements within indexed pages, not whole routes, so per-page opt-out
   // via the HTML attribute is the documented mechanism for whole-page exclusion.
   sidebar: [
@@ -46,6 +46,7 @@ const config: StarlightUserConfig = {
     },
     { label: 'Examples', link: '/examples/' },
     { label: 'Contributing', link: '/contributing/' },
+    { label: 'Build and qualification', link: '/build/' },
   ],
 };
 

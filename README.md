@@ -21,21 +21,13 @@ An Elm dialect parser and compiler toolchain for Scala. Krueger parses Elm sourc
 ### Requirements
 
 - JDK 25+ (Temurin recommended)
-- [Mill](https://mill-build.org/) 1.2.0-RC1+
-- Node.js 22+ (for the Starlight docs site, SvelteKit `sites/try-wasm`, and Playwright checks — match [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml))
+- [sbt](https://www.scala-sbt.org/) 2.0.11, bootstrapped by `./sbt`
+- Node.js 24+ (for the Starlight docs site, SvelteKit `sites/try-wasm`, and Playwright checks — match [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml))
 - For Scala Native: `clang`, `libunwind`, and a boehm-gc library (`libgc` on Linux)
 
 ### Installation
 
 Add the dependency to your build:
-
-**Mill** (1.2.0-RC1+ — add inside a `package.mill` module's `mvnDeps`)
-
-```scala
-def mvnDeps = Seq(
-  mvn"io.eleven19.krueger::krueger-core:VERSION"
-)
-```
 
 **sbt**
 
@@ -72,20 +64,23 @@ val cst = Krueger.parseModule(source)
 val ast = Krueger.parseModuleToAst(source)
 ```
 
+See the [build and qualification guide](docs/src/content/docs/build.md) for onboarding,
+Mill-to-sbt task mappings, publishing and a complete developer recipe.
+
 ## Building from Source
 
 ```sh
 # Compile (JVM)
-mill krueger.core.jvm.compile
+./sbt --batch coreJvm/compile
 
 # Run tests (JVM)
-mill krueger.core.jvm.test
+./sbt --batch testJvmFull
 
 # Compile for Scala.js
-mill krueger.core.js.compile
+./sbt --batch coreJs/compile
 
 # Compile for Scala Native
-mill krueger.core.native.compile
+./sbt --batch coreNative/compile
 ```
 
 ## Testing
@@ -100,9 +95,9 @@ Krueger has two complementary test layers.
 Sources under `krueger/core/test/src/` are shared by all three platforms:
 
 ```sh
-mill krueger.core.jvm.test
-mill krueger.core.js.test
-mill krueger.core.native.test
+./sbt --batch testJvmFull
+./sbt --batch testJsFull
+./sbt --batch testNativeFull
 ```
 
 ### BDD integration tests (cucumber-scala on JUnit 5, JVM)
@@ -112,7 +107,7 @@ parser end-to-end through a `TestDriver`. Step definitions live in
 `krueger/itest/src/io/eleven19/krueger/itest/steps/`.
 
 ```sh
-mill krueger.itest
+./sbt --batch testIntegrationFull
 ```
 
 To add new scenarios, drop a `.feature` file into `resources/features/` and
@@ -127,15 +122,15 @@ The published handbook and API reference live on [GitHub Pages](https://eleven19
 **Production-sized artifact (same shape CI deploys):**
 
 ```sh
-./mill docs.site   # writes docs/dist/, including dist/try/
+./sbt --batch site   # writes docs/dist/, including dist/try/
 ```
 
-**Local dev with the playground** (Mill prepares Scaladoc, WASM artifacts, builds the playground from `sites/try-wasm/`, and copies it into `docs/public/try/` for Astro):
+**Local dev with the playground** (sbt prepares Scaladoc, WASM artifacts, builds the playground from `sites/try-wasm/`, and copies it into `docs/public/try/` for Astro):
 
 ```sh
 cd docs
 npm ci
-npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
+npm run dev:full    # ./sbt --batch prepareLocalDevSite && astro dev
 ```
 
 Then open `http://localhost:4321/krueger/` and `/krueger/try/`.
@@ -169,7 +164,7 @@ val Success(query)  = QueryParser.parse(
 ): @unchecked
 
 val names = Matcher
-    .matches(query, module)
+    .matches[io.eleven19.krueger.cst.CstNode](query, module)
     .flatMap(_.captures.get("n"))
     .collect { case n: CstName => n.value }
     .toList

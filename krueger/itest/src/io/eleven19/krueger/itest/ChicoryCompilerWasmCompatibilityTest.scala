@@ -19,7 +19,7 @@ final class ChicoryCompilerWasmCompatibilityTest:
     private val chicoryRuntimeVersion = "1.7.5"
 
     @Test
-    def `Mill injects the compiler-api wasm artifact path into itest JVMs`(): Unit =
+    def `sbt injects the compiler-api wasm artifact path into itest JVMs`(): Unit =
         val dir = artifactDir()
         assertTrue(Files.isDirectory(dir), dir.toString)
         assertTrue(Files.isRegularFile(dir.resolve("main.wasm")), dir.resolve("main.wasm").toString)
@@ -72,7 +72,7 @@ final class ChicoryCompilerWasmCompatibilityTest:
             case Some(path) => Path.of(path)
             case None =>
                 fail(
-                    s"missing system property $artifactDirProperty; run this suite through Mill so it can inject the linked compiler-api.wasm artifact path"
+                    s"missing system property $artifactDirProperty; run this suite through sbt so it can inject the linked compiler-api.wasm artifact path"
                 )
 
     private def repoRoot(): Path =

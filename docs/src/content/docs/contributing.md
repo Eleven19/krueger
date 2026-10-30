@@ -3,29 +3,32 @@ title: Contributing
 description: How to build, test, and submit changes to Krueger.
 ---
 
+See [Build and qualify Krueger](/krueger/build/) for setup, task mappings,
+full-test behavior and the developer recipe.
+
 ## Build
 
 ```sh
 # Compile (JVM)
-mill krueger.core.jvm.compile
+./sbt --batch coreJvm/compile
 
 # Compile for Scala.js
-mill krueger.core.js.compile
+./sbt --batch coreJs/compile
 
 # Compile for Scala Native
-mill krueger.core.native.compile
+./sbt --batch coreNative/compile
 ```
 
 ## Test
 
 ```sh
 # kyo-test unit suites (cross-platform)
-mill krueger.core.jvm.test
-mill krueger.core.js.test
-mill krueger.core.native.test
+./sbt --batch testJvmFull
+./sbt --batch testJsFull
+./sbt --batch testNativeFull
 
 # cucumber-scala BDD integration tests (JVM)
-mill krueger.itest
+./sbt --batch testIntegrationFull
 ```
 
 ## Docs site
@@ -33,7 +36,7 @@ mill krueger.itest
 The handbook under `docs/` is **Starlight / Astro** alongside a single
 **SvelteKit** playground at
 [`/krueger/try/`](https://eleven19.github.io/krueger/try/). GitHub
-Pages runs the same pipeline as `./mill docs.site`: Scaladoc, WASM artifacts for
+Pages runs the same pipeline as `./sbt --batch site`: Scaladoc, WASM artifacts for
 the playground, SvelteKit production build, Astro build, then a copy of
 `sites/try-wasm/build/` into `docs/dist/try/`.
 
@@ -45,7 +48,7 @@ mirrored into `docs/public/try/` (gitignored). The one-step prep is:
 ```sh
 cd docs
 npm ci
-npm run dev:full    # ./mill docs.prepareLocalDevSite && astro dev
+npm run dev:full    # ./sbt --batch prepareLocalDevSite && astro dev
 ```
 
 Open `http://localhost:4321/krueger/` and `/krueger/try/`.
@@ -55,13 +58,13 @@ Open `http://localhost:4321/krueger/` and `/krueger/try/`.
 Build everything exactly as deploy does:
 
 ```sh
-./mill docs.site
+./sbt --batch site
 ```
 
 Output: `docs/dist/` (including `dist/try/`). Equivalent npm orchestration:
 
 ```sh
-cd docs && npm ci && npm run site:build   # alias for build:full — Mill + try-wasm + Astro + stitch
+cd docs && npm ci && npm run site:build   # alias for build:full — sbt + try-wasm + Astro + stitch
 ```
 
 Preview the static tree:
@@ -76,13 +79,13 @@ cd docs && npm run preview   # serves docs/dist/
    `docs/public/api/{jvm,js,native}/` (gitignored):
 
    ```sh
-   ./mill docs.writeToDocsPublic
-   ./mill docs.apiJvm
-   ./mill docs.apiJs
-   ./mill docs.apiNative
+   ./sbt --batch apiDocs
+   ./sbt --batch apiJvm/doc
+   ./sbt --batch apiJs/doc
+   ./sbt --batch apiNative/doc
    ```
 
-2. **try-wasm** — `./mill krueger.webapp-wasm.writeToWasmSite` populates
+2. **try-wasm** — `./sbt --batch stageWasm` populates
    `sites/try-wasm/static/wasm/` (both the WASM-compiled compiler artifact and
    the Scala.js facade JS module) before `npm run build` in `sites/try-wasm`.
 

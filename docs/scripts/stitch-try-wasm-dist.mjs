@@ -22,7 +22,7 @@ function fail(msg) {
 }
 
 if (!existsSync(src) || !statSync(src).isDirectory()) {
-  fail(`missing ${src} — run npm run build:try-wasm (or ./mill docs.site) first`);
+  fail(`missing ${src} — run npm run build:try-wasm (or ./sbt --batch site) first`);
 }
 
 if (existsSync(dest)) rmSync(dest, { recursive: true });
