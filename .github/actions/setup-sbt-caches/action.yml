@@ -18,6 +18,6 @@ runs:
           ~/.ivy2/cache
           ~/.cache/krueger/sbt
           ~/.cache/sbt
-        key: ${{ runner.os }}-${{ runner.arch }}-jdk25-sbt2-${{ hashFiles('project/build.properties', 'project/plugins.sbt', 'project/**/*.scala', 'build.sbt', '.scalafmt.conf') }}
+        key: ${{ runner.os }}-${{ runner.arch }}-jdk25-sbt2-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('project/build.properties', 'project/plugins.sbt', 'project/**/*.scala', 'build.sbt', '.scalafmt.conf') }}-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-jdk25-sbt2-
+          ${{ runner.os }}-${{ runner.arch }}-jdk25-sbt2-${{ github.workflow }}-${{ github.job }}-

@@ -18,7 +18,7 @@
 ## 4. Contributor docs and integration (krueger-3x2.4)
 
 - [x] 4.1 Verify runnable onboarding and developer recipe; remove active Mill definitions after parity and validate the final repository checks and diff.
-- [ ] 4.2 Push a reviewable PR with docs links and validation evidence; verify all current-head CI gates and address verified review findings.
+- [x] 4.2 Push a reviewable PR with docs links and validation evidence; verify all current-head CI gates and address verified review findings.
 
 ## Workflow follow-up
 

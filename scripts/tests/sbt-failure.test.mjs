@@ -32,3 +32,15 @@ test('format violations fail the contributor check', () => {
     assert.match(result.stdout + result.stderr, /not formatted|must be formatted|scalafmt.*failed/i);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('compileAll rejects invalid test sources', () => {
+  mkdirSync('.dev/docs', { recursive: true });
+  const dir = mkdtempSync(resolve('.dev/docs/compile-probe-'));
+  try {
+    writeFileSync(`${dir}/BrokenTest.scala`, 'class BrokenTest: def invalid =\n');
+    const result = spawnSync('./sbt', ['--batch', `set treesJvm / Test / sources := Seq(file("${dir}/BrokenTest.scala"))`, 'compileAll'], { encoding: 'utf8', timeout: 120000 });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stdout + result.stderr, /BrokenTest.scala/);
+    assert.match(result.stdout + result.stderr, /Compilation failed|Syntax Error/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

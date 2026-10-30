@@ -31,20 +31,22 @@ test('qualification rejects an empty required suite rather than reporting succes
 });
 
 test('integration receives linked compiler paths and packaging preserves POM metadata', () => {
-  const result = spawnSync('./sbt', ['--batch', 'show integration/Test/javaOptions', 'show coreJvm/makePom', 'show coreJs/makePom', 'show coreNative/makePom'], { encoding: 'utf8', timeout: 600000, maxBuffer: 8 * 1024 * 1024 });
+  const projects = ['treesJvm', 'treesJs', 'treesNative', 'coreJvm', 'coreJs', 'coreNative', 'compilerApiJvm', 'compilerApiJs', 'compilerApiNative', 'umbrella'];
+  const result = spawnSync('./sbt', ['--batch', 'show integration/Test/javaOptions', ...projects.map(p => `show ${p}/makePom`)], { encoding: 'utf8', timeout: 600000, maxBuffer: 8 * 1024 * 1024 });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stdout, /-Dkrueger.compiler-api.wasm.dir=.*target\/out\/linked\/compiler-api-wasm/);
   assert.match(result.stdout, /-Dkrueger.webapp-wasm.facade.dir=.*target\/out\/linked\/webapp-js/);
   assert.ok(existsSync("target/out/linked/compiler-api-wasm/main.wasm"), "compiler-api main.wasm was not linked");
   const poms = [...result.stdout.matchAll(/\[info\] (\$\{OUT\}[^\n]+\.pom)/g)].map(m => readFileSync(m[1].trim().replace('${OUT}', `${process.cwd()}/target/out`), 'utf8'));
-  assert.equal(poms.length, 3);
+  assert.equal(poms.length, 10);
   for (const pom of poms) {
     assert.match(pom, /<groupId>io.eleven19.krueger<\/groupId>/);
     assert.match(pom, /Apache-2.0/);
     assert.match(pom, /<id>DamianReeves<\/id>/);
     assert.match(pom, /An Elm dialect parser and compiler toolchain for Scala/);
   }
-  for (const suffix of ['_3', '_sjs1_3', '_native0.5_3']) assert.ok(poms.some(p => p.includes(`<artifactId>krueger-core${suffix}</artifactId>`)));
+  const expected = ['krueger_3', ...['trees', 'core', 'compiler-api'].flatMap(m => ['_3', '_sjs1_3', '_native0.5_3'].map(s => `krueger-${m}${s}`))].sort();
+  assert.deepEqual(poms.map(p => p.match(/<artifactId>([^<]+)<\/artifactId>/)[1]).sort(), expected);
 
 });
 

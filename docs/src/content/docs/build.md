@@ -27,7 +27,9 @@ runner also reads `project/build.properties`; use `sbt --server` for a standalon
 session or its default client mode for repeated interactive commands. On
 Windows, use an installed sbt 2 runner with JDK 25. The build definition uses
 Scala 3.8.4, independently of the library compiler pinned to Scala 3.9.0.
-Scala.js remains 1.22.0, Native 0.5.12 and Kyo 1.0.0-RC7.
+Scala.js remains 1.22.0, Native 0.5.12 and Kyo 1.0.0-RC7. The sbt 2 JUnit
+bridge uses JUnit Platform 1.14.0 and Jupiter 5.14.0 for the existing BDD
+suites; the migration preserves their complete assertion set.
 
 Import `build.sbt` in IntelliJ or Metals. Generated BSP/IDE data stays ignored.
 No source directories need moving.

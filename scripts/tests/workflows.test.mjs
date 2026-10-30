@@ -26,3 +26,12 @@ test('qualification cannot read signing secrets and missing publication credenti
     assert.ok(workflow.indexOf('scripts/ci/qualify.sh') < workflow.indexOf('PGP_SECRET:'));
   }
 });
+
+test('cache producers cannot overwrite another category or freeze at the first source revision', () => {
+  const action = readFileSync('.github/actions/setup-sbt-caches/action.yml', 'utf8');
+  const key = action.split('\n').find(line => line.trimStart().startsWith('key:'));
+  assert.ok(key.includes('github.workflow'), 'workflow caches must have independent producers');
+  assert.ok(key.includes('github.job'), 'category caches must have independent producers');
+  assert.ok(key.includes('github.sha'), 'each source revision must be able to save its task cache');
+  assert.match(action, /restore-keys:/);
+});

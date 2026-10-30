@@ -32,7 +32,7 @@ Add the dependency to your build:
 **sbt**
 
 ```scala
-"io.eleven19.krueger" %% "krueger-core" % "VERSION"
+libraryDependencies += "io.eleven19.krueger" %% "krueger-core" % "VERSION"
 ```
 
 **Maven**
