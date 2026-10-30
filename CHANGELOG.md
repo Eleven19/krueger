@@ -17,7 +17,7 @@ leading `v`.
 ### Changed
 
 - Bumped minimum supported JDK to 25 (Temurin).
-- Bumped Scala to 3.8.3.
+- Bumped Scala to 3.9.0, Kyo to 1.0.0-RC7, and Scala Native to 0.5.12. Kyo 1.0.0-RC7 is built with Scala 3.9.0, and Scala Native 0.5.12 is the first release with a compiler plugin for Scala 3.9.0.
 - Adopted Mill's `PlatformScalaModule` for the cross-platform `krueger-core` module. Shared sources remain at `krueger/core/src/`; each platform can add its own `krueger/core/src-jvm/`, `src-js/`, or `src-native/` directory when platform-specific code is needed.
 - `ModuleParser.qualifiedName` now parses dot-separated qualified names (`Data.List`, `Http.Body`) instead of requiring space-separated upper identifiers.
 
